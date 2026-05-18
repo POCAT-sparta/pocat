@@ -1,7 +1,6 @@
 package com.rocketcrew.pocat.domain.like.service;
 
 import com.rocketcrew.pocat.domain.like.dto.response.LikeResponse;
-import com.rocketcrew.pocat.domain.like.entity.Like;
 import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -9,29 +8,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
-@Transactional
-public class LikeService {
+@Transactional(readOnly = true)
+public class LikeQueryService {
 
     private final LikeRepository likeRepository;
 
-    public LikeResponse toggleLike(Long userId, Long auctionId) {
-        Optional<Like> existing = likeRepository.findByUserIdAndAuctionId(userId, auctionId);
-        if (existing.isPresent()) {
-            likeRepository.delete(existing.get());
-            return LikeResponse.from(existing.get());
-        }
-        Like like = Like.builder()
-                .userId(userId)
-                .auctionId(auctionId)
-                .build();
-        return LikeResponse.from(likeRepository.save(like));
-    }
-
-    @Transactional(readOnly = true)
     public Page<LikeResponse> getMyLikes(Long userId, Pageable pageable) {
         return likeRepository.findByUserId(userId, pageable)
                 .map(LikeResponse::from);
