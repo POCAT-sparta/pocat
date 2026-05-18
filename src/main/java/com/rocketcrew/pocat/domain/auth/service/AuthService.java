@@ -58,7 +58,6 @@ public class AuthService {
         return issueTokens(user);
     }
 
-    @Transactional
     public TokenResponse reissue(ReissueRequest request) {
         String refreshToken = request.refreshToken();
 
