@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.auction.entity;
+package com.rocketcrew.pocat.domain.auction.enums;
 
 public enum AuctionStatus {
     PENDING,

@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.bid.entity;
+package com.rocketcrew.pocat.domain.bid.enums;
 
 public enum BidStatus {
     ACTIVE,

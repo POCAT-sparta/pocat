@@ -1,7 +1,7 @@
 package com.rocketcrew.pocat.domain.bid.dto.response;
 
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
-import com.rocketcrew.pocat.domain.bid.entity.BidStatus;
+import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 
 import java.time.LocalDateTime;
 
