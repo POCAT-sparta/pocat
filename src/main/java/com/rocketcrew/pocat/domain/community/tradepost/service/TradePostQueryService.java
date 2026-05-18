@@ -1,8 +1,11 @@
 package com.rocketcrew.pocat.domain.community.tradepost.service;
 
+import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostListResponse;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostResponse;
 import com.rocketcrew.pocat.domain.community.tradepost.entity.TradePost;
 import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
+import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
 import lombok.RequiredArgsConstructor;
@@ -17,15 +20,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class TradePostQueryService {
 
     private final TradePostRepository tradePostRepository;
+    private final UserRepository userRepository;
 
-    public Page<TradePostResponse> getPosts(Pageable pageable) {
+    public Page<TradePostListResponse> getPosts(Pageable pageable) {
         return tradePostRepository.findAll(pageable)
-                .map(TradePostResponse::from);
+                .map(post -> {
+                    String nickname = userRepository.findById(post.getUserId())
+                            .map(User::getNickname)
+                            .orElse(null);
+                    return TradePostListResponse.from(post, nickname);
+                });
     }
 
     public TradePostResponse getPost(Long id) {
         TradePost tradePost = tradePostRepository.findById(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
-        return TradePostResponse.from(tradePost);
+        String nickname = userRepository.findById(tradePost.getUserId())
+                .map(User::getNickname)
+                .orElse(null);
+        return TradePostResponse.from(tradePost, nickname);
     }
 }

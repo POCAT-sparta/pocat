@@ -4,30 +4,24 @@ import com.rocketcrew.pocat.domain.community.tradepost.entity.TradePost;
 
 import java.time.LocalDateTime;
 
-public record TradePostResponse(
+public record TradePostListResponse(
         Long id,
         String title,
-        String content,
-        Long authorId,
         String authorNickname,
         Long price,
         String thumbnail,
         int viewCount,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime createdAt
 ) {
-    public static TradePostResponse from(TradePost tradePost, String authorNickname) {
-        return new TradePostResponse(
+    public static TradePostListResponse from(TradePost tradePost, String authorNickname) {
+        return new TradePostListResponse(
                 tradePost.getId(),
                 tradePost.getTitle(),
-                tradePost.getContent(),
-                tradePost.getUserId(),
                 authorNickname,
                 tradePost.getPrice(),
                 tradePost.getThumbnail(),
                 tradePost.getViewCount(),
-                tradePost.getCreatedAt(),
-                tradePost.getUpdatedAt()
+                tradePost.getCreatedAt()
         );
     }
 }
