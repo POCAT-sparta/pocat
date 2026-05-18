@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.auction.entity;
 
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,8 +9,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Builder
 @AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "auctions")
 public class Auction extends BaseEntity {
@@ -17,35 +18,38 @@ public class Auction extends BaseEntity {
     @Column(name = "card_id", nullable = false)
     private Long cardId;
 
-    @Column(nullable = false)
+    @Column(name = "seller_id", nullable = false)
     private Long sellerId;
 
+    @Column(name = "highest_bidder_id")
     private Long highestBidderId;
 
-    @Column(nullable = false)
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "card_image_url", length = 500)
     private String cardImageUrl;
 
-    @Column(nullable = false)
+    @Column(name = "starting_price", nullable = false)
     private Long startingPrice;
 
+    @Column(name = "buyout_price")
     private Long buyoutPrice;
 
+    @Column(name = "highest_price")
     private Long highestPrice;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(name = "status", nullable = false, length = 30)
     private AuctionStatus status;
 
-    @Column(nullable = false)
+    @Column(name = "started_at")
     private LocalDateTime startedAt;
 
-    @Column(nullable = false)
+    @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
