@@ -1,6 +1,6 @@
 package com.rocketcrew.pocat.global.exception.common;
 
-import com.example.readys7project.global.dto.ApiResponseDto;
+import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
