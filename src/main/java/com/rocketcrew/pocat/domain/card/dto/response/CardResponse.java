@@ -1,9 +1,9 @@
 package com.rocketcrew.pocat.domain.card.dto.response;
 
 import com.rocketcrew.pocat.domain.card.entity.Card;
-import com.rocketcrew.pocat.domain.card.entity.CardGrade;
-import com.rocketcrew.pocat.domain.card.entity.CardSource;
-import com.rocketcrew.pocat.domain.card.entity.CardStatus;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 
 import java.time.LocalDateTime;
 

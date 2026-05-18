@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.card.entity;
+package com.rocketcrew.pocat.domain.card.entity.enums;
 
 public enum CardGrade {
     PSA_10,
