@@ -1,6 +1,6 @@
 package com.rocketcrew.pocat.domain.user.dto.response;
 
-import com.rocketcrew.pocat.domain.user.entity.Role;
+import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -10,7 +10,7 @@ public record UserResponse(
         String email,
         String nickname,
         String phone,
-        Role role,
+        UserRole userRole,
         String bankName,
         String bankAccount,
         String address,
@@ -24,7 +24,7 @@ public record UserResponse(
                 user.getEmail(),
                 user.getNickname(),
                 user.getPhone(),
-                user.getRole(),
+                user.getUserRole(),
                 user.getBankName(),
                 user.getBankAccount(),
                 user.getAddress(),

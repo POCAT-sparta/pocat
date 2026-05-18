@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.user.entity;
 
+import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,21 +13,21 @@ import lombok.*;
 @Table(name = "users")
 public class User extends BaseEntity {
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "nickname", nullable = false, length = 100)
     private String nickname;
 
-    @Column(length = 20)
+    @Column(name = "phone", length = 20)
     private String phone;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Role role;
+    @Column(name = "user_role", nullable = false, length = 20)
+    private UserRole userRole;
 
     @Column(name = "bank_name", length = 50)
     private String bankName;
@@ -37,7 +38,7 @@ public class User extends BaseEntity {
     @Column(name = "billing_key")
     private String billingKey;
 
-    @Column(length = 255)
+    @Column(name = "address", length = 255)
     private String address;
 
     @Column(name = "unpaid_strike", nullable = false)

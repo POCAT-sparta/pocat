@@ -3,7 +3,8 @@ package com.rocketcrew.pocat.domain.community.freepost.controller;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.CreateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
-import com.rocketcrew.pocat.domain.community.freepost.service.FreePostService;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommandService;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,13 @@ import java.util.List;
 @RequestMapping("/api/v1/free-posts")
 public class FreePostController {
 
-    private final FreePostService freePostService;
+    private final FreePostQueryService freePostQueryService;
+    private final FreePostCommandService freePostCommandService;
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getPosts(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<FreePostResponse> page = freePostService.getPosts(pageable);
+        Page<FreePostResponse> page = freePostQueryService.getPosts(pageable);
         List<FreePostResponse> content = page.getContent();
         PageResponseDto<FreePostResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -35,7 +37,7 @@ public class FreePostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponseDto<FreePostResponse>> getPost(@PathVariable Long postId) {
-        FreePostResponse response = freePostService.getPost(postId);
+        FreePostResponse response = freePostQueryService.getPost(postId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -43,7 +45,7 @@ public class FreePostController {
     public ResponseEntity<ApiResponseDto<FreePostResponse>> createPost(
             @RequestParam Long userId,
             @RequestBody CreateFreePostRequest request) {
-        FreePostResponse response = freePostService.createPost(userId, request);
+        FreePostResponse response = freePostCommandService.createPost(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
@@ -53,7 +55,7 @@ public class FreePostController {
             @PathVariable Long postId,
             @RequestParam Long userId,
             @RequestBody UpdateFreePostRequest request) {
-        FreePostResponse response = freePostService.updatePost(postId, userId, request);
+        FreePostResponse response = freePostCommandService.updatePost(postId, userId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -61,7 +63,7 @@ public class FreePostController {
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
             @PathVariable Long postId,
             @RequestParam Long userId) {
-        freePostService.deletePost(postId, userId);
+        freePostCommandService.deletePost(postId, userId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }
