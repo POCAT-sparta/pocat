@@ -2,7 +2,7 @@
 language: "ko"
 
 reviews:
-  profile: "chill"          # chill / assertive / followup
+  profile: "assertive"          # chill / assertive
   high_level_summary: true
   auto_review:
     enabled: true
