@@ -20,8 +20,3 @@ spring:
       port: 6379
 server:
   port: 8080
-
-jwt:
-  secret: cG9jYXQtc2VjcmV0LWtleS1mb3ItaG1hYy1zaGEyNTYtZW5jb2Rpbmctc3RyaW5n
-  access-token-expiration: 1800000    # 30분 (ms)
-  refresh-token-expiration: 604800000 # 7일 (ms)
