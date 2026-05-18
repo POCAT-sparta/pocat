@@ -1,5 +1,7 @@
 package com.rocketcrew.pocat.domain.order.entity;
 
+import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,7 +17,7 @@ public class Order extends BaseEntity {
     @Column(name = "auction_id")
     private Long auctionId;
 
-    @Column(name = "card_id")
+    @Column(name = "card_id", nullable = false)
     private Long cardId;
 
     @Column(name = "seller_id")
@@ -24,7 +26,7 @@ public class Order extends BaseEntity {
     @Column(name = "buyer_id", nullable = false)
     private Long buyerId;
 
-    @Column(name = "order_uid", nullable = false, length = 50)
+    @Column(name = "order_uid", nullable = false, length = 50, unique = true)
     private String orderUid;
 
     @Column(name = "final_price", nullable = false)
@@ -38,7 +40,14 @@ public class Order extends BaseEntity {
     @Column(name = "delivery_status", length = 20)
     private DeliveryStatus deliveryStatus;
 
-    public void cancel() {
+    @Column(name = "cancel_reason", length = 255)
+    private String cancelReason;
+
+    public void cancel(String reason) {
         this.status = OrderStatus.CANCELLED;
+        this.cancelReason = reason;
+        if (this.deliveryStatus != null) {
+            this.deliveryStatus = DeliveryStatus.CANCELLED;
+        }
     }
 }

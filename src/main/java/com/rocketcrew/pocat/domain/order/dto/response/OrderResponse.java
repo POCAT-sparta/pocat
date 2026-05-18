@@ -1,37 +1,38 @@
 package com.rocketcrew.pocat.domain.order.dto.response;
 
-import com.rocketcrew.pocat.domain.order.entity.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.entity.OrderStatus;
 
 import java.time.LocalDateTime;
 
 public record OrderResponse(
-        Long id,
-        Long auctionId,
-        Long cardId,
-        Long sellerId,
-        Long buyerId,
+        Long orderId,
         String orderUid,
+        Long auctionId,
+        String cardName,
+        String cardGrade,
+        String cardImageUrl,
         Long finalPrice,
-        OrderStatus status,
-        DeliveryStatus deliveryStatus,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        String orderStatus,
+        String deliveryStatus,
+        LocalDateTime createdAt
 ) {
-    public static OrderResponse from(Order order) {
+    public static OrderResponse of(
+            Order order,
+            String cardName,
+            String cardGrade,
+            String cardImageUrl
+    ) {
         return new OrderResponse(
                 order.getId(),
-                order.getAuctionId(),
-                order.getCardId(),
-                order.getSellerId(),
-                order.getBuyerId(),
                 order.getOrderUid(),
+                order.getAuctionId(),
+                cardName,
+                cardGrade,
+                cardImageUrl,
                 order.getFinalPrice(),
-                order.getStatus(),
-                order.getDeliveryStatus(),
-                order.getCreatedAt(),
-                order.getUpdatedAt()
+                order.getStatus().name(),
+                order.getDeliveryStatus().name(),
+                order.getCreatedAt()
         );
     }
 }
