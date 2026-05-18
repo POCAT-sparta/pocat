@@ -1,7 +1,10 @@
 package com.rocketcrew.pocat.domain.order.controller;
 
+import com.rocketcrew.pocat.domain.order.dto.request.CancelOrderRequest;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
-import com.rocketcrew.pocat.domain.order.service.OrderService;
+import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -11,36 +14,41 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/orders")
 public class OrderController {
 
-    private final OrderService orderService;
+    private final OrderQueryService orderQueryService;
+    private final OrderCommandService orderCommandService;
 
-    @GetMapping
+    @GetMapping("/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<OrderResponse>>> getMyOrders(
-            @RequestParam Long buyerId,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<OrderResponse> page = orderService.getMyOrders(buyerId, pageable);
-        List<OrderResponse> content = page.getContent();
-        PageResponseDto<OrderResponse> pageResponse = PageResponseDto.of(page, content);
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
+            @RequestParam Long buyerId, // TODO: userDetails
+            @RequestParam(required = false) OrderStatus status,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<OrderResponse> page = orderQueryService.getMyOrders(buyerId, status, pageable);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
-    @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponseDto<OrderResponse>> getOrder(@PathVariable Long orderId) {
-        OrderResponse response = orderService.getOrder(orderId);
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    @GetMapping("/{orderUid}")
+    public ResponseEntity<ApiResponseDto<OrderResponse>> getOneOrder(
+            // TODO: userDetails
+            @PathVariable String orderUid
+    ) {
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, orderQueryService.getOneOrder(orderUid)));
     }
 
-    @DeleteMapping("/{orderId}")
-    public ResponseEntity<ApiResponseDto<OrderResponse>> cancelOrder(@PathVariable Long orderId) {
-        OrderResponse response = orderService.cancelOrder(orderId);
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    @PatchMapping("/{orderUid}/cancel")
+    public ResponseEntity<ApiResponseDto<OrderResponse>> cancelOrder(
+            // TODO: userDetails
+            @PathVariable String orderUid,
+            @Valid @RequestBody CancelOrderRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, orderCommandService.cancelOrder(orderUid, request.reason())));
     }
 }

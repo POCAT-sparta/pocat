@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.order.entity;
+package com.rocketcrew.pocat.domain.order.enums;
 
 public enum OrderStatus {
     PAYMENT_PENDING,
