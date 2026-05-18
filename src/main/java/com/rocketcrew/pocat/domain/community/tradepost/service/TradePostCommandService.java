@@ -8,30 +8,15 @@ import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepos
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class TradePostService {
+public class TradePostCommandService {
 
     private final TradePostRepository tradePostRepository;
-
-    @Transactional(readOnly = true)
-    public Page<TradePostResponse> getPosts(Pageable pageable) {
-        return tradePostRepository.findAll(pageable)
-                .map(TradePostResponse::from);
-    }
-
-    @Transactional(readOnly = true)
-    public TradePostResponse getPost(Long id) {
-        TradePost tradePost = tradePostRepository.findById(id)
-                .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
-        return TradePostResponse.from(tradePost);
-    }
 
     public TradePostResponse createPost(Long userId, CreateTradePostRequest request) {
         TradePost tradePost = TradePost.builder()

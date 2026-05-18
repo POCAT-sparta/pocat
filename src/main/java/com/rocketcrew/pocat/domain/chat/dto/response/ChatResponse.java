@@ -1,7 +1,7 @@
 package com.rocketcrew.pocat.domain.chat.dto.response;
 
 import com.rocketcrew.pocat.domain.chat.entity.Chat;
-import com.rocketcrew.pocat.domain.chat.entity.ChatStatus;
+import com.rocketcrew.pocat.domain.chat.entity.enums.ChatStatus;
 
 import java.time.LocalDateTime;
 

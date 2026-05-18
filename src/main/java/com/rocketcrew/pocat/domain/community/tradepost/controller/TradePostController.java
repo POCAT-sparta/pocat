@@ -3,7 +3,8 @@ package com.rocketcrew.pocat.domain.community.tradepost.controller;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.CreateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.UpdateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostResponse;
-import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostService;
+import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostCommandService;
+import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,13 @@ import java.util.List;
 @RequestMapping("/api/v1/trade-posts")
 public class TradePostController {
 
-    private final TradePostService tradePostService;
+    private final TradePostQueryService tradePostQueryService;
+    private final TradePostCommandService tradePostCommandService;
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostResponse>>> getPosts(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TradePostResponse> page = tradePostService.getPosts(pageable);
+        Page<TradePostResponse> page = tradePostQueryService.getPosts(pageable);
         List<TradePostResponse> content = page.getContent();
         PageResponseDto<TradePostResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -35,7 +37,7 @@ public class TradePostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(@PathVariable Long postId) {
-        TradePostResponse response = tradePostService.getPost(postId);
+        TradePostResponse response = tradePostQueryService.getPost(postId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -43,7 +45,7 @@ public class TradePostController {
     public ResponseEntity<ApiResponseDto<TradePostResponse>> createPost(
             @RequestParam Long userId,
             @RequestBody CreateTradePostRequest request) {
-        TradePostResponse response = tradePostService.createPost(userId, request);
+        TradePostResponse response = tradePostCommandService.createPost(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
@@ -53,7 +55,7 @@ public class TradePostController {
             @PathVariable Long postId,
             @RequestParam Long userId,
             @RequestBody UpdateTradePostRequest request) {
-        TradePostResponse response = tradePostService.updatePost(postId, userId, request);
+        TradePostResponse response = tradePostCommandService.updatePost(postId, userId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -61,7 +63,7 @@ public class TradePostController {
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
             @PathVariable Long postId,
             @RequestParam Long userId) {
-        tradePostService.deletePost(postId, userId);
+        tradePostCommandService.deletePost(postId, userId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }

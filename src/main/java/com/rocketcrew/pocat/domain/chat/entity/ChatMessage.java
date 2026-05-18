@@ -6,8 +6,8 @@ import lombok.*;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-@AllArgsConstructor
 @Entity
 @Table(name = "chat_messages")
 public class ChatMessage extends BaseEntity {

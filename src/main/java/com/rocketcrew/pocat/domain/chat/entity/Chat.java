@@ -1,13 +1,14 @@
 package com.rocketcrew.pocat.domain.chat.entity;
 
+import com.rocketcrew.pocat.domain.chat.entity.enums.ChatStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-@AllArgsConstructor
 @Entity
 @Table(name = "chats")
 public class Chat extends BaseEntity {

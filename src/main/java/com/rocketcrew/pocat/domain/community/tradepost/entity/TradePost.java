@@ -6,8 +6,8 @@ import lombok.*;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-@AllArgsConstructor
 @Entity
 @Table(name = "trade_posts")
 public class TradePost extends BaseEntity {

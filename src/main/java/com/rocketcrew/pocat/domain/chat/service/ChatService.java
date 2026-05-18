@@ -6,7 +6,7 @@ import com.rocketcrew.pocat.domain.chat.dto.response.ChatMessageResponse;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatResponse;
 import com.rocketcrew.pocat.domain.chat.entity.Chat;
 import com.rocketcrew.pocat.domain.chat.entity.ChatMessage;
-import com.rocketcrew.pocat.domain.chat.entity.ChatStatus;
+import com.rocketcrew.pocat.domain.chat.entity.enums.ChatStatus;
 import com.rocketcrew.pocat.domain.chat.repository.ChatMessageRepository;
 import com.rocketcrew.pocat.domain.chat.repository.ChatRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
