@@ -5,12 +5,13 @@ import com.rocketcrew.pocat.domain.auth.dto.request.ReissueRequest;
 import com.rocketcrew.pocat.domain.auth.dto.request.SignupRequest;
 import com.rocketcrew.pocat.domain.auth.dto.response.SignupResponse;
 import com.rocketcrew.pocat.domain.auth.dto.response.TokenResponse;
-import com.rocketcrew.pocat.domain.user.entity.Role;
 import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.jwt.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,7 +40,7 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
                 .phone(request.phone())
-                .role(Role.USER)
+                .userRole(UserRole.USER)
                 .build();
 
         userRepository.save(user);
@@ -93,7 +94,7 @@ public class AuthService {
     }
 
     private TokenResponse issueTokens(User user) {
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole().name());
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUserRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         long refreshExpiration = jwtUtil.getRefreshTokenExpiration();
