@@ -1,12 +1,11 @@
 package com.rocketcrew.pocat.domain.order.snapshot.entity;
 
+import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.annotations.SQLDelete;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -14,12 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "order_snapshots")
-@EntityListeners(AuditingEntityListener.class)
-public class OrderSnapshot {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@SQLDelete(sql = "UPDATE order_snapshots SET deleted_at = NOW() WHERE id = ?")
+public class OrderSnapshot extends BaseEntity {
 
     @Column(name = "order_id", nullable = false)
     private Long orderId;
@@ -38,8 +33,4 @@ public class OrderSnapshot {
 
     @Column(name = "snapshot_json", columnDefinition = "TEXT")
     private String snapshotJson;
-
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
 }

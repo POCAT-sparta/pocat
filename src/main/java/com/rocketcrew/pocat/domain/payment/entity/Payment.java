@@ -1,9 +1,9 @@
 package com.rocketcrew.pocat.domain.payment.entity;
 
+import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.annotations.SQLDelete;
 
 import java.time.LocalDateTime;
 
@@ -13,12 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "payments")
-@EntityListeners(AuditingEntityListener.class)
-public class Payment {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@SQLDelete(sql = "UPDATE payments SET deleted_at = NOW() WHERE id = ?")
+public class Payment extends BaseEntity {
 
     @Column(name = "order_id", nullable = false)
     private Long orderId;
@@ -42,8 +38,4 @@ public class Payment {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
-
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
 }
