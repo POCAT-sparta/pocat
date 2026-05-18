@@ -1,5 +1,8 @@
 package com.rocketcrew.pocat.domain.card.entity;
 
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,10 +21,10 @@ public class Card extends BaseEntity {
     @Column(name = "tcgdex_id", length = 100)
     private String tcgdexId;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(length = 100)
+    @Column(name = "series", length = 100)
     private String series;
 
     @Column(name = "set_name", length = 100)
@@ -30,22 +33,22 @@ public class Card extends BaseEntity {
     @Column(name = "card_number", length = 20)
     private String cardNumber;
 
-    @Column(length = 50)
+    @Column(name = "rarity", length = 50)
     private String rarity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "grade", nullable = false, length = 20)
     private CardGrade grade;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "source", nullable = false, length = 20)
     private CardSource source;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     private CardStatus status;
 
     public void update(String tcgdexId, String name, String series, String setName,
