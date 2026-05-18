@@ -2,8 +2,12 @@ package com.rocketcrew.pocat.domain.community.tradepost.controller;
 
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.CreateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.UpdateTradePostRequest;
+import com.rocketcrew.pocat.domain.community.tradepost.dto.response.CreateTradePost;
+import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostListResponse;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostResponse;
-import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostService;
+import com.rocketcrew.pocat.domain.community.tradepost.dto.response.UpdateTradePostResponse;
+import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostCommandService;
+import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -19,49 +23,50 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/trade-posts")
+@RequestMapping("/api/v1/posts/trade")
 public class TradePostController {
 
-    private final TradePostService tradePostService;
+    private final TradePostQueryService tradePostQueryService;
+    private final TradePostCommandService tradePostCommandService;
 
-    @GetMapping
-    public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostResponse>>> getPosts(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TradePostResponse> page = tradePostService.getPosts(pageable);
-        List<TradePostResponse> content = page.getContent();
-        PageResponseDto<TradePostResponse> pageResponse = PageResponseDto.of(page, content);
+    @GetMapping //TODO keyword 등 Query Parameters 추가
+    public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostListResponse>>> getPosts(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<TradePostListResponse> page = tradePostQueryService.getPosts(pageable);
+        List<TradePostListResponse> content = page.getContent();
+        PageResponseDto<TradePostListResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(@PathVariable Long postId) {
-        TradePostResponse response = tradePostService.getPost(postId);
+    @GetMapping("/{tradePostId}")
+    public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(@PathVariable Long tradePostId) {
+        TradePostResponse response = tradePostQueryService.getPost(tradePostId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponseDto<TradePostResponse>> createPost(
+    public ResponseEntity<ApiResponseDto<CreateTradePost>> createPost(
             @RequestParam Long userId,
             @RequestBody CreateTradePostRequest request) {
-        TradePostResponse response = tradePostService.createPost(userId, request);
+        CreateTradePost response = tradePostCommandService.createPost(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponseDto<TradePostResponse>> updatePost(
-            @PathVariable Long postId,
+    @PatchMapping("/{tradePostId}")
+    public ResponseEntity<ApiResponseDto<UpdateTradePostResponse>> updatePost(
+            @PathVariable Long tradePostId,
             @RequestParam Long userId,
             @RequestBody UpdateTradePostRequest request) {
-        TradePostResponse response = tradePostService.updatePost(postId, userId, request);
+        UpdateTradePostResponse response = tradePostCommandService.updatePost(tradePostId, userId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @DeleteMapping("/{postId}")
+    @DeleteMapping("/{tradePostId}")
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
-            @PathVariable Long postId,
+            @PathVariable Long tradePostId,
             @RequestParam Long userId) {
-        tradePostService.deletePost(postId, userId);
+        tradePostCommandService.deletePost(tradePostId, userId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }

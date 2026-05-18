@@ -6,21 +6,21 @@ import lombok.*;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Builder
 @AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "chat_messages")
 public class ChatMessage extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(name="sender_id", nullable = false)
     private Long senderId;
 
-    @Column(nullable = false)
+    @Column(name="chat_id", nullable = false)
     private Long chatId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
-    @Column(nullable = false)
+    @Column(name = "is_read", nullable = false)
     private boolean isRead;
 }
