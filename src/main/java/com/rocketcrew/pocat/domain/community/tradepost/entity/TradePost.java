@@ -15,19 +15,19 @@ public class TradePost extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false)
+    @Column(name="title", nullable = false)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name="content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false)
+    @Column(name="price", nullable = false)
     private Long price;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name="thumbnail", columnDefinition = "TEXT")
     private String thumbnail;
 
-    @Column(nullable = false)
+    @Column(name="view_count",nullable = false)
     private int viewCount;
 
     public void update(String title, String content, Long price, String thumbnail) {

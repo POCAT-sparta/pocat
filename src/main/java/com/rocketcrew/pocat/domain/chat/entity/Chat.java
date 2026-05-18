@@ -13,17 +13,17 @@ import lombok.*;
 @Table(name = "chats")
 public class Chat extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(name="owner_id", nullable = false)
     private Long ownerId;
 
-    @Column(nullable = false)
+    @Column(name="guest_id", nullable = false)
     private Long guestId;
 
-    @Column(nullable = false)
+    @Column(name="post_id", nullable = false)
     private Long postId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name="status", nullable = false, length = 20)
     private ChatStatus status;
 
     public void updateStatus(ChatStatus status) {
