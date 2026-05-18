@@ -3,7 +3,8 @@ package com.rocketcrew.pocat.domain.user.controller;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
-import com.rocketcrew.pocat.domain.user.service.UserService;
+import com.rocketcrew.pocat.domain.user.service.UserCommandService;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +23,12 @@ import java.util.List;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    private final UserService userService;
+    private final UserQueryService userQueryService;
+    private final UserCommandService userCommandService;
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponseDto<UserResponse>> getUserById(@PathVariable Long userId) {
-        UserResponse response = userService.getUserById(userId);
+        UserResponse response = userQueryService.getUserById(userId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -34,7 +36,7 @@ public class UserController {
     public ResponseEntity<ApiResponseDto<UserResponse>> updateUser(
             @PathVariable Long userId,
             @RequestBody UpdateUserRequest request) {
-        UserResponse response = userService.updateUser(userId, request);
+        UserResponse response = userCommandService.updateUser(userId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -42,14 +44,14 @@ public class UserController {
     public ResponseEntity<ApiResponseDto<UserResponse>> updateBank(
             @PathVariable Long userId,
             @RequestBody UpdateBankRequest request) {
-        UserResponse response = userService.updateBank(userId, request);
+        UserResponse response = userCommandService.updateBank(userId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<UserResponse>>> getAllUsers(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<UserResponse> page = userService.getAllUsers(pageable);
+        Page<UserResponse> page = userQueryService.getAllUsers(pageable);
         List<UserResponse> content = page.getContent();
         PageResponseDto<UserResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));

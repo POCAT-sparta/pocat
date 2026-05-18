@@ -11,21 +11,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class CommentService {
+public class CommentCommandService {
 
     private final CommentRepository commentRepository;
-
-    @Transactional(readOnly = true)
-    public List<CommentResponse> getCommentsByPost(Long postId) {
-        return commentRepository.findByPostId(postId).stream()
-                .map(CommentResponse::from)
-                .toList();
-    }
 
     public CommentResponse createComment(Long userId, CreateCommentRequest request) {
         Comment comment = Comment.builder()
