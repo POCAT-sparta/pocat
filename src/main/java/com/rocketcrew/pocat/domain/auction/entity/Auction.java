@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "auctions")
 public class Auction extends BaseEntity {
@@ -46,37 +48,6 @@ public class Auction extends BaseEntity {
 
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
     private String cancelReason;
-
-    @Builder
-    public Auction(
-            Long cardId,
-            Long sellerId,
-            Long highestBidderId,
-            String title,
-            String description,
-            String cardImageUrl,
-            Long startingPrice,
-            Long buyoutPrice,
-            Long highestPrice,
-            AuctionStatus status,
-            LocalDateTime startedAt,
-            LocalDateTime endedAt,
-            String cancelReason
-    ) {
-        this.cardId = cardId;
-        this.sellerId = sellerId;
-        this.highestBidderId = highestBidderId;
-        this.title = title;
-        this.description = description;
-        this.cardImageUrl = cardImageUrl;
-        this.startingPrice = startingPrice;
-        this.buyoutPrice = buyoutPrice;
-        this.highestPrice = highestPrice;
-        this.status = status;
-        this.startedAt = startedAt;
-        this.endedAt = endedAt;
-        this.cancelReason = cancelReason;
-    }
 
     public void cancel(String cancelReason) {
         this.status = AuctionStatus.CANCELLED;
