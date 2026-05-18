@@ -1,0 +1,267 @@
+CREATE TABLE `settlements` (
+`id`	BIGINT	NULL,
+`order_id`	BIGINT	NOT NULL,
+`seller_id`	BIGINT	NULL,
+`total_price`	BIGINT	NOT NULL,
+`platform_fee`	BIGINT	NOT NULL,
+`seller_amount`	BIGINT	NOT NULL	COMMENT '판매자 실수령액',
+`status`	VARCHAR(30)	NOT NULL	COMMENT 'PENDING / COMPLETED',
+`settled_at`	TIMESTAMP	NOT NULL	COMMENT '정산 완료 시각',
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `comments` (
+`id`	BIGINT	NOT NULL,
+`user_id`	BIGINT	NOT NULL,
+`post_id`	BIGINT	NOT NULL,
+`parent_id`	BIGINT	NOT NULL,
+`content`	TEXT	NOT NULL,
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `notifications` (
+`id`	BIGINT	NULL,
+`user_id`	BIGINT	NOT NULL,
+`type`	VARCHAR(50)	NOT NULL	COMMENT 'BID_OUTBID/AUCTION_WON/AUCTION_LOST/INSPECTION_PASSED/INSPECTION_FAILED/SHIPPING/SHIPPING_COMPLETED',
+`title`	VARCHAR(255)	NOT NULL,
+`message`	TEXT	NOT NULL,
+`is_read`	BOOLEAN	NOT NULL,
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `order_snapshots` (
+`id`	BIGINT	NULL,
+`order_id`	BIGINT	NOT NULL,
+`final_price`	DECIMAL(12,2)	NOT NULL,
+`fee_rate`	DECIMAL(5,2)	NOT NULL,
+`fee`	DECIMAL(12,2)	NOT NULL,
+`seller_amount`	DECIMAL(12,2)	NOT NULL	COMMENT '판매자 실수령액',
+`snapshot_json`	TEXT	NULL,
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `users` (
+`id`	BIGINT	NULL,
+`email`	VARCHAR(255)	NOT NULL,
+`password`	VARCHAR(255)	NOT NULL,
+`nickname`	VARCHAR(100)	NOT NULL,
+`phone`	VARCHAR(20)	NULL,
+`role`	VARCHAR(20)	NOT NULL	COMMENT 'USER/ADMIN',
+`bank_name`	VARCHAR(50)	NULL	COMMENT '정산용 은행명',
+`bank_account`	VARCHAR(50)	NULL	COMMENT '정산용 계좌번호',
+`billing_key`	VARCHAR(255)	NULL	COMMENT '경매 자동결제용 빌링키',
+`address`	VARCHAR(255)	NULL,
+`unpaid_strike`	INT	NOT NULL	COMMENT '패널티',
+`is_bid_blocked`	BOOLEAN	NOT NULL	COMMENT '제재 여부',
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `orders` (
+`id`	BIGINT	NULL,
+`auction_id`	BIGINT	NULL,
+`card_id`	BIGINT	NULL,
+`seller_id`	BIGINT	NULL,
+`buyer_id`	BIGINT	NOT NULL,
+`order_uid`	VARCHAR(50)	NOT NULL,
+`final_price`	BIGINT	NOT NULL,
+`status`	VARCHAR(30)	NOT NULL	COMMENT 'PAYMENT_PENDING/CANCELLED/PAYMENT_COMPLETED/SHIPPING/COMPLETED/REFUNDED',
+`delivery_status`	VARCHAR(20)	NULL	COMMENT 'PREPARING/SHIPPING/COMPLETED',
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `free_posts` (
+`id`	BIGINT	NOT NULL,
+`user_id`	BIGINT	NOT NULL,
+`title`	VARCHAR(255)	NOT NULL,
+`content`	TEXT	NOT NULL,
+`view_count`	INT	NOT NULL,
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `cards` (
+`id`	BIGINT	NULL,
+`user_id`	BIGINT	NOT NULL,
+`tcgdex_id`	VARCHAR(100)	NULL	COMMENT 'TCGdex 외부 ID',
+`name`	VARCHAR(255)	NOT NULL,
+`series`	VARCHAR(100)	NULL,
+`set_name`	VARCHAR(100)	NULL,
+`card_number`	VARCHAR(20)	NULL	COMMENT '001 등 카드번호',
+`rarity`	VARCHAR(50)	NULL,
+`grade`	VARCHAR(20)	NOT NULL	COMMENT 'PSA_10/PSA_9/BGS_10',
+`image_url`	VARCHAR(500)	NULL,
+`source`	VARCHAR(20)	NOT NULL	COMMENT 'TCGDEX/MANUAL',
+`status`	VARCHAR(20)	NOT NULL	COMMENT 'ACTIVE/PENDING',
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `auction_snapshots` (
+`id`	BIGINT	NULL,
+`auction_id`	BIGINT	NOT NULL,
+`final_price`	BIGINT	NOT NULL,
+`snapshot_json`	TEXT	NULL,
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `payments` (
+`id`	BIGINT	NULL,
+`order_id`	BIGINT	NOT NULL,
+`payment_uid`	VARCHAR(50)	NOT NULL,
+`amount`	BIGINT	NOT NULL,
+`payment_type`	VARCHAR(20)	NOT NULL	COMMENT 'BILLING_KEY/PG_DIRECT',
+`payment_method`	VARCHAR(50)	NOT NULL	COMMENT 'CARD/KAKAO_PAY/TOSS etc',
+`status`	VARCHAR(20)	NOT NULL	COMMENT 'PENDING/COMPLETED/FAILED/REFUNDED',
+`paid_at`	TIMESTAMP	NULL,
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `trade_posts` (
+`id`	BIGINT	NULL,
+`user_id`	BIGINT	NOT NULL,
+`title`	VARCHAR(255)	NOT NULL,
+`content`	TEXT	NOT NULL,
+`price`	BIGINT	NOT NULL,
+`thumbnail`	TEXT	NULL,
+`view_count`	INT	NOT NULL,
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `auctions` (
+`id`	BIGINT	NULL,
+`card_id`	BIGINT	NOT NULL,
+`seller_id`	BIGINT	NOT NULL,
+`highest_bidder_id`	BIGINT	NULL,
+`title`	VARCHAR(255)	NOT NULL,
+`description`	TEXT	NULL,
+`card_image_url`	VARCHAR(500)	NULL,
+`starting_price`	BIGINT	NOT NULL,
+`buyout_price`	BIGINT	NULL	COMMENT '즉시구매가',
+`highest_price`	BIGINT	NULL	COMMENT '현재 최고 입찰가',
+`status`	VARCHAR(30)	NOT NULL	COMMENT 'PENDING/INSPECTING/REJECTED/ACTIVE/ENDED/NO_BIDDER/CANCELLED/PAYMENT_PENDING',
+`started_at`	TIMESTAMP	NOT NULL,
+`ended_at`	TIMESTAMP	NOT NULL,
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL,
+`candel_reason`	TEXT	NULL
+);
+
+CREATE TABLE `chat_messages` (
+`id`	BIGINT	NULL,
+`sender_id`	BIGINT	NOT NULL,
+`chat_id`	BIGINT	NOT NULL,
+`message`	TEXT	NOT NULL,
+`is_read`	BOOLEAN	NOT NULL,
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `likes` (
+`id`	BIGINT	NULL,
+`user_id`	BIGINT	NOT NULL,
+`auction_id`	BIGINT	NULL,
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `refunds` (
+`id`	BIGINT	NULL,
+`order_id`	BIGINT	NOT NULL,
+`payment_id`	BIGINT	NOT NULL,
+`amount`	BIGINT	NOT NULL,
+`reason`	VARCHAR(100)	NOT NULL,
+`reject_reason`	VARCHAR(100)	NULL,
+`status`	VARCHAR(20)	NOT NULL	COMMENT 'REQUESTED/FAILED/COMPLETED/REJECTED',
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `auction_bids` (
+`id`	BIGINT	NULL,
+`user_id`	BIGINT	NOT NULL,
+`auction_id`	BIGINT	NOT NULL,
+`bid_price`	BIGINT	NOT NULL,
+`status`	VARCHAR(20)	NOT NULL	COMMENT 'ACTIVE/WON/LOST/CANCELLED',
+`created_at`	TIMESTAMP	NOT NULL
+);
+
+CREATE TABLE `chats` (
+`id`	BIGINT	NULL,
+`owner_id`	BIGINT	NOT NULL,
+`guest_id`	BIGINT	NOT NULL,
+`post_id`	BIGINT	NOT NULL,
+`status`	VARCHAR(20)	NOT NULL	COMMENT 'ACTIVE/COMPLETED/CANCELLED',
+`created_at`	TIMESTAMP	NOT NULL,
+`updated_at`	TIMESTAMP	NOT NULL
+);
+
+ALTER TABLE `settlements` ADD CONSTRAINT `PK_SETTLEMENTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `comments` ADD CONSTRAINT `PK_COMMENTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `notifications` ADD CONSTRAINT `PK_NOTIFICATIONS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `order_snapshots` ADD CONSTRAINT `PK_ORDER_SNAPSHOTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `users` ADD CONSTRAINT `PK_USERS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `orders` ADD CONSTRAINT `PK_ORDERS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `free_posts` ADD CONSTRAINT `PK_FREE_POSTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `cards` ADD CONSTRAINT `PK_CARDS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `auction_snapshots` ADD CONSTRAINT `PK_AUCTION_SNAPSHOTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `payments` ADD CONSTRAINT `PK_PAYMENTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `trade_posts` ADD CONSTRAINT `PK_TRADE_POSTS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `auctions` ADD CONSTRAINT `PK_AUCTIONS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `chat_messages` ADD CONSTRAINT `PK_CHAT_MESSAGES` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `likes` ADD CONSTRAINT `PK_LIKES` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `refunds` ADD CONSTRAINT `PK_REFUNDS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `auction_bids` ADD CONSTRAINT `PK_AUCTION_BIDS` PRIMARY KEY (
+`id`
+);
+
+ALTER TABLE `chats` ADD CONSTRAINT `PK_CHATS` PRIMARY KEY (
+`id`
+);
+
