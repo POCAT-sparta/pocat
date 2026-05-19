@@ -14,7 +14,9 @@ import org.hibernate.annotations.SQLDelete;
 @Builder
 @AllArgsConstructor
 @Entity
-@Table(name = "cards")
+@Table(name = "cards", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"tcgdex_id"})
+})
 @SQLDelete(sql = "UPDATE cards SET deleted_at = NOW() WHERE id = ?")
 public class Card extends BaseEntity {
 

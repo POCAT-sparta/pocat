@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,11 +39,6 @@ public class CardDataInit implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        if (cardRepository.count() > 0) {
-            log.info("[CardDataInit] 카드 데이터가 이미 존재합니다. 초기화를 건너뜁니다.");
-            return;
-        }
-
         Long userId = userRepository.findFirstByOrderByIdAsc()
                 .map(user -> user.getId())
                 .orElse(null);
@@ -72,6 +68,11 @@ public class CardDataInit implements ApplicationRunner {
                 attempted++;
 
                 String tcgdexId = cardNode.path("id").asText();
+
+                if (cardRepository.existsByTcgdexId(tcgdexId)) {
+                    log.debug("[CardDataInit] 이미 존재하는 카드 스킵: {}", tcgdexId);
+                    continue;
+                }
 
                 // 개별 카드 조회 → rarity, category 획득
                 try {
@@ -109,8 +110,12 @@ public class CardDataInit implements ApplicationRunner {
                 }
             }
 
-            saveCards(cardList);
-            log.info("[CardDataInit] 카드 {}개 초기화 완료 (시도: {})", cardList.size(), attempted);
+            if (!cardList.isEmpty()) {
+                saveCards(cardList);
+                log.info("[CardDataInit] 카드 {}개 초기화 완료 (시도: {})", cardList.size(), attempted);
+            } else {
+                log.info("[CardDataInit] 신규 카드 없음. 초기화 건너뜁니다.");
+            }
 
         } catch (Exception e) {
             // 선택적 초기화이므로 실패해도 애플리케이션 시작은 계속 진행
@@ -120,7 +125,12 @@ public class CardDataInit implements ApplicationRunner {
 
     @Transactional
     public void saveCards(List<Card> cards) {
-        cardRepository.saveAll(cards);
+        try {
+            cardRepository.saveAll(cards);
+        } catch (DataIntegrityViolationException e) {
+            // 다중 인스턴스 동시 기동 시 유니크 제약 위반 무시 (최종 방어선)
+            log.warn("[CardDataInit] 중복 카드 감지, 일부 삽입 건너뜀: {}", e.getMessage());
+        }
     }
 
     private RestTemplate createRestTemplate() {

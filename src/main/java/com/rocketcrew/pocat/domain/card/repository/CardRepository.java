@@ -13,4 +13,6 @@ public interface CardRepository extends JpaRepository<Card, Long>, CardRepositor
     Page<Card> findByStatus(CardStatus status, Pageable pageable);
 
     Page<Card> findByUserIdAndStatus(Long userId, CardStatus status, Pageable pageable);
+
+    boolean existsByTcgdexId(String tcgdexId);
 }
