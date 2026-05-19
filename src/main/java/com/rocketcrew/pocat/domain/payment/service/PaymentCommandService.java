@@ -192,6 +192,6 @@ public class PaymentCommandService {
     }
 
     private String generatePaymentUid() {
-        return "pocat-payment-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        return "pocat-payment-" + UUID.randomUUID().toString().replace("-", "");
     }
 }
