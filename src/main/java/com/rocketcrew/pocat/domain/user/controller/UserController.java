@@ -10,6 +10,7 @@ import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,7 +45,7 @@ public class UserController {
     @PostMapping("/api/v1/users/me/billing-key")
     public ResponseEntity<ApiResponseDto<Void>> registerBillingKey(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody RegisterBillingKeyRequest request) {
+            @Valid @RequestBody RegisterBillingKeyRequest request) {
         userCommandService.registerBillingKey(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
@@ -58,7 +59,7 @@ public class UserController {
     @PutMapping("/api/v1/users/me/billing-key")
     public ResponseEntity<ApiResponseDto<Void>> updateBillingKey(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody UpdateBillingKeyRequest request) {
+            @Valid @RequestBody UpdateBillingKeyRequest request) {
         userCommandService.updateBillingKey(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }

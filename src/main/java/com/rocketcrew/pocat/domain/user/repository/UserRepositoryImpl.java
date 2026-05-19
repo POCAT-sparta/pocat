@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.user.repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rocketcrew.pocat.domain.user.entity.QUser;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -33,10 +35,12 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
             builder.and(user.isBidBlocked.eq(isBidBlocked));
         }
 
+        OrderSpecifier<?>[] orders = toOrderSpecifiers(pageable.getSort(), user);
+
         List<User> content = queryFactory
                 .selectFrom(user)
                 .where(builder)
-                .orderBy(user.createdAt.desc())
+                .orderBy(orders)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -48,5 +52,22 @@ public class UserRepositoryImpl implements UserRepositoryCustom {
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    private OrderSpecifier<?>[] toOrderSpecifiers(Sort sort, QUser user) {
+        if (!sort.isSorted()) {
+            return new OrderSpecifier[]{user.createdAt.desc()};
+        }
+        return sort.stream()
+                .map(order -> {
+                    boolean desc = order.isDescending();
+                    return switch (order.getProperty()) {
+                        case "nickname" -> desc ? user.nickname.desc() : user.nickname.asc();
+                        case "unpaidStrike" -> desc ? user.unpaidStrike.desc() : user.unpaidStrike.asc();
+                        case "email" -> desc ? user.email.desc() : user.email.asc();
+                        default -> desc ? user.createdAt.desc() : user.createdAt.asc();
+                    };
+                })
+                .toArray(OrderSpecifier[]::new);
     }
 }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -39,10 +40,13 @@ public class FreePostQueryService {
                 .stream()
                 .collect(Collectors.toMap(User::getId, User::getNickname));
 
+        List<Long> postIds = posts.getContent().stream().map(FreePost::getId).toList();
+        Map<Long, Integer> commentCountMap = buildCommentCountMap(postIds);
+
         return posts.map(post -> FreePostResponse.of(
                 post,
                 nicknameMap.getOrDefault(post.getUserId(), ""),
-                commentRepository.countByFreePostId(post.getId())
+                commentCountMap.getOrDefault(post.getId(), 0)
         ));
     }
 
@@ -66,10 +70,25 @@ public class FreePostQueryService {
                 .map(User::getNickname)
                 .orElse("");
 
+        List<Long> postIds = posts.getContent().stream().map(FreePost::getId).toList();
+        Map<Long, Integer> commentCountMap = buildCommentCountMap(postIds);
+
         return posts.map(post -> FreePostResponse.of(
                 post,
                 nickname,
-                commentRepository.countByFreePostId(post.getId())
+                commentCountMap.getOrDefault(post.getId(), 0)
         ));
+    }
+
+    private Map<Long, Integer> buildCommentCountMap(List<Long> postIds) {
+        if (postIds.isEmpty()) {
+            return Map.of();
+        }
+        return commentRepository.findCommentCountsByFreePostIds(postIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Long) row[1]).intValue()
+                ));
     }
 }

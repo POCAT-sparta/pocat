@@ -1,3 +1,5 @@
 package com.rocketcrew.pocat.domain.user.dto.request;
 
-public record UpdateBillingKeyRequest(String billingKey) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record UpdateBillingKeyRequest(@NotBlank String billingKey) {}

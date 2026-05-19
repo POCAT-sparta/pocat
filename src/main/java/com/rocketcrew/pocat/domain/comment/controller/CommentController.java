@@ -9,6 +9,7 @@ import com.rocketcrew.pocat.domain.comment.service.CommentQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +38,7 @@ public class CommentController {
     @PostMapping
     public ResponseEntity<ApiResponseDto<CommentResponse>> createComment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody CreateCommentRequest request) {
+            @Valid @RequestBody CreateCommentRequest request) {
         CommentResponse response = commentCommandService.createComment(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

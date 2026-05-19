@@ -37,9 +37,6 @@ public class UserCommandService {
     }
 
     public void registerBillingKey(Long userId, RegisterBillingKeyRequest request) {
-        if (request.billingKey() == null || request.billingKey().isBlank()) {
-            throw new UserException(ErrorCode.INVALID_CONTENT);
-        }
         int updated = userRepository.updateBillingKeyIfNull(userId, request.billingKey());
         if (updated == 0) {
             if (!userRepository.existsById(userId)) {
@@ -59,9 +56,6 @@ public class UserCommandService {
     }
 
     public void updateBillingKey(Long userId, UpdateBillingKeyRequest request) {
-        if (request.billingKey() == null || request.billingKey().isBlank()) {
-            throw new UserException(ErrorCode.INVALID_CONTENT);
-        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
         if (user.getBillingKey() == null) {

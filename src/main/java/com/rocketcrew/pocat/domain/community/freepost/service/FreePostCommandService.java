@@ -23,12 +23,6 @@ public class FreePostCommandService {
     private final CommentRepository commentRepository;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
-        if (request.title() == null || request.title().isBlank()) {
-            throw new FreePostException(ErrorCode.INVALID_CONTENT);
-        }
-        if (request.content() == null || request.content().isBlank()) {
-            throw new FreePostException(ErrorCode.INVALID_CONTENT);
-        }
         FreePost freePost = FreePost.builder()
                 .userId(userId)
                 .title(request.title())

@@ -56,7 +56,8 @@ public class FreePostRepositoryImpl implements FreePostRepositoryCustom {
             boolean desc = order.isDescending();
             return switch (order.getProperty()) {
                 case "viewCount" -> desc ? freePost.viewCount.desc() : freePost.viewCount.asc();
-                default -> desc ? freePost.createdAt.desc() : freePost.createdAt.asc();
+                case "createdAt" -> desc ? freePost.createdAt.desc() : freePost.createdAt.asc();
+                default -> throw new IllegalArgumentException("지원하지 않는 정렬 필드입니다: " + order.getProperty());
             };
         }
         return freePost.createdAt.desc();
