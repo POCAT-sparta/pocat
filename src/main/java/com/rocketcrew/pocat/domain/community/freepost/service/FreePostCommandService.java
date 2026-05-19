@@ -65,8 +65,9 @@ public class FreePostCommandService {
     }
 
     public void incrementViewCount(Long postId) {
-        FreePost freePost = freePostRepository.findById(postId)
-                .orElseThrow(() -> new FreePostException(ErrorCode.FREE_POST_NOT_FOUND));
-        freePost.incrementViewCount();
+        int updated = freePostRepository.incrementViewCount(postId);
+        if (updated == 0) {
+            throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
+        }
     }
 }

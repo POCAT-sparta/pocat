@@ -33,15 +33,16 @@ public class UserCommandService {
     }
 
     public void registerBillingKey(Long userId, RegisterBillingKeyRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        if (user.getBillingKey() != null) {
-            throw new UserException(ErrorCode.BILLING_KEY_ALREADY_EXISTS);
-        }
         if (request.billingKey() == null || request.billingKey().isBlank()) {
             throw new UserException(ErrorCode.INVALID_CONTENT);
         }
-        user.registerBillingKey(request.billingKey());
+        if (!userRepository.existsById(userId)) {
+            throw new UserException(ErrorCode.USER_NOT_FOUND);
+        }
+        int updated = userRepository.updateBillingKeyIfNull(userId, request.billingKey());
+        if (updated == 0) {
+            throw new UserException(ErrorCode.BILLING_KEY_ALREADY_EXISTS);
+        }
     }
 
     public void deleteBillingKey(Long userId) {

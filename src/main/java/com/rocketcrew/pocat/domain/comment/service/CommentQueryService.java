@@ -27,6 +27,10 @@ public class CommentQueryService {
                 .map(Comment::getId)
                 .toList();
 
+        if (rootIds.isEmpty()) {
+            return rootComments.map(CommentTreeResponse::from);
+        }
+
         Map<Long, List<CommentTreeResponse>> childMap = commentRepository.findByParentIdIn(rootIds)
                 .stream()
                 .collect(Collectors.groupingBy(
