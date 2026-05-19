@@ -60,4 +60,18 @@ public class CardCommandService {
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         cardRepository.delete(card);
     }
+
+    public CardResponse approveCard(Long id) {
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        card.approve();
+        return CardResponse.from(card);
+    }
+
+    public CardResponse rejectCard(Long id, String rejectReason) {
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        card.reject(rejectReason);
+        return CardResponse.from(card);
+    }
 }

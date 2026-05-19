@@ -1,7 +1,11 @@
 package com.rocketcrew.pocat.domain.card.controller;
 
+import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.service.CardCommandService;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -29,8 +33,12 @@ public class CardController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getCards(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) CardGrade grade,
+            @RequestParam(required = false) CardCategory category,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<CardResponse> page = cardQueryService.getCards(pageable);
+        CardSearchCondition condition = new CardSearchCondition(keyword, grade, category, CardStatus.ACTIVE);
+        Page<CardResponse> page = cardQueryService.getCards(condition, pageable);
         List<CardResponse> content = page.getContent();
         PageResponseDto<CardResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -49,5 +57,15 @@ public class CardController {
         CardResponse response = cardCommandService.createCard(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
+    }
+
+    @GetMapping("/my-requests")
+    public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getMyRequests(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) CardStatus status,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<CardResponse> page = cardQueryService.getMyRequests(userDetails.getUserId(), status, pageable);
+        PageResponseDto<CardResponse> pageResponse = PageResponseDto.of(page, page.getContent());
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 }

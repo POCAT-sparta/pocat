@@ -61,6 +61,18 @@ public class Card extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private CardStatus status;
 
+    @Column(name = "reject_reason", columnDefinition = "TEXT")
+    private String rejectReason;
+
+    public void approve() {
+        this.status = CardStatus.ACTIVE;
+    }
+
+    public void reject(String rejectReason) {
+        this.status = CardStatus.REJECTED;
+        this.rejectReason = rejectReason;
+    }
+
     public void update(String tcgdexId, String name, String series, String setId, String setName,
                        String cardNumber, String rarity, CardCategory category, CardGrade grade,
                        String imageUrl, CardSource source) {
