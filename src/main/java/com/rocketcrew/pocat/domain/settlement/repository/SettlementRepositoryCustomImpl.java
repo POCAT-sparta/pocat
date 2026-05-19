@@ -53,6 +53,7 @@ public class SettlementRepositoryCustomImpl implements SettlementRepositoryCusto
                 .join(order).on(settlement.orderId.eq(order.id))
                 .join(card).on(order.cardId.eq(card.id))
                 .where(where)
+                .orderBy(settlement.createdAt.desc(), settlement.settlementUid.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
