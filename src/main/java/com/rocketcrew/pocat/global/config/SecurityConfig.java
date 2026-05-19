@@ -1,6 +1,6 @@
 package com.rocketcrew.pocat.global.config;
 
-import com.rocketcrew.pocat.global.jwt.JwtUtil;
+import com.rocketcrew.pocat.global.security.JwtUtil;
 import com.rocketcrew.pocat.global.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
