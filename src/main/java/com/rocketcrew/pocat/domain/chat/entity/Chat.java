@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.chat.entity.enums.ChatStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -11,6 +12,7 @@ import lombok.*;
 @Builder
 @Entity
 @Table(name = "chats")
+@SQLDelete(sql = "UPDATE chats SET deleted_at = NOW() WHERE id = ?")
 public class Chat extends BaseEntity {
 
     @Column(name="owner_id", nullable = false)

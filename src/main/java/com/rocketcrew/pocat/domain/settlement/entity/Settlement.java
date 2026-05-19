@@ -1,9 +1,9 @@
 package com.rocketcrew.pocat.domain.settlement.entity;
 
+import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.annotations.SQLDelete;
 
 import java.time.LocalDateTime;
 
@@ -13,12 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "settlements")
-@EntityListeners(AuditingEntityListener.class)
-public class Settlement {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@SQLDelete(sql = "UPDATE settlements SET deleted_at = NOW() WHERE id = ?")
+public class Settlement extends BaseEntity {
 
     @Column(name = "order_id", nullable = false)
     private Long orderId;
@@ -41,8 +37,4 @@ public class Settlement {
 
     @Column(name = "settled_at", nullable = false)
     private LocalDateTime settledAt;
-
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
 }

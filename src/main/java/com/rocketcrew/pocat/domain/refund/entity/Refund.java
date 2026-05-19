@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.refund.entity;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -10,6 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "refunds")
+@SQLDelete(sql = "UPDATE refunds SET deleted_at = NOW() WHERE id = ?")
 public class Refund extends BaseEntity {
 
     @Column(name = "order_id", nullable = false)
