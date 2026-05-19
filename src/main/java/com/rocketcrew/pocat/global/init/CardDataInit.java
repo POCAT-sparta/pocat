@@ -16,7 +16,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -123,13 +122,13 @@ public class CardDataInit implements ApplicationRunner {
         }
     }
 
-    @Transactional
     public void saveCards(List<Card> cards) {
-        try {
-            cardRepository.saveAll(cards);
-        } catch (DataIntegrityViolationException e) {
-            // 다중 인스턴스 동시 기동 시 유니크 제약 위반 무시 (최종 방어선)
-            log.warn("[CardDataInit] 중복 카드 감지, 일부 삽입 건너뜀: {}", e.getMessage());
+        for (Card card : cards) {
+            try {
+                cardRepository.save(card);
+            } catch (DataIntegrityViolationException e) {
+                log.warn("[CardDataInit] 중복 카드 감지, 삽입 건너뜀: {}", card.getTcgdexId());
+            }
         }
     }
 

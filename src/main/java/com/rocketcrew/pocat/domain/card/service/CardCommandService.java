@@ -20,6 +20,9 @@ public class CardCommandService {
     private final CardRepository cardRepository;
 
     public CardResponse createCard(Long userId, CreateCardRequest request) {
+        if (request.tcgdexId() != null && cardRepository.existsByTcgdexId(request.tcgdexId())) {
+            throw new CardException(ErrorCode.CARD_ALREADY_EXISTS);
+        }
         Card card = Card.builder()
                 .userId(userId)
                 .tcgdexId(request.tcgdexId())

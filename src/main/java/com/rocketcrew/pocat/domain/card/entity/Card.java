@@ -78,6 +78,9 @@ public class Card extends BaseEntity {
         if (this.status != CardStatus.PENDING) {
             throw new IllegalStateException("PENDING 상태에서만 거절할 수 있습니다.");
         }
+        if (rejectReason == null || rejectReason.isBlank()) {
+            throw new IllegalArgumentException("거절 사유는 필수입니다.");
+        }
         this.status = CardStatus.REJECTED;
         this.rejectReason = rejectReason;
     }
