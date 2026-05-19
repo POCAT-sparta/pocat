@@ -41,14 +41,15 @@ public class Payment extends BaseEntity {
     private LocalDateTime paidAt;
 
     public void complete(String paymentMethod, LocalDateTime paidAt) {
-        if (this.status != PaymentStatus.PENDING) {
-            throw new IllegalStateException("결제 완료 전이가 불가능한 결제 상태입니다: " + this.status);
-        }
         if (paymentMethod == null || paymentMethod.isBlank()) {
-            throw new IllegalArgumentException("결제 완료 시 paymentMethod는 필수입니다.");
+            throw new IllegalArgumentException("결제 수단은 필수입니다.");
         }
         if (paidAt == null) {
-            throw new IllegalArgumentException("결제 완료 시 paidAt은 필수입니다.");
+            throw new IllegalArgumentException("결제 완료 시각은 필수입니다.");
+        }
+        if (this.status != PaymentStatus.PENDING) {
+            throw new IllegalStateException(
+                    "결제 완료는 PENDING 상태에서만 가능합니다. 현재 상태: " + this.status);
         }
         this.status = PaymentStatus.COMPLETED;
         this.paymentMethod = paymentMethod;
@@ -57,14 +58,16 @@ public class Payment extends BaseEntity {
 
     public void fail() {
         if (this.status != PaymentStatus.PENDING) {
-            throw new IllegalStateException("결제 실패 전이가 불가능한 결제 상태입니다: " + this.status);
+            throw new IllegalStateException(
+                    "결제 실패는 PENDING 상태에서만 가능합니다. 현재 상태: " + this.status);
         }
         this.status = PaymentStatus.FAILED;
     }
 
     public void refund() {
         if (this.status != PaymentStatus.COMPLETED) {
-            throw new IllegalStateException("환불 전이가 불가능한 결제 상태입니다: " + this.status);
+            throw new IllegalStateException(
+                    "환불은 COMPLETED 상태에서만 가능합니다. 현재 상태: " + this.status);
         }
         this.status = PaymentStatus.REFUNDED;
     }
