@@ -6,12 +6,12 @@ import com.rocketcrew.pocat.domain.refund.entity.RefundStatus;
 import java.time.LocalDateTime;
 
 public record RefundResponse(
-        Long id,
+        Long refundId,
         Long orderId,
         Long paymentId,
         Long amount,
         String reason,
-        String rejectReason,
+        String rejectReason,    // 거절 시에만 채워짐
         RefundStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

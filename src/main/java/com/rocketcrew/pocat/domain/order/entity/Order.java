@@ -52,4 +52,8 @@ public class Order extends BaseEntity {
             this.deliveryStatus = DeliveryStatus.CANCELLED;
         }
     }
+
+    public void refund() {
+        this.status = OrderStatus.REFUNDED;
+    }
 }
