@@ -50,5 +50,4 @@ public class CardController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
-
 }
