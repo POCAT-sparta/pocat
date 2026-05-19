@@ -48,9 +48,12 @@ public class OrderQueryService {
         });
     }
 
-    public OrderResponse getOneOrder(String orderUid) {
+    public OrderResponse getOneOrder(Long userId, String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        if (!order.getBuyerId().equals(userId)) {
+            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
+        }
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
@@ -61,7 +64,7 @@ public class OrderQueryService {
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
-        Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.COMPLETED, since);
+        Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.ORDER_COMPLETED, since);
         Double avg = (Double) result[0];
         long count = (Long) result[1];
         Long averagePrice = avg != null ? Math.round(avg) : null;
