@@ -26,6 +26,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         List<Card> content = queryFactory
                 .selectFrom(card)
                 .where(builder)
+                .orderBy(card.createdAt.desc(), card.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();

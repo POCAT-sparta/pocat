@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.service.CardService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,9 +44,9 @@ public class CardController {
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<CardResponse>> createCard(
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateCardRequest request) {
-        CardResponse response = cardService.createCard(userId, request);
+        CardResponse response = cardService.createCard(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
