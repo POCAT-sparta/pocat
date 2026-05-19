@@ -25,16 +25,25 @@ public class ViewCountFlushScheduler {
     @Transactional
     @Scheduled(fixedDelay = 60_000)
     public void flush() {
+        if (redisTemplate.hasKey(PROCESSING_KEY)) {
+            log.warn("진행이 안된 데이터 발견, DB업데이트를 재 시도합니다.");
+            flushKey(PROCESSING_KEY);
+        }
+
         if (!redisTemplate.hasKey(BUFFER_KEY)) {
             return;
         }
-        redisTemplate.rename(BUFFER_KEY, PROCESSING_KEY);
 
+        redisTemplate.rename(BUFFER_KEY, PROCESSING_KEY);
+        flushKey(PROCESSING_KEY);
+    }
+
+    private void flushKey(String key) {
         Set<ZSetOperations.TypedTuple<String>> entries =
-                redisTemplate.opsForZSet().rangeWithScores(PROCESSING_KEY, 0, -1);
+                redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
 
         if (entries == null || entries.isEmpty()) {
-            redisTemplate.delete(PROCESSING_KEY);
+            redisTemplate.delete(key);
             return;
         }
 
@@ -48,6 +57,6 @@ public class ViewCountFlushScheduler {
             }
         }
 
-        redisTemplate.delete(PROCESSING_KEY);
+        redisTemplate.delete(key);
     }
 }
