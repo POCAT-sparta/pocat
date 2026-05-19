@@ -65,10 +65,17 @@ public class Card extends BaseEntity {
     private String rejectReason;
 
     public void approve() {
+        if (this.status != CardStatus.PENDING) {
+            throw new IllegalStateException("PENDING 상태에서만 승인할 수 있습니다.");
+        }
         this.status = CardStatus.ACTIVE;
+        this.rejectReason = null;
     }
 
     public void reject(String rejectReason) {
+        if (this.status != CardStatus.PENDING) {
+            throw new IllegalStateException("PENDING 상태에서만 거절할 수 있습니다.");
+        }
         this.status = CardStatus.REJECTED;
         this.rejectReason = rejectReason;
     }

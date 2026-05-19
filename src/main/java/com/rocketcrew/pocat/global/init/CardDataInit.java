@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -28,6 +29,7 @@ public class CardDataInit implements ApplicationRunner {
     private static final String TCGDEX_SET_URL = "https://api.tcgdex.net/v2/en/sets/swsh3";
     private static final String TCGDEX_CARD_URL = "https://api.tcgdex.net/v2/en/cards/";
     private static final int MAX_CARDS = 50;
+    // 더미 데이터이므로 테스트용 다양한 등급 순환 할당
     private static final CardGrade[] GRADES = CardGrade.values();
 
     private final CardRepository cardRepository;
@@ -42,8 +44,7 @@ public class CardDataInit implements ApplicationRunner {
             return;
         }
 
-        Long userId = userRepository.findAll().stream()
-                .findFirst()
+        Long userId = userRepository.findFirstBy()
                 .map(user -> user.getId())
                 .orElse(null);
 
@@ -53,7 +54,7 @@ public class CardDataInit implements ApplicationRunner {
         }
 
         try {
-            RestTemplate restTemplate = new RestTemplate();
+            RestTemplate restTemplate = createRestTemplate();
 
             // 세트 조회 → 카드 ID 목록 + 시리즈명 획득
             String setResponse = restTemplate.getForObject(TCGDEX_SET_URL, String.class);
@@ -79,7 +80,7 @@ public class CardDataInit implements ApplicationRunner {
                     String name = cardRoot.path("name").asText();
                     String localId = cardRoot.path("localId").asText();
                     String imageUrl = cardRoot.path("image").asText("") + "/high.webp";
-                    String rarity = cardRoot.path("rarity").asText(null);
+                    String rarity = cardRoot.path("rarity").asText("");
                     CardCategory category = parseCategory(cardRoot.path("category").asText(""));
                     CardGrade grade = GRADES[count % GRADES.length];
 
@@ -90,7 +91,7 @@ public class CardDataInit implements ApplicationRunner {
                             .series(seriesName)
                             .setName(setName)
                             .cardNumber(localId)
-                            .rarity(rarity)
+                            .rarity(rarity.isEmpty() ? null : rarity)
                             .category(category)
                             .grade(grade)
                             .imageUrl(imageUrl)
@@ -110,11 +111,20 @@ public class CardDataInit implements ApplicationRunner {
             log.info("[CardDataInit] 카드 {}개 초기화 완료", cardList.size());
 
         } catch (Exception e) {
+            // 선택적 초기화이므로 실패해도 애플리케이션 시작은 계속 진행
             log.error("[CardDataInit] 카드 초기화 실패: {}", e.getMessage());
         }
     }
 
+    private RestTemplate createRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(10000);
+        return new RestTemplate(factory);
+    }
+
     private CardCategory parseCategory(String category) {
+        if (category == null || category.isBlank()) return null;
         return switch (category.toUpperCase()) {
             case "POKEMON" -> CardCategory.POKEMON;
             case "TRAINER", "TRAINERS" -> CardCategory.TRAINERS;
