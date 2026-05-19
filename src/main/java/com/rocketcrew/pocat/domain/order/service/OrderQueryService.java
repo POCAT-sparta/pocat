@@ -58,7 +58,7 @@ public class OrderQueryService {
 
     public CardAveragePriceResponse getAveragePriceByCard(Long cardId) {
         cardRepository.findById(cardId)
-                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+                .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
         Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.COMPLETED, since);
