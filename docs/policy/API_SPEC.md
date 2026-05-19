@@ -701,15 +701,15 @@ Authorization: Bearer {accessToken}
 
 **Query Parameters**
 
-| 파라미터      | 타입 | 필수 | 설명                       |
-|-----------|---|---|--------------------------|
+| 파라미터     | 타입 | 필수 | 설명                       |
+|----------|---|---|--------------------------|
 | `keyword` | String | N | 카드 이름, 경매 제목, 시리즈명, 확장팩명, 카드번호 검색   |
-| `serires` | String | N | 카드 시리즈 필터                |
+| `series` | String | N | 카드 시리즈 필터                |
 | `setName` | String | N | 카드 확장팩 이름 필터             |
-| `grade`   | String | N | 카드 등급 필터                 |
-| `page`    | int | N | 페이지 번호 (default: 0)      |
-| `size`    | int | N | 페이지 크기 (default: 20)     |
-| `sort`    | String | N | 정렬 기준 (endedAt,asc / createdAt,desc) |
+| `grade`  | String | N | 카드 등급 필터                 |
+| `page`   | int | N | 페이지 번호 (default: 0)      |
+| `size`   | int | N | 페이지 크기 (default: 20)     |
+| `sort`   | String | N | 정렬 기준 (endedAt,asc / createdAt,desc) |
 
 **Response** `200 OK`
 
