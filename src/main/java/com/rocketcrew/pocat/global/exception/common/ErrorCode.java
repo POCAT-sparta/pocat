@@ -24,6 +24,7 @@ public enum ErrorCode {
 
     // Auction
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "경매를 찾을 수 없습니다."),
+    AUCTION_NOT_PENDING(HttpStatus.CONFLICT,"경매가 PENDING 상태가 아닙니다."),
 
     // Bid
     BID_NOT_FOUND(HttpStatus.NOT_FOUND, "입찰을 찾을 수 없습니다."),
