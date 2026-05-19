@@ -19,14 +19,12 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
 
     Optional<Order> findByOrderUid(String orderUid);
 
-    @Query("SELECT AVG(o.finalPrice) FROM Order o " +
+    @Query("SELECT AVG(o.finalPrice), COUNT(o) FROM Order o " +
            "WHERE o.cardId = :cardId AND o.status = :status AND o.createdAt >= :since")
-    Double findAvgFinalPriceByCardId(
+    Object[] findAvgAndCountByCardId(
             @Param("cardId") Long cardId,
             @Param("status") OrderStatus status,
             @Param("since") LocalDateTime since
     );
-
-    long countByCardIdAndStatusAndCreatedAtGreaterThanEqual(Long cardId, OrderStatus status, LocalDateTime since);
 
 }

@@ -61,8 +61,9 @@ public class OrderQueryService {
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
-        Double avg = orderRepository.findAvgFinalPriceByCardId(cardId, OrderStatus.COMPLETED, since);
-        long count = orderRepository.countByCardIdAndStatusAndCreatedAtGreaterThanEqual(cardId, OrderStatus.COMPLETED, since);
+        Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.COMPLETED, since);
+        Double avg = (Double) result[0];
+        long count = (Long) result[1];
         Long averagePrice = avg != null ? Math.round(avg) : null;
         return new CardAveragePriceResponse(cardId, averagePrice, count, since, now);
     }
