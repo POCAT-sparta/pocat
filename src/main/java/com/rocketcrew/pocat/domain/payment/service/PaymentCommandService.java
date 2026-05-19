@@ -92,7 +92,7 @@ public class PaymentCommandService {
         //   ① 응답 status가 "PAID"인지 확인
         //   ② 응답 amount.total이 payment.getAmount()와 일치하는지 검증
         //   ③ 불일치 시: PortOne 결제 취소 API 호출 후
-        //      paymentFailureService.markFailed(payment.getId(), order.getId()) 호출 (REQUIRES_NEW)
+        //      paymentFailureService.markFailed(payment.getId()) 호출 (REQUIRES_NEW)
         //      → 외부 트랜잭션 롤백과 무관하게 실패 상태가 커밋됨
         //      → 이후 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH)
         //   ④ 검증 통과 시: payment.complete(method, paidAt), order.completePayment() 호출
@@ -157,13 +157,13 @@ public class PaymentCommandService {
         // Order order = findOrder(payment.getOrderId());
         // if ("PAID".equals(portOneStatus)) {
         //     if (!payment.getAmount().equals(portOneAmount)) {
-        //         paymentFailureService.markFailed(payment.getId(), order.getId()); // REQUIRES_NEW
+        //         paymentFailureService.markFailed(payment.getId()); // REQUIRES_NEW
         //         return;
         //     }
         //     payment.complete(portOneMethod, portOnePaidAt);
         //     order.completePayment();
         // } else {
-        //     paymentFailureService.markFailed(payment.getId(), order.getId()); // REQUIRES_NEW
+        //     paymentFailureService.markFailed(payment.getId()); // REQUIRES_NEW
         // }
     }
 

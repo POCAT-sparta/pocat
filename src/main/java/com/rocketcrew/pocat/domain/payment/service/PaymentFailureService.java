@@ -26,11 +26,15 @@ public class PaymentFailureService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
 
+    /**
+     * orderId를 외부에서 받지 않고 payment.getOrderId()로 파생한다.
+     * 두 ID를 독립 파라미터로 받으면 호출부 실수로 무관한 주문 상태가 오염될 수 있다.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(Long paymentId, Long orderId) {
+    public void markFailed(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findById(payment.getOrderId())
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
         payment.fail();

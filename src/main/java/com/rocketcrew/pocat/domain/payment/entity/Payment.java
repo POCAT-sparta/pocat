@@ -56,10 +56,11 @@ public class Payment extends BaseEntity {
         this.paidAt = paidAt;
     }
 
+    // FAILED → FAILED 멱등 전이 허용: Webhook 재전송·이벤트 리플레이 시 불필요한 예외 방지
     public void fail() {
-        if (this.status != PaymentStatus.PENDING) {
+        if (this.status != PaymentStatus.PENDING && this.status != PaymentStatus.FAILED) {
             throw new IllegalStateException(
-                    "결제 실패는 PENDING 상태에서만 가능합니다. 현재 상태: " + this.status);
+                    "결제 실패는 PENDING 또는 FAILED 상태에서만 가능합니다. 현재 상태: " + this.status);
         }
         this.status = PaymentStatus.FAILED;
     }
