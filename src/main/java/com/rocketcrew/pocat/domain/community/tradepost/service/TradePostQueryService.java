@@ -31,7 +31,7 @@ public class TradePostQueryService {
     }
 
     public TradePostResponse getPost(Long id, String clientIp, Long requesterId) {
-        TradePost tradePost = tradePostRepository.findById(id)
+        TradePost tradePost = tradePostRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
         String nickname = userQueryService.getUserById(tradePost.getUserId()).nickname();
         if (!tradePost.getUserId().equals(requesterId)) {
