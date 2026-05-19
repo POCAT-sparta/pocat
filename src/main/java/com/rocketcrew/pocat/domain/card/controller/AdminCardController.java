@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,7 +44,7 @@ public class AdminCardController {
     @PatchMapping("/{cardId}/reject")
     public ResponseEntity<ApiResponseDto<CardResponse>> rejectCard(
             @PathVariable Long cardId,
-            @RequestBody RejectCardRequest request) {
+            @Valid @RequestBody RejectCardRequest request) {
         CardResponse response = cardCommandService.rejectCard(cardId, request.rejectReason());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
