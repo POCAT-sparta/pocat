@@ -41,16 +41,31 @@ public class Payment extends BaseEntity {
     private LocalDateTime paidAt;
 
     public void complete(String paymentMethod, LocalDateTime paidAt) {
+        if (this.status != PaymentStatus.PENDING) {
+            throw new IllegalStateException("결제 완료 전이가 불가능한 결제 상태입니다: " + this.status);
+        }
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            throw new IllegalArgumentException("결제 완료 시 paymentMethod는 필수입니다.");
+        }
+        if (paidAt == null) {
+            throw new IllegalArgumentException("결제 완료 시 paidAt은 필수입니다.");
+        }
         this.status = PaymentStatus.COMPLETED;
         this.paymentMethod = paymentMethod;
         this.paidAt = paidAt;
     }
 
     public void fail() {
+        if (this.status != PaymentStatus.PENDING) {
+            throw new IllegalStateException("결제 실패 전이가 불가능한 결제 상태입니다: " + this.status);
+        }
         this.status = PaymentStatus.FAILED;
     }
 
     public void refund() {
+        if (this.status != PaymentStatus.COMPLETED) {
+            throw new IllegalStateException("환불 전이가 불가능한 결제 상태입니다: " + this.status);
+        }
         this.status = PaymentStatus.REFUNDED;
     }
 }

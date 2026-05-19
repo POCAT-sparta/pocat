@@ -40,6 +40,8 @@ public enum ErrorCode {
     PAYMENT_BUYER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청자와 주문 구매자가 일치하지 않습니다."),
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.CONFLICT, "결제 금액이 주문 금액과 일치하지 않습니다."),
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.UNAUTHORIZED, "Webhook 서명 검증에 실패했습니다."),
+    WEBHOOK_EMPTY_BODY(HttpStatus.BAD_REQUEST, "Webhook 요청 본문이 비어 있습니다. 인프라 설정을 확인하세요."),
+    PORTONE_NOT_INTEGRATED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 연동이 완료되지 않았습니다."),
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),

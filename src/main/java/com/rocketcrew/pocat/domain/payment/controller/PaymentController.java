@@ -1,7 +1,6 @@
 package com.rocketcrew.pocat.domain.payment.controller;
 
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
-import com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
@@ -52,13 +51,15 @@ public class PaymentController {
 
     /**
      * 6.4 PortOne Webhook 수신 (PUBLIC — PortOne 서버 → 우리 서버)
+     * rawBody를 byte[]로 수신하여 HMAC 서명 검증에 원본 바이트를 그대로 사용한다.
+     * 역직렬화 후 재직렬화 시 발생하는 바이트 불일치로 서명 검증이 실패하는 문제를 방지.
      * PortOne은 200을 받지 못하면 재전송하므로 서명 검증 통과 후 항상 200 반환.
      */
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponseDto<Void>> handleWebhook(
             @RequestHeader("X-PortOne-Signature") String signature,
-            @RequestBody WebhookRequest request) {
-        paymentCommandService.handleWebhook(signature, request);
+            @RequestBody byte[] rawBody) {
+        paymentCommandService.handleWebhook(signature, rawBody);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 }
