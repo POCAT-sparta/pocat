@@ -7,8 +7,10 @@ import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostRespo
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
+import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ public class FreePostCommandService {
     private final CommentRepository commentRepository;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
         FreePost freePost = FreePost.builder()
                 .userId(userId)
                 .title(request.title())
@@ -30,8 +34,7 @@ public class FreePostCommandService {
                 .viewCount(0)
                 .build();
         FreePost saved = freePostRepository.save(freePost);
-        String nickname = userRepository.findById(userId).map(u -> u.getNickname()).orElse("");
-        return FreePostResponse.of(saved, nickname, 0);
+        return FreePostResponse.of(saved, user.getNickname(), 0);
     }
 
     public FreePostResponse updatePost(Long postId, Long userId, UpdateFreePostRequest request) {
@@ -52,7 +55,9 @@ public class FreePostCommandService {
             }
             freePost.updateContent(request.content());
         }
-        String nickname = userRepository.findById(freePost.getUserId()).map(u -> u.getNickname()).orElse("");
+        User user = userRepository.findById(freePost.getUserId())
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        String nickname = user.getNickname();
         int commentCount = commentRepository.countByFreePostId(freePost.getId());
         return FreePostResponse.of(freePost, nickname, commentCount);
     }
