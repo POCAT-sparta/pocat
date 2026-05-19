@@ -10,6 +10,8 @@ import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostCommandS
 import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.util.HttpRequestUtils;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +20,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -39,15 +43,18 @@ public class TradePostController {
     }
 
     @GetMapping("/{tradePostId}")
-    public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(@PathVariable Long tradePostId) {
-        TradePostResponse response = tradePostQueryService.getPost(tradePostId);
+    public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(
+            @PathVariable Long tradePostId,
+            HttpServletRequest request) {
+        String clientIp = HttpRequestUtils.resolveClientIp(request);
+        TradePostResponse response = tradePostQueryService.getPost(tradePostId, clientIp);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<CreateTradePost>> createPost(
             @RequestParam Long userId,
-            @RequestBody CreateTradePostRequest request) {
+            @RequestBody @Valid CreateTradePostRequest request) {
         CreateTradePost response = tradePostCommandService.createPost(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

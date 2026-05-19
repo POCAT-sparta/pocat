@@ -4,8 +4,7 @@ import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostLis
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.TradePostResponse;
 import com.rocketcrew.pocat.domain.community.tradepost.entity.TradePost;
 import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
-import com.rocketcrew.pocat.domain.user.entity.User;
-import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
 import lombok.RequiredArgsConstructor;
@@ -20,24 +19,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class TradePostQueryService {
 
     private final TradePostRepository tradePostRepository;
-    private final UserRepository userRepository;
+    private final UserQueryService userQueryService;
+    private final ViewCountService viewCountService;
 
     public Page<TradePostListResponse> getPosts(Pageable pageable) {
         return tradePostRepository.findAll(pageable)
                 .map(post -> {
-                    String nickname = userRepository.findById(post.getUserId())
-                            .map(User::getNickname)
-                            .orElse(null);
+                    String nickname = userQueryService.getUserById(post.getUserId()).nickname();
                     return TradePostListResponse.from(post, nickname);
                 });
     }
 
-    public TradePostResponse getPost(Long id) {
+    public TradePostResponse getPost(Long id, String clientIp) {
         TradePost tradePost = tradePostRepository.findById(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
-        String nickname = userRepository.findById(tradePost.getUserId())
-                .map(User::getNickname)
-                .orElse(null);
+        String nickname = userQueryService.getUserById(tradePost.getUserId()).nickname();
+        viewCountService.increaseViewCount(id, clientIp);
         return TradePostResponse.from(tradePost, nickname);
     }
 }
