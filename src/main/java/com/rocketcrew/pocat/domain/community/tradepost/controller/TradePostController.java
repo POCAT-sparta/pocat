@@ -10,6 +10,7 @@ import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostCommandS
 import com.rocketcrew.pocat.domain.community.tradepost.service.TradePostQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import com.rocketcrew.pocat.global.util.HttpRequestUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,9 +55,9 @@ public class TradePostController {
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<CreateTradePost>> createPost(
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestBody @Valid CreateTradePostRequest request) {
-        CreateTradePost response = tradePostCommandService.createPost(userId, request);
+        CreateTradePost response = tradePostCommandService.createPost(customUserDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
@@ -63,17 +65,17 @@ public class TradePostController {
     @PatchMapping("/{tradePostId}")
     public ResponseEntity<ApiResponseDto<UpdateTradePostResponse>> updatePost(
             @PathVariable Long tradePostId,
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestBody UpdateTradePostRequest request) {
-        UpdateTradePostResponse response = tradePostCommandService.updatePost(tradePostId, userId, request);
+        UpdateTradePostResponse response = tradePostCommandService.updatePost(tradePostId, customUserDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @DeleteMapping("/{tradePostId}")
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
-            @PathVariable Long tradePostId,
-            @RequestParam Long userId) {
-        tradePostCommandService.deletePost(tradePostId, userId);
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PathVariable Long tradePostId) {
+        tradePostCommandService.deletePost(tradePostId, customUserDetails.getUserId());
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }
