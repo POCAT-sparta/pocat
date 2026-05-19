@@ -1,33 +1,31 @@
 package com.rocketcrew.pocat.global.security;
 
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
-public class CustomUserDetails implements UserDetails {
+@Getter
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
+public class CustomUserDetails implements UserDetails, Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private final Long userId;
     private final String role;
 
-    public CustomUserDetails(Long userId, String role) {
-        this.userId = userId;
-        this.role = role;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role));
+        String normalizedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        return List.of(new SimpleGrantedAuthority(normalizedRole));
     }
 
     @Override
