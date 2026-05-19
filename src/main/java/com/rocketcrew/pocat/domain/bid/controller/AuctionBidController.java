@@ -5,9 +5,11 @@ import com.rocketcrew.pocat.domain.bid.dto.response.AuctionBidResponse;
 import com.rocketcrew.pocat.domain.bid.service.AuctionBidCommandService;
 import com.rocketcrew.pocat.domain.bid.service.AuctionBidQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,9 +34,9 @@ public class AuctionBidController {
     // Todo : request 및 내부 로직 수정 필요
     @PostMapping("/api/v1/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<AuctionBidResponse>> createBid(
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateBidRequest request) {
-        AuctionBidResponse response = auctionBidCommandService.createBid(userId, request);
+        AuctionBidResponse response = auctionBidCommandService.createBid(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
