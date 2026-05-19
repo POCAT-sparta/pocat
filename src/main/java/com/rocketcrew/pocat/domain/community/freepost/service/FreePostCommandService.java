@@ -19,6 +19,12 @@ public class FreePostCommandService {
     private final FreePostRepository freePostRepository;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
+        if (request.title() == null || request.title().isBlank()) {
+            throw new FreePostException(ErrorCode.INVALID_CONTENT);
+        }
+        if (request.content() == null || request.content().isBlank()) {
+            throw new FreePostException(ErrorCode.INVALID_CONTENT);
+        }
         FreePost freePost = FreePost.builder()
                 .userId(userId)
                 .title(request.title())
@@ -34,7 +40,18 @@ public class FreePostCommandService {
         if (!freePost.getUserId().equals(userId)) {
             throw new FreePostException(ErrorCode.USER_FORBIDDEN);
         }
-        freePost.update(request.title(), request.content());
+        if (request.title() != null) {
+            if (request.title().isBlank()) {
+                throw new FreePostException(ErrorCode.INVALID_CONTENT);
+            }
+            freePost.updateTitle(request.title());
+        }
+        if (request.content() != null) {
+            if (request.content().isBlank()) {
+                throw new FreePostException(ErrorCode.INVALID_CONTENT);
+            }
+            freePost.updateContent(request.content());
+        }
         return FreePostResponse.from(freePost);
     }
 
@@ -45,5 +62,12 @@ public class FreePostCommandService {
             throw new FreePostException(ErrorCode.USER_FORBIDDEN);
         }
         freePostRepository.delete(freePost);
+    }
+
+    public void incrementViewCount(Long postId) {
+        int updated = freePostRepository.incrementViewCount(postId);
+        if (updated == 0) {
+            throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
+        }
     }
 }
