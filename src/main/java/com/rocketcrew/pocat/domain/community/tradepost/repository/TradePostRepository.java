@@ -6,11 +6,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
 
 public interface TradePostRepository extends JpaRepository<TradePost, Long> {
-
-    Optional<TradePost> findByIdAndDeletedAtIsNull(Long id);
 
     @Modifying
     @Query("UPDATE TradePost t SET t.viewCount = t.viewCount + :count WHERE t.id = :postId")
