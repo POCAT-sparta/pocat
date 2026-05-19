@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.service.CardService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -61,5 +62,12 @@ public class CardController {
         cardService.deleteCard(cardId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
+    }
+
+    @GetMapping("/{cardId}/average-price")
+    public ResponseEntity<ApiResponseDto<CardAveragePriceResponse>> getAveragePrice(
+            @PathVariable Long cardId) {
+        CardAveragePriceResponse response = cardService.getAveragePrice(cardId);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 }

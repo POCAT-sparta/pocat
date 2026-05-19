@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.order.service;
 
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -52,5 +54,16 @@ public class OrderQueryService {
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
+    }
+
+    public CardAveragePriceResponse getAveragePriceByCard(Long cardId) {
+        cardRepository.findById(cardId)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime since = now.minusMonths(6);
+        Double avg = orderRepository.findAvgFinalPriceByCardId(cardId, OrderStatus.COMPLETED, since);
+        long count = orderRepository.countByCardIdAndStatusAndCreatedAtAfter(cardId, OrderStatus.COMPLETED, since);
+        Long averagePrice = avg != null ? Math.round(avg) : null;
+        return new CardAveragePriceResponse(cardId, averagePrice, count, since, now);
     }
 }
