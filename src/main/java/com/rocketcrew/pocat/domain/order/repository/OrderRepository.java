@@ -27,6 +27,6 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
             @Param("since") LocalDateTime since
     );
 
-    long countByCardIdAndStatusAndCreatedAtAfter(Long cardId, OrderStatus status, LocalDateTime since);
+    long countByCardIdAndStatusAndCreatedAtGreaterThanEqual(Long cardId, OrderStatus status, LocalDateTime since);
 
 }
