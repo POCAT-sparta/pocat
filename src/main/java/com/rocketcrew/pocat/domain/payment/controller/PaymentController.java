@@ -6,7 +6,9 @@ import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
+import com.rocketcrew.pocat.global.security.CachedBodyHttpServletRequest;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -57,8 +59,17 @@ public class PaymentController {
     @PostMapping("/webhook")
     public ResponseEntity<ApiResponseDto<Void>> handleWebhook(
             @RequestHeader("X-PortOne-Signature") String signature,
-            @RequestBody WebhookRequest request) {
-        paymentCommandService.handleWebhook(signature, request);
+            @RequestBody @Valid WebhookRequest request,
+            HttpServletRequest httpRequest) {
+        // WebhookRateLimitFilter에서 CachedBodyHttpServletRequest로 래핑되어 들어옴
+        byte[] rawBody;
+        if (httpRequest instanceof CachedBodyHttpServletRequest cachedRequest) {
+            rawBody = cachedRequest.getCachedBody();
+        } else {
+            // 필터가 동작하지 않은 경우 (테스트 환경 등)
+            rawBody = new byte[0];
+        }
+        paymentCommandService.handleWebhook(signature, rawBody, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 }

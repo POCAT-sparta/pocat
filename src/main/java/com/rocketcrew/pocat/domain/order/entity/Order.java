@@ -54,10 +54,18 @@ public class Order extends BaseEntity {
     }
 
     public void completePayment() {
+        if (this.status != OrderStatus.PAYMENT_PENDING) {
+            throw new IllegalStateException(
+                    "결제 완료는 PAYMENT_PENDING 상태에서만 가능합니다. 현재 상태: " + this.status);
+        }
         this.status = OrderStatus.PAYMENT_COMPLETED;
     }
 
     public void failPayment() {
+        if (this.status != OrderStatus.PAYMENT_PENDING) {
+            throw new IllegalStateException(
+                    "결제 실패는 PAYMENT_PENDING 상태에서만 가능합니다. 현재 상태: " + this.status);
+        }
         this.status = OrderStatus.PAYMENT_FAILED;
     }
 }

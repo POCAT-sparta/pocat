@@ -14,6 +14,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +24,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(noRollbackFor = PaymentException.class)
 public class PaymentCommandService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final PortOneSignatureVerifier portOneSignatureVerifier;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -64,7 +66,17 @@ public class PaymentCommandService {
                 .status(PaymentStatus.PENDING)
                 .build();
 
-        return PaymentResponse.from(paymentRepository.save(payment));
+        try {
+            return PaymentResponse.from(paymentRepository.save(payment));
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청으로 인한 중복 생성 시도 시, 기존 레코드 반환
+            Optional<Payment> existingAfterRace = paymentRepository.findByOrderIdAndStatus(
+                    request.orderId(), PaymentStatus.PENDING);
+            if (existingAfterRace.isPresent()) {
+                return PaymentResponse.from(existingAfterRace.get());
+            }
+            throw e; // 다른 무결성 위반이면 재발생
+        }
     }
 
     /**
@@ -88,28 +100,11 @@ public class PaymentCommandService {
         //   - 응답 status가 "PAID"인지 확인
         //   - 응답 amount.total이 payment.getAmount()와 일치하는지 검증
         //   → 불일치 시: PortOne 결제 취소 API 호출 후 payment.fail(), order.failPayment()
-        // 아래는 PortOne 연동 완료 후 실제 응답 값으로 교체 필요
-        String portOneStatus = "PAID";
-        String portOneMethod = "CARD";
-        Long portOneAmount = payment.getAmount();
-        LocalDateTime portOnePaidAt = LocalDateTime.now();
 
-        if (!payment.getAmount().equals(portOneAmount)) {
-            // TODO: PortOne 결제 취소 API 호출
-            payment.fail();
-            order.failPayment();
-            throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
-        }
-
-        if ("PAID".equals(portOneStatus)) {
-            payment.complete(portOneMethod, portOnePaidAt);
-            order.completePayment();
-        } else {
-            payment.fail();
-            order.failPayment();
-        }
-
-        return PaymentResponse.from(payment);
+        // Fail-closed: PortOne 연동이 구현되기 전까지 결제 완료를 허용하지 않음
+        payment.fail();
+        order.failPayment();
+        throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
     }
 
     /**
@@ -118,13 +113,11 @@ public class PaymentCommandService {
      * Client Confirm과 멱등성을 공유하며, PortOne이 200을 받지 못하면 재전송하므로
      * 처리 결과와 무관하게 서명 검증만 통과하면 200을 반환한다.
      */
-    public void handleWebhook(String signature, WebhookRequest request) {
-        // TODO: X-PortOne-Signature 서명 검증
-        //   - PortOne 제공 라이브러리 또는 HMAC-SHA256으로 검증
-        //   - 검증 실패 시 즉시 예외 반환 (ErrorCode.WEBHOOK_SIGNATURE_INVALID)
-        // if (!portOneSignatureVerifier.verify(signature, rawBody)) {
-        //     throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
-        // }
+    public void handleWebhook(String signature, byte[] rawBody, WebhookRequest request) {
+        // X-PortOne-Signature 서명 검증 (Fail-closed)
+        if (portOneSignatureVerifier == null || !portOneSignatureVerifier.verify(signature, rawBody)) {
+            throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
+        }
 
         String paymentId = request.data().paymentId();
 

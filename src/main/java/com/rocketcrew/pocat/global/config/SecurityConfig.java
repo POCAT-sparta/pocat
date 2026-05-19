@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.global.config;
 
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import com.rocketcrew.pocat.global.security.JwtAuthenticationFilter;
+import com.rocketcrew.pocat.global.security.WebhookRateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,6 +48,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
+                )
+                .addFilterBefore(
+                        new WebhookRateLimitFilter(),
+                        UsernamePasswordAuthenticationFilter.class
                 )
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtUtil, redisTemplate),
