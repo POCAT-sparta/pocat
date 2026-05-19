@@ -28,4 +28,9 @@ public class FreePostQueryService {
                 .orElseThrow(() -> new FreePostException(ErrorCode.FREE_POST_NOT_FOUND));
         return FreePostResponse.from(freePost);
     }
+
+    public Page<FreePostResponse> getMyPosts(Long userId, Pageable pageable) {
+        return freePostRepository.findByUserId(userId, pageable)
+                .map(FreePostResponse::from);
+    }
 }

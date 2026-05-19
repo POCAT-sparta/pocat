@@ -1,6 +1,8 @@
 package com.rocketcrew.pocat.domain.like.controller;
 
+import com.rocketcrew.pocat.domain.like.dto.request.ToggleLikeRequest;
 import com.rocketcrew.pocat.domain.like.dto.response.LikeResponse;
+import com.rocketcrew.pocat.domain.like.dto.response.ToggleLikeResponse;
 import com.rocketcrew.pocat.domain.like.service.LikeCommandService;
 import com.rocketcrew.pocat.domain.like.service.LikeQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -21,15 +23,15 @@ public class LikeController {
     private final LikeCommandService likeCommandService;
     private final LikeQueryService likeQueryService;
 
-    @PostMapping("/auctions/{auctionId}")
-    public ResponseEntity<ApiResponseDto<LikeResponse>> toggleLike(
-            @PathVariable Long auctionId,
-            @RequestParam Long userId) {
-        LikeResponse response = likeCommandService.toggleLike(userId, auctionId);
+    @PostMapping
+    public ResponseEntity<ApiResponseDto<ToggleLikeResponse>> toggleLike(
+            @RequestParam Long userId,
+            @RequestBody ToggleLikeRequest request) {
+        ToggleLikeResponse response = likeCommandService.toggleLike(userId, request.auctionId());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @GetMapping
+    @GetMapping("/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<LikeResponse>>> getMyLikes(
             @RequestParam Long userId,
             @PageableDefault(size = 10) Pageable pageable) {

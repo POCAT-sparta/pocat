@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.user.service;
 
+import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
@@ -25,10 +26,30 @@ public class UserCommandService {
         return UserResponse.from(user);
     }
 
-    public UserResponse updateBank(Long userId, UpdateBankRequest request) {
+    public void updateBank(Long userId, UpdateBankRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
         user.updateBank(request.bankName(), request.bankAccount());
-        return UserResponse.from(user);
+    }
+
+    public void registerBillingKey(Long userId, RegisterBillingKeyRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        if (user.getBillingKey() != null) {
+            throw new UserException(ErrorCode.BILLING_KEY_ALREADY_EXISTS);
+        }
+        if (request.billingKey() == null || request.billingKey().isBlank()) {
+            throw new UserException(ErrorCode.INVALID_CONTENT);
+        }
+        user.registerBillingKey(request.billingKey());
+    }
+
+    public void deleteBillingKey(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        if (user.getBillingKey() == null) {
+            throw new UserException(ErrorCode.BILLING_KEY_NOT_FOUND);
+        }
+        user.deleteBillingKey();
     }
 }

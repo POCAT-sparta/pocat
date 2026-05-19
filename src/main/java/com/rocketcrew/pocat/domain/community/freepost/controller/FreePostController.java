@@ -20,7 +20,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/free-posts")
+@RequestMapping("/api/v1/posts/free")
 public class FreePostController {
 
     private final FreePostQueryService freePostQueryService;
@@ -35,9 +35,20 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponseDto<FreePostResponse>> getPost(@PathVariable Long postId) {
-        FreePostResponse response = freePostQueryService.getPost(postId);
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getMyPosts(
+            @RequestParam Long userId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<FreePostResponse> page = freePostQueryService.getMyPosts(userId, pageable);
+        List<FreePostResponse> content = page.getContent();
+        PageResponseDto<FreePostResponse> pageResponse = PageResponseDto.of(page, content);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
+    }
+
+    @GetMapping("/{freePostId}")
+    public ResponseEntity<ApiResponseDto<FreePostResponse>> getPost(@PathVariable Long freePostId) {
+        freePostCommandService.incrementViewCount(freePostId);
+        FreePostResponse response = freePostQueryService.getPost(freePostId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -50,20 +61,20 @@ public class FreePostController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PutMapping("/{postId}")
+    @PatchMapping("/{freePostId}")
     public ResponseEntity<ApiResponseDto<FreePostResponse>> updatePost(
-            @PathVariable Long postId,
+            @PathVariable Long freePostId,
             @RequestParam Long userId,
             @RequestBody UpdateFreePostRequest request) {
-        FreePostResponse response = freePostCommandService.updatePost(postId, userId, request);
+        FreePostResponse response = freePostCommandService.updatePost(freePostId, userId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @DeleteMapping("/{postId}")
+    @DeleteMapping("/{freePostId}")
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
-            @PathVariable Long postId,
+            @PathVariable Long freePostId,
             @RequestParam Long userId) {
-        freePostCommandService.deletePost(postId, userId);
+        freePostCommandService.deletePost(freePostId, userId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }

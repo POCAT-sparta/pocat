@@ -3,15 +3,18 @@ package com.rocketcrew.pocat.domain.comment.controller;
 import com.rocketcrew.pocat.domain.comment.dto.request.CreateCommentRequest;
 import com.rocketcrew.pocat.domain.comment.dto.request.UpdateCommentRequest;
 import com.rocketcrew.pocat.domain.comment.dto.response.CommentResponse;
+import com.rocketcrew.pocat.domain.comment.dto.response.CommentTreeResponse;
 import com.rocketcrew.pocat.domain.comment.service.CommentCommandService;
 import com.rocketcrew.pocat.domain.comment.service.CommentQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
+import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,10 +25,11 @@ public class CommentController {
     private final CommentCommandService commentCommandService;
 
     @GetMapping
-    public ResponseEntity<ApiResponseDto<List<CommentResponse>>> getCommentsByPost(
-            @RequestParam Long postId) {
-        List<CommentResponse> responses = commentQueryService.getCommentsByPost(postId);
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, responses));
+    public ResponseEntity<ApiResponseDto<PageResponseDto<CommentTreeResponse>>> getCommentsByPost(
+            @RequestParam Long postId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<CommentTreeResponse> page = commentQueryService.getCommentsByPost(postId, pageable);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
     @PostMapping
@@ -37,7 +41,7 @@ public class CommentController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PutMapping("/{commentId}")
+    @PatchMapping("/{commentId}")
     public ResponseEntity<ApiResponseDto<CommentResponse>> updateComment(
             @PathVariable Long commentId,
             @RequestParam Long userId,

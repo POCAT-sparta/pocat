@@ -1,6 +1,6 @@
 package com.rocketcrew.pocat.domain.order.dto.request;
 
-import com.rocketcrew.pocat.domain.card.entity.CardGrade;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 
