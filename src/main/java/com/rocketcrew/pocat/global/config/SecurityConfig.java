@@ -43,6 +43,8 @@ public class SecurityConfig {
                                 "/api/v1/posts/free/**",
                                 "/api/v1/posts/trade/**",
                                 "/api/v1/comments/**").permitAll()
+                        // PortOne 서버가 직접 호출하는 Webhook — 별도 사용자 인증 없음
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

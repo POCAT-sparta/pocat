@@ -52,4 +52,12 @@ public class Order extends BaseEntity {
             this.deliveryStatus = DeliveryStatus.CANCELLED;
         }
     }
+
+    public void completePayment() {
+        this.status = OrderStatus.PAYMENT_COMPLETED;
+    }
+
+    public void failPayment() {
+        this.status = OrderStatus.PAYMENT_FAILED;
+    }
 }

@@ -35,6 +35,11 @@ public enum ErrorCode {
 
     // Payment
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),
+    PAYMENT_ORDER_NOT_FAILED(HttpStatus.CONFLICT, "결제 요청은 주문 상태가 PAYMENT_FAILED일 때만 가능합니다."),
+    PAYMENT_WINDOW_EXPIRED(HttpStatus.GONE, "결제 가능 시간(1시간)이 초과되었습니다."),
+    PAYMENT_BUYER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청자와 주문 구매자가 일치하지 않습니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.CONFLICT, "결제 금액이 주문 금액과 일치하지 않습니다."),
+    WEBHOOK_SIGNATURE_INVALID(HttpStatus.UNAUTHORIZED, "Webhook 서명 검증에 실패했습니다."),
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),
