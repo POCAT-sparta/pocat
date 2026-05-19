@@ -62,7 +62,7 @@ public class OrderQueryService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
         Double avg = orderRepository.findAvgFinalPriceByCardId(cardId, OrderStatus.COMPLETED, since);
-        long count = orderRepository.countByCardIdAndStatusAndCreatedAtAfter(cardId, OrderStatus.COMPLETED, since);
+        long count = orderRepository.countByCardIdAndStatusAndCreatedAtGreaterThanEqual(cardId, OrderStatus.COMPLETED, since);
         Long averagePrice = avg != null ? Math.round(avg) : null;
         return new CardAveragePriceResponse(cardId, averagePrice, count, since, now);
     }
