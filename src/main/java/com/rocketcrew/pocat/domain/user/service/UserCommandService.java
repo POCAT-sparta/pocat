@@ -36,11 +36,11 @@ public class UserCommandService {
         if (request.billingKey() == null || request.billingKey().isBlank()) {
             throw new UserException(ErrorCode.INVALID_CONTENT);
         }
-        if (!userRepository.existsById(userId)) {
-            throw new UserException(ErrorCode.USER_NOT_FOUND);
-        }
         int updated = userRepository.updateBillingKeyIfNull(userId, request.billingKey());
         if (updated == 0) {
+            if (!userRepository.existsById(userId)) {
+                throw new UserException(ErrorCode.USER_NOT_FOUND);
+            }
             throw new UserException(ErrorCode.BILLING_KEY_ALREADY_EXISTS);
         }
     }

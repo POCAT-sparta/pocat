@@ -8,12 +8,14 @@ import com.rocketcrew.pocat.domain.comment.service.CommentCommandService;
 import com.rocketcrew.pocat.domain.comment.service.CommentQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,9 +36,9 @@ public class CommentController {
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<CommentResponse>> createComment(
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateCommentRequest request) {
-        CommentResponse response = commentCommandService.createComment(userId, request);
+        CommentResponse response = commentCommandService.createComment(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
@@ -44,17 +46,17 @@ public class CommentController {
     @PatchMapping("/{commentId}")
     public ResponseEntity<ApiResponseDto<CommentResponse>> updateComment(
             @PathVariable Long commentId,
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody UpdateCommentRequest request) {
-        CommentResponse response = commentCommandService.updateComment(commentId, userId, request);
+        CommentResponse response = commentCommandService.updateComment(commentId, userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @DeleteMapping("/{commentId}")
     public ResponseEntity<ApiResponseDto<Void>> deleteComment(
             @PathVariable Long commentId,
-            @RequestParam Long userId) {
-        commentCommandService.deleteComment(commentId, userId);
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        commentCommandService.deleteComment(commentId, userDetails.getUserId());
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }

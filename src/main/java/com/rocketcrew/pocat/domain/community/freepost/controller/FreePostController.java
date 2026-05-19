@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommandSer
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,9 +39,9 @@ public class FreePostController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getMyPosts(
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<FreePostResponse> page = freePostQueryService.getMyPosts(userId, pageable);
+        Page<FreePostResponse> page = freePostQueryService.getMyPosts(userDetails.getUserId(), pageable);
         List<FreePostResponse> content = page.getContent();
         PageResponseDto<FreePostResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -54,9 +56,9 @@ public class FreePostController {
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<FreePostResponse>> createPost(
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateFreePostRequest request) {
-        FreePostResponse response = freePostCommandService.createPost(userId, request);
+        FreePostResponse response = freePostCommandService.createPost(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
@@ -64,17 +66,17 @@ public class FreePostController {
     @PatchMapping("/{freePostId}")
     public ResponseEntity<ApiResponseDto<FreePostResponse>> updatePost(
             @PathVariable Long freePostId,
-            @RequestParam Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody UpdateFreePostRequest request) {
-        FreePostResponse response = freePostCommandService.updatePost(freePostId, userId, request);
+        FreePostResponse response = freePostCommandService.updatePost(freePostId, userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @DeleteMapping("/{freePostId}")
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
             @PathVariable Long freePostId,
-            @RequestParam Long userId) {
-        freePostCommandService.deletePost(freePostId, userId);
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        freePostCommandService.deletePost(freePostId, userDetails.getUserId());
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }
