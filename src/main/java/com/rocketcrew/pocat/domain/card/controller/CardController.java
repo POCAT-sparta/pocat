@@ -1,10 +1,9 @@
 package com.rocketcrew.pocat.domain.card.controller;
 
-import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
-import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
-import com.rocketcrew.pocat.domain.card.service.CardService;
+import com.rocketcrew.pocat.domain.card.service.CardCommandService;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -25,12 +24,13 @@ import java.util.List;
 @RequestMapping("/api/v1/cards")
 public class CardController {
 
-    private final CardService cardService;
+    private final CardQueryService cardQueryService;
+    private final CardCommandService cardCommandService;
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getCards(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<CardResponse> page = cardService.getCards(pageable);
+        Page<CardResponse> page = cardQueryService.getCards(pageable);
         List<CardResponse> content = page.getContent();
         PageResponseDto<CardResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -38,7 +38,7 @@ public class CardController {
 
     @GetMapping("/{cardId}")
     public ResponseEntity<ApiResponseDto<CardResponse>> getCard(@PathVariable Long cardId) {
-        CardResponse response = cardService.getCard(cardId);
+        CardResponse response = cardQueryService.getCard(cardId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -46,23 +46,9 @@ public class CardController {
     public ResponseEntity<ApiResponseDto<CardResponse>> createCard(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateCardRequest request) {
-        CardResponse response = cardService.createCard(userDetails.getUserId(), request);
+        CardResponse response = cardCommandService.createCard(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PutMapping("/{cardId}")
-    public ResponseEntity<ApiResponseDto<CardResponse>> updateCard(
-            @PathVariable Long cardId,
-            @RequestBody UpdateCardRequest request) {
-        CardResponse response = cardService.updateCard(cardId, request);
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
-    }
-
-    @DeleteMapping("/{cardId}")
-    public ResponseEntity<ApiResponseDto<Void>> deleteCard(@PathVariable Long cardId) {
-        cardService.deleteCard(cardId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
-    }
 }
