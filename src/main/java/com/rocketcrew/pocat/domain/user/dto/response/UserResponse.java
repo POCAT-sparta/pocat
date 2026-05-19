@@ -10,12 +10,13 @@ public record UserResponse(
         String email,
         String nickname,
         String phone,
-        UserRole userRole,
+        UserRole role,
         String bankName,
         String bankAccount,
         String address,
         int unpaidStrike,
         boolean isBidBlocked,
+        boolean hasBillingKey,
         LocalDateTime createdAt
 ) {
     public static UserResponse from(User user) {
@@ -30,6 +31,7 @@ public record UserResponse(
                 user.getAddress(),
                 user.getUnpaidStrike(),
                 user.isBidBlocked(),
+                user.getBillingKey() != null,
                 user.getCreatedAt()
         );
     }

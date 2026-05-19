@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.card.entity;
 
+import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
@@ -29,6 +30,9 @@ public class Card extends BaseEntity {
     @Column(name = "series", length = 100)
     private String series;
 
+    @Column(name = "set_id", length = 50)
+    private String setId;
+
     @Column(name = "set_name", length = 100)
     private String setName;
 
@@ -37,6 +41,10 @@ public class Card extends BaseEntity {
 
     @Column(name = "rarity", length = 50)
     private String rarity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 20)
+    private CardCategory category;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "grade", nullable = false, length = 20)
@@ -53,15 +61,17 @@ public class Card extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private CardStatus status;
 
-    public void update(String tcgdexId, String name, String series, String setName,
-                       String cardNumber, String rarity, CardGrade grade,
+    public void update(String tcgdexId, String name, String series, String setId, String setName,
+                       String cardNumber, String rarity, CardCategory category, CardGrade grade,
                        String imageUrl, CardSource source) {
         this.tcgdexId = tcgdexId;
         this.name = name;
         this.series = series;
+        this.setId = setId;
         this.setName = setName;
         this.cardNumber = cardNumber;
         this.rarity = rarity;
+        this.category = category;
         this.grade = grade;
         this.imageUrl = imageUrl;
         this.source = source;

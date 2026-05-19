@@ -16,3 +16,8 @@ spring:
       port: 6379
   kafka:
     bootstrap-servers: localhost:9092
+
+jwt:
+  secret: pocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkey
+  access-token-expiration: 3600000
+  refresh-token-expiration: 86400000
