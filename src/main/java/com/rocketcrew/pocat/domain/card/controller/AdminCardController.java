@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/cards")
@@ -25,9 +26,8 @@ public class AdminCardController {
     }
 
     @DeleteMapping("/{cardId}")
-    public ResponseEntity<ApiResponseDto<Void>> deleteCard(@PathVariable Long cardId) {
+    public ResponseEntity<Void> deleteCard(@PathVariable Long cardId) {
         cardCommandService.deleteCard(cardId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.noContent().build();
     }
 }
