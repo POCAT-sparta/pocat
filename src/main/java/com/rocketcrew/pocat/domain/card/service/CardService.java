@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.card.service;
 
+import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
@@ -26,6 +27,13 @@ public class CardService {
         return cardRepository.findAll(pageable)
                 .map(CardResponse::from);
     }
+
+    @Transactional(readOnly = true)
+    public Page<CardResponse> searchCards(CardSearchCondition condition, Pageable pageable) {
+        return cardRepository.searchCards(condition, pageable)
+                .map(CardResponse::from);
+    }
+
 
     @Transactional(readOnly = true)
     public CardResponse getCard(Long id) {
@@ -59,9 +67,11 @@ public class CardService {
                 request.tcgdexId(),
                 request.name(),
                 request.series(),
+                request.setId(),
                 request.setName(),
                 request.cardNumber(),
                 request.rarity(),
+                request.category(),
                 request.grade(),
                 request.imageUrl(),
                 request.source()

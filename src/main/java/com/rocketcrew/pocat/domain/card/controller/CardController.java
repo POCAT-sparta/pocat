@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.card.controller;
 
+import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
