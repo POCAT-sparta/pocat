@@ -43,7 +43,7 @@ public class OrderQueryService {
 
         return orders.map(order -> {
             Card card = cardMap.get(order.getCardId());
-            if (card == null) throw new CardException(ErrorCode.CARD_NOT_FOUND);
+            if (card == null) throw new OrderException(ErrorCode.CARD_NOT_FOUND);
             return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
         });
     }
@@ -52,7 +52,7 @@ public class OrderQueryService {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
         Card card = cardRepository.findById(order.getCardId())
-                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+                .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
     }
 

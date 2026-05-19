@@ -37,7 +37,7 @@ public class OrderCommandService {
         }
 
         Card card = cardRepository.findById(order.getCardId())
-                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+                .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         order.cancel(reason);
         return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
     }
