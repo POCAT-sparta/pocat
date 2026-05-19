@@ -165,6 +165,7 @@ public class PaymentCommandService {
         // } else {
         //     paymentFailureService.markFailed(payment.getId()); // REQUIRES_NEW
         // }
+         */
     }
 
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
