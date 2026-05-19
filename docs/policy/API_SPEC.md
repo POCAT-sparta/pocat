@@ -701,16 +701,15 @@ Authorization: Bearer {accessToken}
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명                                       |
-|---|---|---|------------------------------------------|
-| `keyword` | String | N | 경매 제목/카드명 검색                             |
-| `status` | String | N | 상태 필터 (ACTIVE 등)                         |
-| `grade` | String | N | 카드 등급 필터                                 |
-| `minPrice` | Long | N | 최소 입찰가                                   |
-| `maxPrice` | Long | N | 최대 입찰가                                   |
-| `page` | int | N | 페이지 번호 (default: 0)                      |
-| `size` | int | N | 페이지 크기 (default: 20)                     |
-| `sort` | String | N | 정렬 기준 (endedAt,asc Refa/ createdAt,desc) |
+| 파라미터      | 타입 | 필수 | 설명                       |
+|-----------|---|---|--------------------------|
+| `keyword` | String | N | 카드 이름, 경매 제목, 시리즈명, 확장팩명, 카드번호 검색   |
+| `serires` | String | N | 카드 시리즈 필터                |
+| `setName` | String | N | 카드 확장팩 이름 필터             |
+| `grade`   | String | N | 카드 등급 필터                 |
+| `page`    | int | N | 페이지 번호 (default: 0)      |
+| `size`    | int | N | 페이지 크기 (default: 20)     |
+| `sort`    | String | N | 정렬 기준 (endedAt,asc / createdAt,desc) |
 
 **Response** `200 OK`
 
@@ -721,6 +720,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 1,
+        "id": 1,
+        "cardId": 1,
         "title": "PSA 10 리자몽 경매",
         "cardName": "리자몽",
         "grade": "PSA_10",
@@ -751,13 +752,48 @@ Authorization: Bearer {accessToken}
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `status` | String | N | 상태 필터 |
-| `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 20) |
+| 파라미터      | 타입 | 필수 | 설명                                |
+|-----------|---|---|-----------------------------------|
+| `keyword` | String | N | 카드 이름, 경매 제목, 시리즈명, 확장팩명, 카드번호 검색 |
+| `serires` | String | N | 카드 시리즈 필터                         |
+| `setName` | String | N | 카드 확장팩 이름 필터                      |
+| `grade`   | String | N | 카드 등급 필터                          |
+| `status`  | String | N | 경매 상태 필터                          |
+| `page`    | int | N | 페이지 번호 (default: 0)               |
+| `size`    | int | N | 페이지 크기 (default: 20)              |
+| `sort`    | String | N | 정렬 기준 (endedAt,asc / createdAt,desc) |
 
 **Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+```json
+{
+  "status": "SUCCESS",
+  "data": {
+    "content": [
+      {
+        "id": 42,
+        "title": "PSA 10 피카츄 1세대 경매",
+        "cardId": 1,
+        "cardName": "피카츄",
+        "grade": "PSA_10",
+        "cardImageUrl": "https://example.com/card.jpg",
+        "startingPrice": 100000,
+        "buyoutPrice": 1000000,
+        "highestPrice": 150000,
+        "status": "ACTIVE",
+        "startedAt": "2026-05-15T12:00:00",
+        "endedAt": "2026-05-18T12:00:00",
+        "createdAt": "2026-05-15T11:00:00"
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1,
+    "size": 20,
+    "number": 0
+  },
+  "message": ""
+}
+```
+
 
 ---
 
@@ -773,6 +809,37 @@ Authorization: Bearer {accessToken}
 | `status` | String | N | 상태 필터 |
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
+
+**Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+```json
+{
+  "status": "SUCCESS",
+  "data": {
+    "content": [
+      {
+        "auctionId": 42,
+        "title": "PSA 10 피카츄 1세대 경매",
+        "cardId": 1,
+        "cardName": "피카츄",
+        "grade": "PSA_10",
+        "cardImageUrl": "https://example.com/card.jpg",
+        "startingPrice": 100000,
+        "highestPrice": 150000,
+        "buyoutPrice": 1000000,
+        "status": "ACTIVE",
+        "startedAt": "2026-05-15T12:00:00",
+        "endedAt": "2026-05-18T12:00:00",
+        "createdAt": "2026-05-15T11:00:00"
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1,
+    "page": 0,
+    "size": 20
+  },
+  "message": ""
+}
+```
 
 ---
 
@@ -806,6 +873,7 @@ Authorization: Bearer {accessToken}
     "buyoutPrice": 1000000,
     "highestPrice": 200000,
     "highestBidderId": 3,
+    "highestBidderNickname": "피카헌터",
     "status": "ACTIVE",
     "startedAt": "2026-05-01T00:00:00",
     "endedAt": "2026-05-04T00:00:00",
@@ -818,39 +886,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 4.5 시세 조회
-
-- **GET** `/api/v1/auctions/{cardId}/price`
-- **권한**: `PUBLIC`
-- **설명**: 특정 카드의 최근 낙찰 이력 기반 시세 정보 조회
-
-**Path Variables**
-
-| 변수 | 타입 | 설명 |
-|---|---|---|
-| `cardId` | Long | 카드 ID |
-
-**Response** `200 OK`
-
-```json
-{
-  "status": "SUCCESS",
-  "data": {
-    "cardId": 1,
-    "cardName": "리자몽",
-    "grade": "PSA_10",
-    "recentAvgPrice": 350000,
-    "recentMinPrice": 200000,
-    "recentMaxPrice": 500000,
-    "recentSoldCount": 5
-  },
-  "message": ""
-}
-```
-
----
-
-### 4.6 경매 등록 (판매자)
+### 4.5 경매 등록 (판매자)
 
 - **POST** `/api/v1/auctions`
 - **권한**: `USER`
@@ -863,9 +899,7 @@ Authorization: Bearer {accessToken}
   "title": "PSA 10 리자몽 경매",
   "description": "2016년 출시 원판 리자몽",
   "startingPrice": 100000,
-  "buyoutPrice": 1000000,
-  "startedAt": "2026-05-01T00:00:00",
-  "endedAt": "2026-05-04T00:00:00"
+  "buyoutPrice": 1000000
 }
 ```
 
@@ -879,13 +913,13 @@ Authorization: Bearer {accessToken}
     "title": "PSA 10 리자몽 경매",
     "status": "PENDING"
   },
-  "message": "경매 등록 완료 (검수 대기 중)"
+  "message":""
 }
 ```
 
 ---
 
-### 4.7 경매 수정 (PENDING 상태만)
+### 4.6 경매 수정 (PENDING 상태만)
 
 - **PATCH** `/api/v1/auctions/{auctionId}`
 - **권한**: `USER` (본인)
@@ -907,20 +941,20 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "auctionId": 1,
+    "id": 1,
     "title": "수정된 경매 제목",
     "description": "수정된 설명",
     "startingPrice": 150000,
     "buyoutPrice": 1200000,
     "status": "PENDING"
   },
-  "message": "경매 수정 완료"
+  "message": ""
 }
 ```
 
 ---
 
-### 4.8 경매 취소 (판매자)
+### 4.7 경매 취소 (판매자)
 
 - **PATCH** `/api/v1/auctions/{auctionId}/cancel`
 - **권한**: `USER` (본인)
@@ -934,13 +968,13 @@ Authorization: Bearer {accessToken}
     "auctionId": 1,
     "status": "CANCELLED"
   },
-  "message": "경매 취소 완료"
+  "message": ""
 }
 ```
 
 ---
 
-### 4.9 입찰 (빌링키 필수)
+### 4.8 입찰 (빌링키 필수)
 
 - **POST** `/api/v1/auctions/{auctionId}/bids`
 - **권한**: `USER`
@@ -971,20 +1005,23 @@ Authorization: Bearer {accessToken}
     "bidPrice": 250000,
     "status": "ACTIVE"
   },
-  "message": "입찰 성공"
+  "message": ""
 }
 ```
 
 **Error Cases**
 
-| 상태 코드 | 사유 |
-|---|---|
-| `400` | 입찰가가 현재 최고가 이하 |
-| `409` | 빌링키 미등록 / 입찰 차단 / 경매 비활성 상태 |
+| 상태 코드 | 사유                              |
+|-------|---------------------------------|
+| `400` | 입력값이 올바르지 않은 경우                 |
+| `403` | 빌링키 미등록 / 본인 경매에 입찰 시도 시 / 입찰 차단 사용자 |
+| `404` | 경매 미존재                          |
+| `409` | 경매 비활성 상태, 락 획득 실패, 최고가보다 낮은 입찰 |
+
 
 ---
 
-### 4.10 내 입찰 목록 조회 (구매자)
+### 4.9 내 입찰 목록 조회 (구매자)
 
 - **GET** `/api/v1/bids/me`
 - **권한**: `USER`
@@ -1024,7 +1061,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 4.11 즉시 구매
+### 4.10 즉시 구매
 
 - **POST** `/api/v1/auctions/{auctionId}/buyout`
 - **권한**: `USER`
@@ -1060,7 +1097,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 4.12 경매 입찰 내역 조회
+### 4.11 경매 입찰 내역 조회
 
 - **GET** `/api/v1/auctions/{auctionId}/bids`
 - **권한**: `PUBLIC`
@@ -1098,7 +1135,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 4.13 경매 검수 승인 / 거절 (관리자)
+### 4.12 경매 검수 승인 / 거절 (관리자)
 
 - **PATCH** `/api/v1/admin/auctions/{auctionId}/inspect`
 - **권한**: `ADMIN`
@@ -1127,7 +1164,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 4.14 경매 강제 취소 (관리자)
+### 4.13 경매 강제 취소 (관리자)
 
 - **PATCH** `/api/v1/admin/auctions/{auctionId}/cancel`
 - **권한**: `ADMIN`
