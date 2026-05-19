@@ -39,7 +39,4 @@ public class FreePost extends BaseEntity {
         this.content = content;
     }
 
-    public void incrementViewCount() {
-        this.viewCount++;
-    }
 }

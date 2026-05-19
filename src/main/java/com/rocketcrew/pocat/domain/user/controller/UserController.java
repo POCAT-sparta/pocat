@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.user.controller;
 
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
+import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
@@ -54,6 +55,14 @@ public class UserController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 
+    @PutMapping("/api/v1/users/me/billing-key")
+    public ResponseEntity<ApiResponseDto<Void>> updateBillingKey(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody UpdateBillingKeyRequest request) {
+        userCommandService.updateBillingKey(userDetails.getUserId(), request);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
+    }
+
     @PutMapping("/api/v1/users/me/bank-account")
     public ResponseEntity<ApiResponseDto<Void>> updateBank(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -64,8 +73,10 @@ public class UserController {
 
     @GetMapping("/api/v1/admin/users")
     public ResponseEntity<ApiResponseDto<PageResponseDto<UserResponse>>> getAllUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean isBidBlocked,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<UserResponse> page = userQueryService.getAllUsers(pageable);
+        Page<UserResponse> page = userQueryService.getAllUsers(keyword, isBidBlocked, pageable);
         PageResponseDto<UserResponse> pageResponse = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }

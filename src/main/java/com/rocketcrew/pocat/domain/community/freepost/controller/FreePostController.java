@@ -30,8 +30,9 @@ public class FreePostController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getPosts(
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<FreePostResponse> page = freePostQueryService.getPosts(pageable);
+        Page<FreePostResponse> page = freePostQueryService.getPosts(keyword, pageable);
         List<FreePostResponse> content = page.getContent();
         PageResponseDto<FreePostResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));

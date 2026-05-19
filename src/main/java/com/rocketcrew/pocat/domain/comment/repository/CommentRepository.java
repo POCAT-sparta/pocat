@@ -9,13 +9,15 @@ import java.util.List;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    List<Comment> findByPostId(Long postId);
+    List<Comment> findByFreePostId(Long freePostId);
 
-    List<Comment> findByPostIdAndParentIdIsNull(Long postId);
+    List<Comment> findByFreePostIdAndParentIdIsNull(Long freePostId);
 
-    Page<Comment> findByPostIdAndParentIdIsNull(Long postId, Pageable pageable);
+    Page<Comment> findByFreePostIdAndParentIdIsNull(Long freePostId, Pageable pageable);
 
     List<Comment> findByParentId(Long parentId);
 
     List<Comment> findByParentIdIn(List<Long> parentIds);
+
+    int countByFreePostId(Long freePostId);
 }

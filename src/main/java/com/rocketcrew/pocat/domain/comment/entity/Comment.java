@@ -17,8 +17,8 @@ public class Comment extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "post_id", nullable = false)
-    private Long postId;
+    @Column(name = "free_post_id", nullable = false)
+    private Long freePostId;
 
     @Column(name = "parent_id")
     private Long parentId;

@@ -28,9 +28,9 @@ public class CommentController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<CommentTreeResponse>>> getCommentsByPost(
-            @RequestParam Long postId,
+            @RequestParam Long freePostId,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<CommentTreeResponse> page = commentQueryService.getCommentsByPost(postId, pageable);
+        Page<CommentTreeResponse> page = commentQueryService.getCommentsByPost(freePostId, pageable);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
