@@ -37,14 +37,13 @@ public class CardDataInit implements ApplicationRunner {
     private final ObjectMapper objectMapper;
 
     @Override
-    @Transactional
     public void run(ApplicationArguments args) throws Exception {
         if (cardRepository.count() > 0) {
             log.info("[CardDataInit] 카드 데이터가 이미 존재합니다. 초기화를 건너뜁니다.");
             return;
         }
 
-        Long userId = userRepository.findFirstBy()
+        Long userId = userRepository.findFirstByOrderByIdAsc()
                 .map(user -> user.getId())
                 .orElse(null);
 
@@ -65,10 +64,12 @@ public class CardDataInit implements ApplicationRunner {
             JsonNode cardNodes = setRoot.path("cards");
 
             List<Card> cardList = new ArrayList<>();
-            int count = 0;
+            int attempted = 0; // 시도 횟수 (MAX_CARDS 상한 기준)
+            int saved = 0;     // 성공 횟수 (등급 순환 기준)
 
             for (JsonNode cardNode : cardNodes) {
-                if (count >= MAX_CARDS) break;
+                if (attempted >= MAX_CARDS) break;
+                attempted++;
 
                 String tcgdexId = cardNode.path("id").asText();
 
@@ -79,10 +80,11 @@ public class CardDataInit implements ApplicationRunner {
 
                     String name = cardRoot.path("name").asText();
                     String localId = cardRoot.path("localId").asText();
-                    String imageUrl = cardRoot.path("image").asText("") + "/high.webp";
+                    String imageBase = cardRoot.path("image").asText("");
+                    String imageUrl = imageBase.isEmpty() ? null : imageBase + "/high.webp";
                     String rarity = cardRoot.path("rarity").asText("");
                     CardCategory category = parseCategory(cardRoot.path("category").asText(""));
-                    CardGrade grade = GRADES[count % GRADES.length];
+                    CardGrade grade = GRADES[saved % GRADES.length];
 
                     Card card = Card.builder()
                             .userId(userId)
@@ -100,20 +102,25 @@ public class CardDataInit implements ApplicationRunner {
                             .build();
 
                     cardList.add(card);
-                    count++;
+                    saved++;
 
                 } catch (Exception e) {
                     log.warn("[CardDataInit] 카드 조회 실패 ({}): {}", tcgdexId, e.getMessage());
                 }
             }
 
-            cardRepository.saveAll(cardList);
-            log.info("[CardDataInit] 카드 {}개 초기화 완료", cardList.size());
+            saveCards(cardList);
+            log.info("[CardDataInit] 카드 {}개 초기화 완료 (시도: {})", cardList.size(), attempted);
 
         } catch (Exception e) {
             // 선택적 초기화이므로 실패해도 애플리케이션 시작은 계속 진행
             log.error("[CardDataInit] 카드 초기화 실패: {}", e.getMessage());
         }
+    }
+
+    @Transactional
+    public void saveCards(List<Card> cards) {
+        cardRepository.saveAll(cards);
     }
 
     private RestTemplate createRestTemplate() {
