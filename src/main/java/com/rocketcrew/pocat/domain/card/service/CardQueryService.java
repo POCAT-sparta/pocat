@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.card.service;
 
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.Card;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
@@ -27,5 +28,13 @@ public class CardQueryService {
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         return CardResponse.from(card);
+    }
+
+    public void validateRegistrableForAuction(Long cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
+        }
     }
 }
