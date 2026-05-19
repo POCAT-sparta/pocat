@@ -61,4 +61,12 @@ public class User extends BaseEntity {
         this.bankName = bankName;
         this.bankAccount = bankAccount;
     }
+
+    public void registerBillingKey(String billingKey) {
+        this.billingKey = billingKey;
+    }
+
+    public void deleteBillingKey() {
+        this.billingKey = null;
+    }
 }
