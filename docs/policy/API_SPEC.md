@@ -701,16 +701,16 @@ Authorization: Bearer {accessToken}
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `keyword` | String | N | 경매 제목/카드명 검색 |
-| `status` | String | N | 상태 필터 (ACTIVE 등) |
-| `grade` | String | N | 카드 등급 필터 |
-| `minPrice` | Long | N | 최소 입찰가 |
-| `maxPrice` | Long | N | 최대 입찰가 |
-| `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 20) |
-| `sort` | String | N | 정렬 기준 (endedAt,asc / createdAt,desc) |
+| 파라미터 | 타입 | 필수 | 설명                                       |
+|---|---|---|------------------------------------------|
+| `keyword` | String | N | 경매 제목/카드명 검색                             |
+| `status` | String | N | 상태 필터 (ACTIVE 등)                         |
+| `grade` | String | N | 카드 등급 필터                                 |
+| `minPrice` | Long | N | 최소 입찰가                                   |
+| `maxPrice` | Long | N | 최대 입찰가                                   |
+| `page` | int | N | 페이지 번호 (default: 0)                      |
+| `size` | int | N | 페이지 크기 (default: 20)                     |
+| `sort` | String | N | 정렬 기준 (endedAt,asc Refa/ createdAt,desc) |
 
 **Response** `200 OK`
 
@@ -720,7 +720,7 @@ Authorization: Bearer {accessToken}
   "data": {
     "content": [
       {
-        "id": 1,
+        "auctionId": 1,
         "title": "PSA 10 리자몽 경매",
         "cardName": "리자몽",
         "grade": "PSA_10",
@@ -875,7 +875,7 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "id": 1,
+    "auctionId": 1,
     "title": "PSA 10 리자몽 경매",
     "status": "PENDING"
   },
@@ -907,8 +907,11 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "id": 1,
+    "auctionId": 1,
     "title": "수정된 경매 제목",
+    "description": "수정된 설명",
+    "startingPrice": 150000,
+    "buyoutPrice": 1200000,
     "status": "PENDING"
   },
   "message": "경매 수정 완료"
@@ -928,7 +931,7 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "id": 1,
+    "auctionId": 1,
     "status": "CANCELLED"
   },
   "message": "경매 취소 완료"
@@ -1042,10 +1045,16 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "auctionId": 1,
-    "status": "PAYMENT_PENDING",
-    "orderId": 5
+    "bidId": 10,
+    "orderUid": "ORD_20260519_abc123",
+    "orderStatus": "PAYMENT_COMPLETED",
+    "paymentUid": "PAY_20260519_xyz789",
+    "paymentStatus": "COMPLETED",
+    "paidAmount": 1000000,
+    "auctionStatus": "ENDED",
+    "purchasedAt": "2026-05-19T12:00:00"
   },
-  "message": "즉시 구매 요청 완료. 결제 진행 중"
+  "message": ""
 }
 ```
 
@@ -1072,6 +1081,7 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "bidId": 10,
+        "bidderId": 23,
         "bidderNickname": "포켓몬마스터",
         "bidPrice": 250000,
         "createdAt": "2026-05-02T10:00:00"
@@ -1102,11 +1112,6 @@ Authorization: Bearer {accessToken}
 }
 ```
 
-| `result` 값 | 전이 상태 |
-|---|---|
-| `PASSED` | `ACTIVE` |
-| `FAILED` | `REJECTED` |
-
 **Response** `200 OK`
 
 ```json
@@ -1116,7 +1121,7 @@ Authorization: Bearer {accessToken}
     "auctionId": 1,
     "status": "ACTIVE"
   },
-  "message": "경매 검수 완료"
+  "message": ""
 }
 ```
 
@@ -1144,7 +1149,7 @@ Authorization: Bearer {accessToken}
     "auctionId": 1,
     "status": "CANCELLED"
   },
-  "message": "경매 강제 취소 완료"
+  "message": ""
 }
 ```
 
