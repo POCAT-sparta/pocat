@@ -16,13 +16,14 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api/v1")
 public class AuctionBidController {
 
     private final AuctionBidQueryService auctionBidQueryService;
     private final AuctionBidCommandService auctionBidCommandService;
 
     // 특정 경매 입찰 목록 조회.
-    @GetMapping("/api/v1/auctions/{auctionId}/bids")
+    @GetMapping("/auctions/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<List<AuctionBidResponse>>> getBidsByAuction(
             @PathVariable Long auctionId) {
         List<AuctionBidResponse> response = auctionBidQueryService.getBidsByAuction(auctionId);
@@ -32,7 +33,7 @@ public class AuctionBidController {
 
     // 입찰
     // Todo : request 및 내부 로직 수정 필요
-    @PostMapping("/api/v1/{auctionId}/bids")
+    @PostMapping("/auctions/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<AuctionBidResponse>> createBid(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateBidRequest request) {

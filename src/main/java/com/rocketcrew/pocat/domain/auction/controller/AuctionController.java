@@ -29,14 +29,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/auctions")
+@RequestMapping("/api/v1")
 public class AuctionController {
 
     private final AuctionQueryService auctionQueryService;
     private final AuctionCommandService auctionCommandService;
 
     // Todo : 경매 목록 조회 API
-    @GetMapping
+    @GetMapping("/auctions")
     public ResponseEntity<ApiResponseDto<PageResponseDto<AuctionResponse>>> getAuctions(
             @PageableDefault(size = 10) Pageable pageable) {
         Page<AuctionResponse> page = auctionQueryService.getAuctions(pageable);
@@ -45,14 +45,14 @@ public class AuctionController {
     }
 
     // Todo : 경매 상세 조회 API
-    @GetMapping("/{auctionId}")
+    @GetMapping("/auctions/{auctionId}")
     public ResponseEntity<ApiResponseDto<AuctionResponse>> getAuction(@PathVariable Long auctionId) {
         AuctionResponse response = auctionQueryService.getAuction(auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     // 경매 등록 API (판매자)
-    @PostMapping
+    @PostMapping("/auctions")
     public ResponseEntity<ApiResponseDto<CreateAuctionResponse>> createAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateAuctionRequest request) {
@@ -62,7 +62,7 @@ public class AuctionController {
     }
 
     // 경매 수정 API (판매자)
-    @PatchMapping("/{auctionId}")
+    @PatchMapping("/auctions/{auctionId}")
     public ResponseEntity<ApiResponseDto<UpdateAuctionResponse>> updateAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,
@@ -72,7 +72,7 @@ public class AuctionController {
     }
 
     // 경매 취소 API (판매자)
-    @PatchMapping("/{auctionId}/cancel")
+    @PatchMapping("/auctions/{auctionId}/cancel")
     public ResponseEntity<ApiResponseDto<CancelAuctionResponse>> cancelAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId) {
