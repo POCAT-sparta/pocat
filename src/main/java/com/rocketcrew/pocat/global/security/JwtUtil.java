@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.global.jwt;
+package com.rocketcrew.pocat.global.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
