@@ -47,9 +47,11 @@ public class TradePostController {
     @GetMapping("/{tradePostId}")
     public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(
             @PathVariable Long tradePostId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest request) {
         String clientIp = HttpRequestUtils.resolveClientIp(request);
-        TradePostResponse response = tradePostQueryService.getPost(tradePostId, clientIp);
+        Long requesterId = userDetails != null ? userDetails.getUserId() : null;
+        TradePostResponse response = tradePostQueryService.getPost(tradePostId, clientIp, requesterId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 

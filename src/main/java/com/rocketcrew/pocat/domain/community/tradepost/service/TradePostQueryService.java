@@ -30,11 +30,13 @@ public class TradePostQueryService {
                 });
     }
 
-    public TradePostResponse getPost(Long id, String clientIp) {
+    public TradePostResponse getPost(Long id, String clientIp, Long requesterId) {
         TradePost tradePost = tradePostRepository.findById(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
         String nickname = userQueryService.getUserById(tradePost.getUserId()).nickname();
-        viewCountService.increaseViewCount(id, clientIp);
+        if (!tradePost.getUserId().equals(requesterId)) {
+            viewCountService.increaseViewCount(id, clientIp);
+        }
         return TradePostResponse.from(tradePost, nickname);
     }
 }
