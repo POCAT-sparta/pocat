@@ -1,8 +1,6 @@
 package com.rocketcrew.pocat.global.security;
 
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,9 +9,9 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 @Getter
-@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class CustomUserDetails implements UserDetails, Serializable {
 
     @Serial
@@ -22,10 +20,19 @@ public class CustomUserDetails implements UserDetails, Serializable {
     private final Long userId;
     private final String role;
 
+    protected CustomUserDetails(Long userId, String role) {
+        Objects.requireNonNull(userId, "userId must not be null");
+        Objects.requireNonNull(role, "role must not be null");
+        if (role.isBlank()) {
+            throw new IllegalArgumentException("role must not be blank");
+        }
+        this.userId = userId;
+        this.role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        String normalizedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
-        return List.of(new SimpleGrantedAuthority(normalizedRole));
+        return List.of(new SimpleGrantedAuthority(role));
     }
 
     @Override
