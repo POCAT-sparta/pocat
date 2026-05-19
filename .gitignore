@@ -39,5 +39,8 @@ out/
 ### Environment ###
 .env
 
+### Claude Code ###
+.claude/
+
 ### Serena ###
 .serena/
