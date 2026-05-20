@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 
@@ -15,12 +16,13 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "settlements")
 @SQLDelete(sql = "UPDATE settlements SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Settlement extends BaseEntity {
 
     @Column(name = "settlement_uid", nullable = false, length = 50, unique = true)
     private String settlementUid;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id", nullable = false, unique = true)
     private Long orderId;
 
     @Column(name = "seller_id")

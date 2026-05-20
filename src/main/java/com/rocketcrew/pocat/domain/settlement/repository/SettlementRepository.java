@@ -11,6 +11,8 @@ import java.util.Optional;
 
 public interface SettlementRepository extends JpaRepository<Settlement, Long>, SettlementRepositoryCustom {
 
+    boolean existsByOrderId(Long orderId);
+
     Page<Settlement> findBySellerId(Long sellerId, Pageable pageable);
 
     Optional<Settlement> findBySettlementUidAndSellerId(String settlementUid, Long sellerId);

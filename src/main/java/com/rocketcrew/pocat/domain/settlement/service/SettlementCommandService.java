@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.UUID;
 
 @Service
@@ -19,23 +21,29 @@ import java.util.UUID;
 public class SettlementCommandService {
     // TODO: 추후에 이벤트 처리로 고도화 가능 : 결제 완료 이벤트 발행 -> 리스너가 컨슘 -> 정산 객체 생성
 
-    // 수수료 비율 미정 - 추후 변경 시 이 상수만 수정
-    private static final double PLATFORM_FEE_RATE = 0.10;
+    private static final BigDecimal PLATFORM_FEE_RATE = new BigDecimal("0.05");
 
     private final SettlementRepository settlementRepository;
     private final OrderRepository orderRepository;
 
-    public void createSettlement(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+    public void createSettlement(String orderUid) {
+        Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
+        if (settlementRepository.existsByOrderId(order.getId())) {
+            return;
+        }
+
         long totalPrice = order.getFinalPrice();
-        long platformFee = Math.round(totalPrice * PLATFORM_FEE_RATE);
+        long platformFee = BigDecimal.valueOf(totalPrice)
+                .multiply(PLATFORM_FEE_RATE)
+                .setScale(0, RoundingMode.HALF_UP)
+                .longValue();
         long sellerAmount = totalPrice - platformFee;
 
         Settlement settlement = Settlement.builder()
                 .settlementUid(UUID.randomUUID().toString())
-                .orderId(orderId)
+                .orderId(order.getId())
                 .sellerId(order.getSellerId())
                 .totalPrice(totalPrice)
                 .platformFee(platformFee)
