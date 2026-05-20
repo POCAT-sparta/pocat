@@ -2518,17 +2518,6 @@ Authorization: Bearer {accessToken}
 DISCONNECT ws://{host}/ws/chat
 ```
 
-### 12.10 읽음 처리
-
-- **SUBSCRIBE** `/sub/chat/{chatId}/read`
-
-```json
-{
-  "chatId": 1,
-  "readerId": 3
-}
-```
-
 ---
 
 ## 13. 알림 (Notification)

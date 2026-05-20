@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface ChatRepository extends JpaRepository<Chat, Long> {
 
-    @Query("SELECT c FROM Chat c WHERE (c.ownerId = :userId OR c.guestId = :userId) ORDER BY c.updatedAt DESC")
+    @Query("SELECT c FROM Chat c WHERE (c.ownerId = :userId AND c.ownerLeft = false) OR (c.guestId = :userId AND c.guestLeft = false) ORDER BY c.updatedAt DESC")
     List<Chat> findMyChats(@Param("userId") Long userId);
 
     boolean existsByPostIdAndGuestId(Long postId, Long guestId);

@@ -29,4 +29,24 @@ public class Chat extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name="status", nullable = false, length = 20)
     private ChatStatus status;
+
+    @Column(name="owner_left", nullable = false)
+    @Builder.Default
+    private boolean ownerLeft = false;
+
+    @Column(name="guest_left", nullable = false)
+    @Builder.Default
+    private boolean guestLeft = false;
+
+    public void markOwnerLeft() {
+        this.ownerLeft = true;
+    }
+
+    public void markGuestLeft() {
+        this.guestLeft = true;
+    }
+
+    public boolean isBothLeft() {
+        return this.ownerLeft && this.guestLeft;
+    }
 }

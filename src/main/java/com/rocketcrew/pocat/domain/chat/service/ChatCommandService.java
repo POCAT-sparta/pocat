@@ -43,6 +43,8 @@ public class ChatCommandService {
                 .ownerId(post.getUserId())
                 .guestId(guestId)
                 .postId(request.postId())
+                .guestLeft(false)
+                .ownerLeft(false)
                 .status(ChatStatus.ACTIVE)
                 .build();
         try {
@@ -85,6 +87,15 @@ public class ChatCommandService {
     public void leaveChat(Long chatId, Long userId) {
         Chat chat = chatRepository.findByIdAndParticipant(chatId, userId)
                 .orElseThrow(() -> new ChatException(ErrorCode.CHAT_FORBIDDEN));
-        chatRepository.delete(chat);
+
+        if (chat.getOwnerId().equals(userId)) {
+            chat.markOwnerLeft();
+        } else {
+            chat.markGuestLeft();
+        }
+
+        if (chat.isBothLeft()) {
+            chatRepository.delete(chat);
+        }
     }
 }
