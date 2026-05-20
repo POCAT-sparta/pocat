@@ -11,10 +11,13 @@ import com.rocketcrew.pocat.domain.refund.dto.response.RefundResponse;
 import com.rocketcrew.pocat.domain.refund.entity.Refund;
 import com.rocketcrew.pocat.domain.refund.entity.RefundStatus;
 import com.rocketcrew.pocat.domain.refund.repository.RefundRepository;
+import com.rocketcrew.pocat.domain.settlement.entity.Settlement;
+import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.RefundException;
+import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,7 @@ public class RefundCommandService {
     private final RefundRepository refundRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final SettlementRepository settlementRepository;
 
     // 환불 요청 가능한 주문 상태
     private static final Set<OrderStatus> REFUNDABLE_STATUSES =
@@ -93,9 +97,13 @@ public class RefundCommandService {
         Payment payment = paymentRepository.findById(refund.getPaymentId())
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
 
+        Settlement settlement = settlementRepository.findByOrderId(refund.getOrderId())
+                .orElseThrow(() -> new SettlementException(ErrorCode.SETTLEMENT_NOT_FOUND));
+
         refund.approve();
         payment.refund();
         order.refund();
+        settlement.refund();
 
         return RefundResponse.from(refund);
     }

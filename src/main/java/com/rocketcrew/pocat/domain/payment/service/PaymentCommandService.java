@@ -11,6 +11,7 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
@@ -32,6 +33,7 @@ public class PaymentCommandService {
     private final OrderRepository orderRepository;
     private final ObjectMapper objectMapper;
     private final PaymentFailureService paymentFailureService;
+    private final SettlementCommandService settlementCommandService;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -96,6 +98,7 @@ public class PaymentCommandService {
         //      → 외부 트랜잭션 롤백과 무관하게 실패 상태가 커밋됨
         //      → 이후 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH)
         //   ④ 검증 통과 시: payment.complete(method, paidAt), order.completePayment() 호출
+        //      이후 settlementCommandService.createSettlement(order.getOrderUid()) 호출
         //
         // [fail-closed] PortOne 연동 완료 전까지 이 경로는 차단한다.
         // 하드코딩된 플레이스홀더로 결제가 우회 완료되는 보안 취약점을 방지.
@@ -162,6 +165,7 @@ public class PaymentCommandService {
         //     }
         //     payment.complete(portOneMethod, portOnePaidAt);
         //     order.completePayment();
+        //     settlementCommandService.createSettlement(order.getOrderUid());
         // } else {
         //     paymentFailureService.markFailed(payment.getId()); // REQUIRES_NEW
         // }
