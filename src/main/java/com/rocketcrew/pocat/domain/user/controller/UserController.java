@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
+import com.rocketcrew.pocat.domain.user.dto.response.AdminUserResponse;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
 import com.rocketcrew.pocat.domain.user.service.UserCommandService;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
@@ -37,7 +38,7 @@ public class UserController {
     @PatchMapping("/api/v1/users/me")
     public ResponseEntity<ApiResponseDto<UserResponse>> updateUser(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody UpdateUserRequest request) {
+            @Valid @RequestBody UpdateUserRequest request) {
         UserResponse response = userCommandService.updateUser(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
@@ -67,18 +68,18 @@ public class UserController {
     @PutMapping("/api/v1/users/me/bank-account")
     public ResponseEntity<ApiResponseDto<Void>> updateBank(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody UpdateBankRequest request) {
+            @Valid @RequestBody UpdateBankRequest request) {
         userCommandService.updateBank(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 
     @GetMapping("/api/v1/admin/users")
-    public ResponseEntity<ApiResponseDto<PageResponseDto<UserResponse>>> getAllUsers(
+    public ResponseEntity<ApiResponseDto<PageResponseDto<AdminUserResponse>>> getAllUsers(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Boolean isBidBlocked,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<UserResponse> page = userQueryService.getAllUsers(keyword, isBidBlocked, pageable);
-        PageResponseDto<UserResponse> pageResponse = PageResponseDto.of(page, page.getContent());
+        Page<AdminUserResponse> page = userQueryService.getAllUsers(keyword, isBidBlocked, pageable);
+        PageResponseDto<AdminUserResponse> pageResponse = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 }

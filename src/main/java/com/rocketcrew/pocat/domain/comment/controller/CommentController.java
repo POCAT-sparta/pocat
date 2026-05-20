@@ -48,7 +48,7 @@ public class CommentController {
     public ResponseEntity<ApiResponseDto<CommentResponse>> updateComment(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody UpdateCommentRequest request) {
+            @Valid @RequestBody UpdateCommentRequest request) {
         CommentResponse response = commentCommandService.updateComment(commentId, userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
