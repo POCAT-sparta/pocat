@@ -39,6 +39,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/posts/free/me",
+                                "/api/v1/likes/me").authenticated()
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/v1/auctions/**",
                                 "/api/v1/cards/**",
                                 "/api/v1/posts/free/**",

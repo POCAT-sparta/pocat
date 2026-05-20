@@ -6,20 +6,22 @@ import java.util.List;
 
 public record CommentTreeResponse(
         Long id,
-        Long postId,
+        Long freePostId,
         Long parentId,
         Long authorId,
+        String authorNickname,
         String content,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         List<CommentTreeResponse> children
 ) {
-    public static CommentTreeResponse from(Comment comment, List<CommentTreeResponse> children) {
+    public static CommentTreeResponse of(Comment comment, String authorNickname, List<CommentTreeResponse> children) {
         return new CommentTreeResponse(
                 comment.getId(),
-                comment.getPostId(),
+                comment.getFreePostId(),
                 comment.getParentId(),
                 comment.getUserId(),
+                authorNickname,
                 comment.getContent(),
                 comment.getCreatedAt(),
                 comment.getUpdatedAt(),
@@ -27,7 +29,7 @@ public record CommentTreeResponse(
         );
     }
 
-    public static CommentTreeResponse from(Comment comment) {
-        return from(comment, List.of());
+    public static CommentTreeResponse of(Comment comment, String authorNickname) {
+        return of(comment, authorNickname, List.of());
     }
 }

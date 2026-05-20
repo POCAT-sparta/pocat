@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.like.service.LikeQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +29,7 @@ public class LikeController {
     @PostMapping
     public ResponseEntity<ApiResponseDto<ToggleLikeResponse>> toggleLike(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody ToggleLikeRequest request) {
+            @Valid @RequestBody ToggleLikeRequest request) {
         ToggleLikeResponse response = likeCommandService.toggleLike(userDetails.getUserId(), request.auctionId());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }

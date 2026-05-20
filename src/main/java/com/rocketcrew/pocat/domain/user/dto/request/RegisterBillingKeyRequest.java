@@ -1,3 +1,7 @@
 package com.rocketcrew.pocat.domain.user.dto.request;
 
-public record RegisterBillingKeyRequest(String billingKey) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record RegisterBillingKeyRequest(
+        @NotBlank(message = "빌링키를 입력해 주세요.") String billingKey
+) {}
