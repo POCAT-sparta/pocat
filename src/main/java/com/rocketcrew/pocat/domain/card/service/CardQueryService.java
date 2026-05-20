@@ -38,6 +38,7 @@ public class CardQueryService {
 
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
         return orderQueryService.getAveragePriceByCard(cardId);
+    }
     public void validateRegistrableForAuction(Long cardId) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
