@@ -67,6 +67,7 @@ public class CardDataInit implements ApplicationRunner {
             String setResponse = restTemplate.getForObject(TCGDEX_SET_URL, String.class);
             JsonNode setRoot = objectMapper.readTree(setResponse);
 
+            String setId = setRoot.path("id").asText("swsh3");
             String seriesName = setRoot.path("serie").path("name").asText("Sword & Shield");
             String setName = setRoot.path("name").asText("Darkness Ablaze");
             JsonNode cardNodes = setRoot.path("cards");
@@ -104,9 +105,10 @@ public class CardDataInit implements ApplicationRunner {
                             .tcgdexId(tcgdexId)
                             .name(name)
                             .series(seriesName)
+                            .setId(setId)
                             .setName(setName)
                             .cardNumber(localId)
-                            .rarity(rarity.isEmpty() ? null : rarity)
+                            .rarity(rarity.isEmpty() ? "UNKNOWN" : rarity)
                             .category(category)
                             .grade(grade)
                             .imageUrl(imageUrl)

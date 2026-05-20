@@ -15,9 +15,19 @@ import org.hibernate.annotations.SQLRestriction;
 @Builder
 @AllArgsConstructor
 @Entity
-@Table(name = "cards", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"tcgdex_id"})
-})
+@Table(name = "cards",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"tcgdex_id"})
+        },
+        indexes = {
+                @Index(name = "idx_cards_status", columnList = "status"),
+                @Index(name = "idx_cards_user_id", columnList = "user_id"),
+                @Index(name = "idx_cards_user_id_status", columnList = "user_id, status"),
+                @Index(name = "idx_cards_grade", columnList = "grade"),
+                @Index(name = "idx_cards_category", columnList = "category"),
+                @Index(name = "idx_cards_created_at", columnList = "created_at")
+        }
+)
 @SQLDelete(sql = "UPDATE cards SET deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 public class Card extends BaseEntity {
