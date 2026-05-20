@@ -32,9 +32,23 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
     ORDER_ALREADY_CANCELLED(HttpStatus.CONFLICT, "이미 취소된 주문입니다."),
     ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문 상태입니다."),
+    ORDER_CANNOT_COMPLETE_PAYMENT(HttpStatus.CONFLICT, "결제 완료 처리가 불가능한 주문 상태입니다."),
+    ORDER_CANNOT_FAIL_PAYMENT(HttpStatus.CONFLICT, "결제 실패 처리가 불가능한 주문 상태입니다."),
 
     // Payment
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),
+    PAYMENT_ORDER_NOT_FAILED(HttpStatus.CONFLICT, "결제 요청은 주문 상태가 PAYMENT_FAILED일 때만 가능합니다."),
+    PAYMENT_WINDOW_EXPIRED(HttpStatus.GONE, "결제 가능 시간(1시간)이 초과되었습니다."),
+    PAYMENT_BUYER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청자와 주문 구매자가 일치하지 않습니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.CONFLICT, "결제 금액이 주문 금액과 일치하지 않습니다."),
+    PAYMENT_METHOD_REQUIRED(HttpStatus.BAD_REQUEST, "결제 수단은 필수입니다."),
+    PAYMENT_PAID_AT_REQUIRED(HttpStatus.BAD_REQUEST, "결제 완료 시각은 필수입니다."),
+    PAYMENT_CANNOT_COMPLETE(HttpStatus.CONFLICT, "결제 완료 처리가 불가능한 결제 상태입니다."),
+    PAYMENT_CANNOT_FAIL(HttpStatus.CONFLICT, "결제 실패 처리가 불가능한 결제 상태입니다."),
+    PAYMENT_CANNOT_REFUND(HttpStatus.CONFLICT, "환불 처리가 불가능한 결제 상태입니다."),
+    WEBHOOK_SIGNATURE_INVALID(HttpStatus.FORBIDDEN, "Webhook 서명 검증에 실패했습니다."),
+    WEBHOOK_EMPTY_BODY(HttpStatus.BAD_REQUEST, "Webhook 요청 본문이 비어 있습니다. 인프라 설정을 확인하세요."),
+    PORTONE_NOT_INTEGRATED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 연동이 완료되지 않았습니다."),
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),
