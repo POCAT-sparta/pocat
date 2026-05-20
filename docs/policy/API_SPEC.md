@@ -2425,6 +2425,15 @@ X-PortOne-Signature: {서명값}
 
 **Response** `204 No Content`
 
+### 12.5 읽음 처리
+
+채팅방 입장 시 읽음처리.
+
+- **Patch** `/api/v1/chats/{chatId}/read`
+- **권한**: `USER` (채팅 참여자)
+
+**Response** `200 OK`
+
 ---
 
 ### WebSocket (STOMP)
@@ -2432,7 +2441,7 @@ X-PortOne-Signature: {서명값}
 > 연결 엔드포인트: `ws://{host}/ws/chat`  
 > 인증: WebSocket 핸드셰이크 시 `Authorization` 헤더 또는 쿼리 파라미터로 JWT 전달
 
-### 12.5 WebSocket 핸드셰이크 연결
+### 12.6 WebSocket 핸드셰이크 연결
 
 ```
 CONNECT ws://{host}/ws/chat
@@ -2441,7 +2450,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 12.6 메시지 전송
+### 12.7 메시지 전송
 
 - **SEND** `/pub/chat/{chatId}`
 
@@ -2455,7 +2464,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 12.7 메시지 수신 구독
+### 12.8 메시지 수신 구독
 
 - **SUBSCRIBE** `/sub/chat/{chatId}`
 
@@ -2473,10 +2482,21 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 12.8 WebSocket 연결 해제
+### 12.9 WebSocket 연결 해제
 
 ```
 DISCONNECT ws://{host}/ws/chat
+```
+
+### 12.10 읽음 처리
+
+- **SUBSCRIBE** `/sub/chat/{chatId}/read`
+
+```json
+{
+  "chatId": 1,
+  "readerId": 3
+}
 ```
 
 ---
