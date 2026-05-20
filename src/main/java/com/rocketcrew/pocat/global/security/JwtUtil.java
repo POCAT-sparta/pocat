@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.Optional;
 
 @Component
 public class JwtUtil {
@@ -66,6 +67,17 @@ public class JwtUtil {
         }
     }
 
+    public Optional<TokenPayload> extractPayload(String token) {
+        try {
+            Claims claims = getClaims(token);
+            return Optional.of(new TokenPayload(
+                    Long.parseLong(claims.getSubject()),
+                    claims.get("role", String.class)
+            ));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
     /**
      * JWT를 1회 파싱하여 Claims 반환. 유효하지 않으면 null 반환.
      * JwtAuthenticationFilter에서 파싱 횟수를 줄이기 위해 사용.
@@ -101,6 +113,8 @@ public class JwtUtil {
     public long getRefreshTokenExpiration() {
         return refreshTokenExpiration;
     }
+
+    public record TokenPayload(Long userId, String role) {}
 
     private Claims getClaims(String token) {
         return Jwts.parser()

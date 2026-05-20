@@ -83,7 +83,10 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
 
     // Chat
-    CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅을 찾을 수 없습니다."),
+    CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),
+    CHAT_FORBIDDEN(HttpStatus.FORBIDDEN, "채팅방 접근 권한이 없습니다."),
+    CHAT_SELF_CHAT(HttpStatus.BAD_REQUEST, "자신의 게시글에는 채팅을 시작할 수 없습니다."),
+    CHAT_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 게시글에 이미 채팅방이 존재합니다."),
 
     // Billing
     BILLING_KEY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 빌링키가 존재합니다."),

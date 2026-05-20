@@ -6,20 +6,20 @@ import java.time.LocalDateTime;
 
 public record ChatMessageResponse(
         Long id,
-        Long chatId,
         Long senderId,
+        String senderNickname,
         String message,
         boolean isRead,
         LocalDateTime createdAt
 ) {
-    public static ChatMessageResponse from(ChatMessage chatMessage) {
+    public static ChatMessageResponse from(ChatMessage msg, String senderNickname) {
         return new ChatMessageResponse(
-                chatMessage.getId(),
-                chatMessage.getChatId(),
-                chatMessage.getSenderId(),
-                chatMessage.getMessage(),
-                chatMessage.isRead(),
-                chatMessage.getCreatedAt()
+                msg.getId(),
+                msg.getSenderId(),
+                senderNickname,
+                msg.getMessage(),
+                msg.isRead(),
+                msg.getCreatedAt()
         );
     }
 }

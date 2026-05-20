@@ -4,12 +4,15 @@ import com.rocketcrew.pocat.domain.chat.entity.ChatMessage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
-    List<ChatMessage> findByChatId(Long chatId);
-
     Page<ChatMessage> findByChatId(Long chatId, Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.chatId = :chatId AND m.senderId != :userId AND m.isRead = false")
+    void markAllAsRead(@Param("chatId") Long chatId, @Param("userId") Long userId);
 }
