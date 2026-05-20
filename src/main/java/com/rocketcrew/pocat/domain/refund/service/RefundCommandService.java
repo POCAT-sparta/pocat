@@ -43,7 +43,9 @@ public class RefundCommandService {
      * - 환불 금액은 payments.amount 전액 자동 적용 (클라이언트 금액 신뢰 금지)
      */
     public RefundResponse createRefund(Long buyerId, CreateRefundRequest request) {
-        Order order = findOrder(request.orderId());
+        // 비관적 락으로 동일 주문에 대한 동시 환불 요청 직렬화
+        Order order = orderRepository.findByIdWithLock(request.orderId())
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
         // 요청자 = 주문 구매자 검증
         if (!order.getBuyerId().equals(buyerId)) {
@@ -115,7 +117,8 @@ public class RefundCommandService {
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
 
     private Refund findRefund(Long refundId) {
-        return refundRepository.findById(refundId)
+        // 비관적 락으로 승인·거절 동시 처리 시 상태 불일치 방지
+        return refundRepository.findByIdWithLock(refundId)
                 .orElseThrow(() -> new RefundException(ErrorCode.REFUND_NOT_FOUND));
     }
 
