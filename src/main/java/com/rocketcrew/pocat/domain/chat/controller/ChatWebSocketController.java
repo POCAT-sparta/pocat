@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.chat.controller;
 
 import com.rocketcrew.pocat.domain.chat.dto.request.SendMessageRequest;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatMessagePublishDto;
+import com.rocketcrew.pocat.domain.chat.dto.response.ChatEventType;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatReadPublishDto;
 import com.rocketcrew.pocat.domain.chat.service.ChatCommandService;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -38,7 +39,7 @@ public class ChatWebSocketController {
 
         chatCommandService.markAsRead(chatId, userDetails.getUserId());
 
-        ChatReadPublishDto publish = new ChatReadPublishDto(chatId, userDetails.getUserId());
+        ChatReadPublishDto publish = new ChatReadPublishDto(ChatEventType.READ, chatId, userDetails.getUserId());
         messagingTemplate.convertAndSend("/sub/chat/" + chatId, publish);
     }
 }

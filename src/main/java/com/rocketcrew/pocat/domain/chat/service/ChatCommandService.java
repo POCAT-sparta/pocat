@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.chat.service;
 
 import com.rocketcrew.pocat.domain.chat.dto.request.CreateChatRequest;
+import com.rocketcrew.pocat.domain.chat.dto.response.ChatEventType;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatMessagePublishDto;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatResponse;
 import com.rocketcrew.pocat.domain.chat.entity.Chat;
@@ -61,6 +62,7 @@ public class ChatCommandService {
                 .build());
 
         return new ChatMessagePublishDto(
+                ChatEventType.MESSAGE,
                 chatId,
                 senderId,
                 sender.getNickname(),

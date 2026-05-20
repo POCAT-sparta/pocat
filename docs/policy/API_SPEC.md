@@ -2425,21 +2425,30 @@ X-PortOne-Signature: {서명값}
 
 **Response** `204 No Content`
 
-### 12.5 읽음 처리
+---
 
-채팅방 입장 시 읽음처리.
+### 12.5 읽음 처리 (입장 시 일괄)
 
-- **Patch** `/api/v1/chats/{chatId}/read`
+- **PATCH** `/api/v1/chats/{chatId}/read`
 - **권한**: `USER` (채팅 참여자)
+- **설명**: 채팅방 입장 시 호출. 내가 받은 미읽음 메시지를 전체 읽음 처리
 
 **Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
 ### WebSocket (STOMP)
 
 > 연결 엔드포인트: `ws://{host}/ws/chat`  
-> 인증: WebSocket 핸드셰이크 시 `Authorization` 헤더 또는 쿼리 파라미터로 JWT 전달
+> 인증: WebSocket 핸드셰이크 시 `Authorization` 헤더 또는 `token` 네이티브 헤더로 JWT 전달
 
 ### 12.6 WebSocket 핸드셰이크 연결
 
@@ -2464,14 +2473,25 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 12.8 메시지 수신 구독
+### 12.8 실시간 읽음 처리
+
+- **SEND** `/pub/chat/{chatId}/read`
+- **설명**: 채팅방이 열려 있는 상태에서 메시지 수신 시 호출. 서버가 읽음 처리 후 READ 이벤트를 브로드캐스트
+
+**Payload 없음**
+
+---
+
+### 12.9 이벤트 수신 구독
 
 - **SUBSCRIBE** `/sub/chat/{chatId}`
+- **설명**: 메시지(MESSAGE)와 읽음(READ) 두 가지 이벤트를 `type` 필드로 구분
 
-**수신 메시지 형식**
+**메시지 이벤트 (type: MESSAGE)**
 
 ```json
 {
+  "type": "MESSAGE",
   "chatId": 1,
   "senderId": 3,
   "senderNickname": "포켓몬마스터",
@@ -2480,9 +2500,19 @@ Authorization: Bearer {accessToken}
 }
 ```
 
+**읽음 이벤트 (type: READ)**
+
+```json
+{
+  "type": "READ",
+  "chatId": 1,
+  "readerId": 3
+}
+```
+
 ---
 
-### 12.9 WebSocket 연결 해제
+### 12.10 WebSocket 연결 해제
 
 ```
 DISCONNECT ws://{host}/ws/chat
