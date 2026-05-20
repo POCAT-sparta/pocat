@@ -21,17 +21,10 @@ public class UserCommandService {
     private final UserRepository userRepository;
 
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        if (request.nickname() != null && request.nickname().isBlank()) {
-            throw new UserException(ErrorCode.INVALID_CONTENT);
-        }
-        if (request.phone() != null && request.phone().isBlank()) {
-            throw new UserException(ErrorCode.INVALID_CONTENT);
-        }
-        if (request.address() != null && request.address().isBlank()) {
-            throw new UserException(ErrorCode.INVALID_CONTENT);
-        }
+        User user = findUserOrThrow(userId);
+        validateIfPresent(request.nickname());
+        validateIfPresent(request.phone());
+        validateIfPresent(request.address());
         String nickname = request.nickname() != null ? request.nickname() : user.getNickname();
         String phone = request.phone() != null ? request.phone() : user.getPhone();
         String address = request.address() != null ? request.address() : user.getAddress();
@@ -40,8 +33,7 @@ public class UserCommandService {
     }
 
     public void updateBank(Long userId, UpdateBankRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        User user = findUserOrThrow(userId);
         user.updateBank(request.bankName(), request.bankAccount());
     }
 
@@ -56,8 +48,7 @@ public class UserCommandService {
     }
 
     public void deleteBillingKey(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        User user = findUserOrThrow(userId);
         if (user.getBillingKey() == null) {
             throw new UserException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
@@ -65,11 +56,21 @@ public class UserCommandService {
     }
 
     public void updateBillingKey(Long userId, UpdateBillingKeyRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        User user = findUserOrThrow(userId);
         if (user.getBillingKey() == null) {
             throw new UserException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
         user.registerBillingKey(request.billingKey());
+    }
+
+    private User findUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void validateIfPresent(String value) {
+        if (value != null && value.isBlank()) {
+            throw new UserException(ErrorCode.INVALID_CONTENT);
+        }
     }
 }

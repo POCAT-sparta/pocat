@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePost
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommandService;
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostQueryService;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostRankingService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.rocketcrew.pocat.global.util.HttpRequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +31,7 @@ public class FreePostController {
 
     private final FreePostQueryService freePostQueryService;
     private final FreePostCommandService freePostCommandService;
+    private final FreePostRankingService freePostRankingService;
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getPosts(
@@ -50,9 +54,23 @@ public class FreePostController {
     }
 
     @GetMapping("/{freePostId}")
-    public ResponseEntity<ApiResponseDto<FreePostResponse>> getPost(@PathVariable Long freePostId) {
-        freePostCommandService.incrementViewCount(freePostId);
-        FreePostResponse response = freePostQueryService.getPost(freePostId);
+    public ResponseEntity<ApiResponseDto<FreePostResponse>> getPost(
+            @PathVariable Long freePostId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest request) {
+        String clientIp = HttpRequestUtils.resolveClientIp(request);
+        Long requesterId = userDetails != null ? userDetails.getUserId() : null;
+        FreePostResponse response = freePostQueryService.getPost(freePostId, clientIp, requesterId);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<ApiResponseDto<List<FreePostResponse>>> getPopularPosts(
+            @RequestParam(defaultValue = "20") int size) {
+        if (size < 1 || size > 100) {
+            size = 20;
+        }
+        List<FreePostResponse> response = freePostRankingService.getPopular(size);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 

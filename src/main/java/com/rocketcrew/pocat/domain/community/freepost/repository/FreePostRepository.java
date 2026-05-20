@@ -8,11 +8,24 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 public interface FreePostRepository extends JpaRepository<FreePost, Long>, FreePostRepositoryCustom {
+
+    // weight for comment count in popular score: viewCount + commentCount * COMMENT_WEIGHT
+    int COMMENT_WEIGHT = 3;
 
     Page<FreePost> findByUserId(Long userId, Pageable pageable);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update FreePost f set f.viewCount = f.viewCount + 1 where f.id = :postId")
-    int incrementViewCount(@Param("postId") Long postId);
+    @Modifying
+    @Query("UPDATE FreePost f SET f.viewCount = f.viewCount + :count WHERE f.id = :postId")
+    void increaseViewCount(@Param("postId") Long postId, @Param("count") int count);
+
+    @Modifying
+    @Query("UPDATE FreePost f SET f.commentCount = GREATEST(0, f.commentCount + :delta) WHERE f.id = :postId")
+    void updateCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
+
+    @Query("SELECT f FROM FreePost f WHERE f.createdAt >= :since ORDER BY (f.viewCount + f.commentCount * 3) DESC")
+    List<FreePost> findTopByPopularScore(Pageable pageable, @Param("since") LocalDateTime since);
 }
