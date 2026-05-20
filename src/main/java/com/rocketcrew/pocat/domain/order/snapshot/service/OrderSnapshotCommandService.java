@@ -12,6 +12,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -54,7 +56,7 @@ public class OrderSnapshotCommandService {
         try {
             orderSnapshotRepository.save(snapshot);
         } catch (DataIntegrityViolationException e) {
-            // 동시 요청 레이스 컨디션 - 다른 스레드가 이미 생성한 것으로 간주
+            log.debug("스냅샷 동시 생성 감지 - orderUid: {}, 기존 스냅샷으로 처리", orderUid);
         }
     }
 
@@ -71,7 +73,8 @@ public class OrderSnapshotCommandService {
         try {
             return objectMapper.writeValueAsString(data);
         } catch (JsonProcessingException e) {
-            return null;
+            log.error("스냅샷 JSON 직렬화 실패 - orderUid: {}", order.getOrderUid(), e);
+            throw new IllegalStateException("스냅샷 JSON 직렬화 실패", e);
         }
     }
 }
