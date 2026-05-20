@@ -1,7 +1,7 @@
 # 도메인 코드 리뷰 — 2026-05-20
 
 ## 대상 도메인
-User, FreePost, Comment, Like (PR #47 refactor/domaindev/#43 기반)
+User, FreePost, Comment, Like (PR `#56` refactor/domaindev/#43 기반)
 
 ## 리뷰 결과: CHANGES_REQUESTED → 수정 완료
 
