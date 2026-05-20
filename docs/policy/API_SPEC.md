@@ -383,11 +383,9 @@ Authorization: Bearer {accessToken}
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
-| `keyword` | String | N | 카드명 검색 |
-| `series` | String | N | 시리즈 필터 |
-| `setName` | String | N | 세트명 필터 |
-| `rarity` | String | N | 희귀도 필터 |
-| `grade` | String | N | 등급 필터 (PSA_10, PSA_9, BGS_10) |
+| `keyword` | String | N | 카드명 / 시리즈명 / 세트명 검색 |
+| `grade` | String | N | 등급 필터 (PSA_10, PSA_9, BGS_10 등) |
+| `category` | String | N | 카테고리 필터 (POKEMON, TRAINERS, ENERGY, UNKNOWN) |
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
 | `sort` | String | N | 정렬 기준 (createdAt,desc) |
@@ -401,16 +399,21 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "id": 1,
+        "userId": 1,
         "tcgdexId": "swsh1-1",
         "name": "리자몽",
         "series": "소드&쉴드",
+        "setId": "swsh1",
         "setName": "칼과방패",
         "cardNumber": "001",
         "rarity": "Rare Holo",
+        "category": "POKEMON",
         "grade": "PSA_10",
         "imageUrl": "https://...",
         "source": "TCGDEX",
-        "status": "ACTIVE"
+        "status": "ACTIVE",
+        "createdAt": "2026-01-01T00:00:00",
+        "updatedAt": "2026-01-01T00:00:00"
       }
     ],
     "totalElements": 500,
@@ -442,17 +445,21 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "id": 1,
+    "userId": 1,
     "tcgdexId": "swsh1-1",
     "name": "리자몽",
     "series": "소드&쉴드",
+    "setId": "swsh1",
     "setName": "칼과방패",
     "cardNumber": "001",
     "rarity": "Rare Holo",
+    "category": "POKEMON",
     "grade": "PSA_10",
     "imageUrl": "https://...",
     "source": "TCGDEX",
     "status": "ACTIVE",
-    "createdAt": "2026-01-01T00:00:00"
+    "createdAt": "2026-01-01T00:00:00",
+    "updatedAt": "2026-01-01T00:00:00"
   },
   "message": ""
 }
@@ -473,14 +480,30 @@ Authorization: Bearer {accessToken}
   "tcgdexId": "swsh1-1",
   "name": "리자몽",
   "series": "소드&쉴드",
+  "setId": "swsh1",
   "setName": "칼과방패",
   "cardNumber": "001",
   "rarity": "Rare Holo",
+  "category": "POKEMON",
   "grade": "PSA_10",
   "imageUrl": "https://...",
   "source": "TCGDEX"
 }
 ```
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `tcgdexId` | String | ❌ | TCGdex 카드 고유 ID |
+| `name` | String | ✅ | 카드명 |
+| `series` | String | ✅ | 시리즈명 |
+| `setId` | String | ✅ | 세트 ID |
+| `setName` | String | ✅ | 세트명 |
+| `cardNumber` | String | ✅ | 카드 번호 |
+| `rarity` | String | ✅ | 희귀도 |
+| `category` | String | ✅ | 카테고리 (POKEMON, TRAINERS, ENERGY, UNKNOWN) |
+| `grade` | String | ✅ | 등급 (PSA_10, PSA_9 등) |
+| `imageUrl` | String | ❌ | 카드 이미지 URL |
+| `source` | String | ✅ | 카드 출처 (TCGDEX, USER) |
 
 **Response** `201 Created`
 
@@ -489,9 +512,21 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "id": 10,
+    "userId": 1,
+    "tcgdexId": "swsh1-1",
     "name": "리자몽",
+    "series": "소드&쉴드",
+    "setId": "swsh1",
+    "setName": "칼과방패",
+    "cardNumber": "001",
+    "rarity": "Rare Holo",
+    "category": "POKEMON",
     "grade": "PSA_10",
-    "status": "PENDING"
+    "imageUrl": "https://...",
+    "source": "TCGDEX",
+    "status": "PENDING",
+    "createdAt": "2026-01-01T00:00:00",
+    "updatedAt": "2026-01-01T00:00:00"
   },
   "message": "카드 등록 요청 완료"
 }
@@ -508,8 +543,10 @@ Authorization: Bearer {accessToken}
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
+| `status` | String | N | 상태 필터 (PENDING, ACTIVE, REJECTED) |
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
+| `sort` | String | N | 정렬 기준 (createdAt,desc) |
 
 **Response** `200 OK`
 
@@ -520,10 +557,21 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "id": 10,
+        "userId": 1,
+        "tcgdexId": "swsh1-1",
         "name": "리자몽",
+        "series": "소드&쉴드",
+        "setId": "swsh1",
+        "setName": "칼과방패",
+        "cardNumber": "001",
+        "rarity": "Rare Holo",
+        "category": "POKEMON",
         "grade": "PSA_10",
+        "imageUrl": "https://...",
+        "source": "TCGDEX",
         "status": "PENDING",
-        "createdAt": "2026-01-01T00:00:00"
+        "createdAt": "2026-01-01T00:00:00",
+        "updatedAt": "2026-01-01T00:00:00"
       }
     ],
     "totalElements": 3,
@@ -583,7 +631,7 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "id": 10,
-    "status": "PENDING"
+    "status": "REJECTED"
   },
   "message": "카드 등록 거절 완료"
 }
@@ -629,23 +677,19 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 3.9 TCGdex 연동 동기화 (관리자)
+### 3.9 TCGdex 자동 동기화 (스케줄러)
 
-- **POST** `/api/v1/admin/cards/sync`
-- **권한**: `ADMIN`
-- **설명**: TCGdex 외부 API를 통해 카드 데이터 동기화
+- **스케줄**: 매주 일요일 00:00 자동 실행
+- **권한**: 시스템 내부 실행 (API 엔드포인트 없음)
+- **설명**: TCGdex 외부 API에서 전체 세트를 순회하며 DB에 없는 카드를 신규 저장한다. 이미 존재하는 tcgdexId는 스킵한다. 별도 스레드 풀(`syncExecutor`)에서 비동기로 실행되므로 애플리케이션 성능에 영향을 주지 않는다.
 
-**Response** `200 OK`
-
-```json
-{
-  "status": "SUCCESS",
-  "data": {
-    "syncedCount": 150
-  },
-  "message": "TCGdex 동기화 완료"
-}
-```
+| 항목 | 내용 |
+|---|---|
+| 실행 주기 | 매주 일요일 00:00 (cron: `0 0 0 * * SUN`) |
+| 실행 방식 | `@Async` 비동기 — 전용 스레드 풀에서 실행 |
+| 대상 | TCGdex 전체 세트 |
+| 처리 방식 | 신규 카드만 INSERT (기존 카드 스킵) |
+| 실패 처리 | 세트/카드 단위 실패 시 warn 로그 후 계속 진행 |
 
 ---
 
@@ -658,9 +702,10 @@ Authorization: Bearer {accessToken}
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
-| `status` | String | N | 상태 필터 (PENDING, ACTIVE) |
+| `status` | String | N | 상태 필터 (PENDING, ACTIVE, REJECTED) |
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
+| `sort` | String | N | 정렬 기준 (createdAt,desc) |
 
 **Response** `200 OK`
 
@@ -672,11 +717,20 @@ Authorization: Bearer {accessToken}
       {
         "id": 10,
         "userId": 1,
-        "userNickname": "포켓몬마스터",
+        "tcgdexId": "swsh1-1",
         "name": "리자몽",
+        "series": "소드&쉴드",
+        "setId": "swsh1",
+        "setName": "칼과방패",
+        "cardNumber": "001",
+        "rarity": "Rare Holo",
+        "category": "POKEMON",
         "grade": "PSA_10",
+        "imageUrl": "https://...",
+        "source": "TCGDEX",
         "status": "PENDING",
-        "createdAt": "2026-01-01T00:00:00"
+        "createdAt": "2026-01-01T00:00:00",
+        "updatedAt": "2026-01-01T00:00:00"
       }
     ],
     "totalElements": 30,
@@ -2031,7 +2085,7 @@ X-PortOne-Signature: {서명값}
 
 ### 10.1 내 거래 게시글 목록
 
-- **GET** `/api/v1/users/me/posts/trade`
+- **GET** `/api/v1/posts/trade/me`
 - **권한**: `USER`
 
 **Query Parameters**
