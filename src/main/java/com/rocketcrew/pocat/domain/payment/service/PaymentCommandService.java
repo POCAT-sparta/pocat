@@ -17,6 +17,7 @@ import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -86,14 +86,19 @@ public class PaymentCommandService {
         Payment payment = findPaymentByUid(paymentUid);
         Order order = findOrder(payment.getOrderId());
 
-        validateBuyer(order, buyerId);
-
         // 멱등성: 이미 최종 처리된 경우 현재 상태 그대로 반환
         if (isFinalized(payment.getStatus())) {
             return PaymentResponse.from(payment);
         }
 
+        validateBuyer(order, buyerId);
+
         PortOnePaymentResponse portOneClientPayment = portOneClient.getPayment(paymentUid);
+
+        payment = findPaymentByUidWithLock(paymentUid);
+
+        if (isFinalized(payment.getStatus())) return PaymentResponse.from(payment);
+
         if (!"PAID".equals(portOneClientPayment.status())) {
             paymentFailureService.markFailed(payment.getId());
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
@@ -191,6 +196,11 @@ public class PaymentCommandService {
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
 
     private Payment findPaymentByUid(String paymentUid) {
+        return paymentRepository.findByPaymentUid(paymentUid)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+    }
+
+    private Payment findPaymentByUidWithLock(String paymentUid) {
         return paymentRepository.findByPaymentUidWithLock(paymentUid)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
     }
@@ -213,6 +223,6 @@ public class PaymentCommandService {
     }
 
     private String generatePaymentUid() {
-        return "pocat-payment-" + UUID.randomUUID().toString().replace("-", "");
+        return TsidGenerator.generatePaymentUid();
     }
 }
