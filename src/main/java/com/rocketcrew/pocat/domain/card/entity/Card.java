@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -18,6 +19,7 @@ import org.hibernate.annotations.SQLDelete;
         @UniqueConstraint(columnNames = {"tcgdex_id"})
 })
 @SQLDelete(sql = "UPDATE cards SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Card extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
