@@ -36,10 +36,11 @@ public class CardController {
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getCards(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String setName,
             @RequestParam(required = false) CardGrade grade,
             @RequestParam(required = false) CardCategory category,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        CardSearchCondition condition = new CardSearchCondition(keyword, grade, category, CardStatus.ACTIVE);
+        CardSearchCondition condition = new CardSearchCondition(keyword, setName, grade, category, CardStatus.ACTIVE);
         Page<CardResponse> page = cardQueryService.getCards(condition, pageable);
         List<CardResponse> content = page.getContent();
         PageResponseDto<CardResponse> pageResponse = PageResponseDto.of(page, content);

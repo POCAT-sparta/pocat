@@ -15,7 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -50,10 +49,6 @@ public class CardQueryService {
         }
     }
     
-    public List<Long> searchCardIds(CardSearchCondition condition) {
-        return cardRepository.searchCardIds(condition);
-    }
-
     public Page<CardResponse> getMyRequests(Long userId, CardStatus status, Pageable pageable) {
         // status 유무에 따라 분기 — 두 map() 중 하나만 실행되므로 이중 순회 없음
         if (status != null) {

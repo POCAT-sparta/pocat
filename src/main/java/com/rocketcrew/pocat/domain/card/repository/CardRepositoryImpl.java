@@ -6,12 +6,12 @@ import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 
 @RequiredArgsConstructor
 public class CardRepositoryImpl implements CardRepositoryCustom {
@@ -40,19 +40,6 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
-    @Override
-    public List<Long> searchCardIds(CardSearchCondition condition) {
-        QCard card = QCard.card;
-
-        // OOM 방지: 조건 없이 전체 조회 시 수만 건 메모리 적재 가능 → 상한 고정
-        return queryFactory
-                .select(card.id)
-                .from(card)
-                .where(buildCondition(condition))
-                .limit(1_000)
-                .fetch();
-    }
-
     private BooleanBuilder buildCondition(CardSearchCondition condition) {
         QCard card = QCard.card;
         BooleanBuilder builder = new BooleanBuilder();
@@ -65,6 +52,9 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                     .or(card.series.containsIgnoreCase(kw))
                     .or(card.setName.containsIgnoreCase(kw))
             );
+        }
+        if (StringUtils.hasText(condition.setName())) {
+            builder.and(card.setName.equalsIgnoreCase(condition.setName()));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));
