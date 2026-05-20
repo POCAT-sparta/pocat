@@ -47,7 +47,7 @@ public class CardQueryService {
         }
         return card;
     }
-    
+
     public List<Long> searchCardIds(CardSearchCondition condition) {
         return cardRepository.searchCardIds(condition);
     }

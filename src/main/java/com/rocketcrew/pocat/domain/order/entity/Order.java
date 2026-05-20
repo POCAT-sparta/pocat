@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.util.TsidGenerator;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -57,6 +58,19 @@ public class Order extends BaseEntity {
         }
     }
 
+    public static Order fromAuction(Long auctionId, Long cardId, Long sellerId, Long buyerId, Long finalPrice) {
+        return Order.builder()
+                .auctionId(auctionId)
+                .cardId(cardId)
+                .sellerId(sellerId)
+                .buyerId(buyerId)
+                .orderUid(TsidGenerator.generateOrderUid())
+                .finalPrice(finalPrice)
+                .status(OrderStatus.PAYMENT_PENDING)
+                .deliveryStatus(DeliveryStatus.PREPARING)
+                .build();
+    }
+
     // 빌링키 자동결제(PAYMENT_PENDING) 또는 PG 직접결제(PAYMENT_FAILED) 성공 시 호출
     public void completePayment() {
         if (this.status != OrderStatus.PAYMENT_PENDING && this.status != OrderStatus.PAYMENT_FAILED) {
@@ -71,5 +85,12 @@ public class Order extends BaseEntity {
             throw new OrderException(ErrorCode.ORDER_CANNOT_FAIL_PAYMENT);
         }
         this.status = OrderStatus.PAYMENT_FAILED;
+    }
+
+    public void refund() {
+        this.status = OrderStatus.REFUNDED;
+        if (this.deliveryStatus != null) {
+            this.deliveryStatus = DeliveryStatus.CANCELLED;
+        }
     }
 }

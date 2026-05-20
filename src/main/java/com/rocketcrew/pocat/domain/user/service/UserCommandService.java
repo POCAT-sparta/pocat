@@ -23,6 +23,15 @@ public class UserCommandService {
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        if (request.nickname() != null && request.nickname().isBlank()) {
+            throw new UserException(ErrorCode.INVALID_CONTENT);
+        }
+        if (request.phone() != null && request.phone().isBlank()) {
+            throw new UserException(ErrorCode.INVALID_CONTENT);
+        }
+        if (request.address() != null && request.address().isBlank()) {
+            throw new UserException(ErrorCode.INVALID_CONTENT);
+        }
         String nickname = request.nickname() != null ? request.nickname() : user.getNickname();
         String phone = request.phone() != null ? request.phone() : user.getPhone();
         String address = request.address() != null ? request.address() : user.getAddress();

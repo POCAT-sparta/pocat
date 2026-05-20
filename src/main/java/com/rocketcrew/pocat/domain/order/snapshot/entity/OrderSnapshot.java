@@ -5,31 +5,32 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 
-import java.math.BigDecimal;
-
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 @Entity
-@Table(name = "order_snapshots")
+@Table(
+        name = "order_snapshots",
+        uniqueConstraints = @UniqueConstraint(name = "uk_order_snapshots_order_uid", columnNames = "order_uid")
+)
 @SQLDelete(sql = "UPDATE order_snapshots SET deleted_at = NOW() WHERE id = ?")
 public class OrderSnapshot extends BaseEntity {
 
-    @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    @Column(name = "order_uid", nullable = false, length = 50)
+    private String orderUid;
 
-    @Column(name = "final_price", nullable = false, precision = 12, scale = 2)
-    private BigDecimal finalPrice;
+    @Column(name = "final_price", nullable = false)
+    private Long finalPrice;
 
-    @Column(name = "fee_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal feeRate;
+    @Column(name = "fee_rate", nullable = false)
+    private Long feeRate;
 
-    @Column(name = "fee", nullable = false, precision = 12, scale = 2)
-    private BigDecimal fee;
+    @Column(name = "fee", nullable = false)
+    private Long fee;
 
-    @Column(name = "seller_amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal sellerAmount;
+    @Column(name = "seller_amount", nullable = false)
+    private Long sellerAmount;
 
     @Column(name = "snapshot_json", columnDefinition = "TEXT")
     private String snapshotJson;

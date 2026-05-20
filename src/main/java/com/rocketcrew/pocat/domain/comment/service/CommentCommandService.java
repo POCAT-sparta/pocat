@@ -25,9 +25,6 @@ public class CommentCommandService {
         if (!freePostRepository.existsById(request.freePostId())) {
             throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
         }
-        if (request.content() == null || request.content().isBlank()) {
-            throw new CommentException(ErrorCode.INVALID_CONTENT);
-        }
         if (request.parentId() != null) {
             Comment parentComment = commentRepository.findById(request.parentId())
                     .orElseThrow(() -> new CommentException(ErrorCode.INVALID_PARENT_COMMENT));
@@ -52,9 +49,6 @@ public class CommentCommandService {
                 .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
         if (!comment.getUserId().equals(userId)) {
             throw new CommentException(ErrorCode.USER_FORBIDDEN);
-        }
-        if (request.content() == null || request.content().isBlank()) {
-            throw new CommentException(ErrorCode.INVALID_CONTENT);
         }
         comment.update(request.content());
         return CommentResponse.from(comment);

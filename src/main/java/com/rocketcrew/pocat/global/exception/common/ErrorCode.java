@@ -58,10 +58,15 @@ public enum ErrorCode {
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),
+    REFUND_INVALID_ORDER_STATUS(HttpStatus.CONFLICT, "환불 요청은 결제완료·배송중·완료 상태의 주문만 가능합니다."),
+    REFUND_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일 주문에 이미 진행 중이거나 완료된 환불이 존재합니다."),
+    REFUND_BUYER_MISMATCH(HttpStatus.FORBIDDEN, "환불 요청자와 주문 구매자가 일치하지 않습니다."),
+    REFUND_NOT_REQUESTED(HttpStatus.CONFLICT, "REQUESTED 상태의 환불만 처리할 수 있습니다."),
 
     // Settlement
     SETTLEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "정산을 찾을 수 없습니다."),
     SETTLEMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 정산이 완료된 건입니다."),
+    SETTLEMENT_CANNOT_COMPLETE(HttpStatus.CONFLICT, "PENDING 상태의 정산만 완료 처리할 수 있습니다."),
 
     // FreePost
     FREE_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "자유 게시글을 찾을 수 없습니다."),

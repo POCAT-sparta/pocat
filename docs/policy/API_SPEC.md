@@ -2031,7 +2031,7 @@ X-PortOne-Signature: {서명값}
 
 ### 10.1 내 거래 게시글 목록
 
-- **GET** `/api/v1/users/me/posts/trade`
+- **GET** `/api/v1/posts/trade/me`
 - **권한**: `USER`
 
 **Query Parameters**

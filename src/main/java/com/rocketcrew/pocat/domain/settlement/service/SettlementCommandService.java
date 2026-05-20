@@ -15,7 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.UUID;
+import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
+import com.rocketcrew.pocat.global.util.TsidGenerator;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,6 @@ import java.util.UUID;
 public class SettlementCommandService {
     // TODO: 추후에 이벤트 처리로 고도화 가능 : 결제 완료 이벤트 발행 -> 리스너가 컨슘 -> 정산 객체 생성
 
-    private static final BigDecimal PLATFORM_FEE_RATE = new BigDecimal("0.05");
 
     private final SettlementRepository settlementRepository;
     private final OrderRepository orderRepository;
@@ -38,13 +38,13 @@ public class SettlementCommandService {
 
         long totalPrice = order.getFinalPrice();
         long platformFee = BigDecimal.valueOf(totalPrice)
-                .multiply(PLATFORM_FEE_RATE)
-                .setScale(0, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(PlatformFeePolicy.RATE))
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
                 .longValue();
         long sellerAmount = totalPrice - platformFee;
 
         Settlement settlement = Settlement.builder()
-                .settlementUid(UUID.randomUUID().toString())
+                .settlementUid(TsidGenerator.generateSettlementUid())
                 .orderId(order.getId())
                 .sellerId(order.getSellerId())
                 .totalPrice(totalPrice)
