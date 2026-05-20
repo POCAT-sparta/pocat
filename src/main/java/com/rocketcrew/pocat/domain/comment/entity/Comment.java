@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -12,13 +13,14 @@ import org.hibernate.annotations.SQLDelete;
 @Entity
 @Table(name = "comments")
 @SQLDelete(sql = "UPDATE comments SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Comment extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "post_id", nullable = false)
-    private Long postId;
+    @Column(name = "free_post_id", nullable = false)
+    private Long freePostId;
 
     @Column(name = "parent_id")
     private Long parentId;

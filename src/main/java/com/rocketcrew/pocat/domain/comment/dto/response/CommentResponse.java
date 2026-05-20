@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 public record CommentResponse(
         Long id,
         Long userId,
-        Long postId,
+        Long freePostId,
         Long parentId,
         String content,
         LocalDateTime createdAt,
@@ -17,7 +17,7 @@ public record CommentResponse(
         return new CommentResponse(
                 comment.getId(),
                 comment.getUserId(),
-                comment.getPostId(),
+                comment.getFreePostId(),
                 comment.getParentId(),
                 comment.getContent(),
                 comment.getCreatedAt(),

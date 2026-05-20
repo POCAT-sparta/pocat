@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.user.controller;
 
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
+import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
@@ -9,6 +10,7 @@ import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +45,7 @@ public class UserController {
     @PostMapping("/api/v1/users/me/billing-key")
     public ResponseEntity<ApiResponseDto<Void>> registerBillingKey(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody RegisterBillingKeyRequest request) {
+            @Valid @RequestBody RegisterBillingKeyRequest request) {
         userCommandService.registerBillingKey(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
@@ -51,6 +53,14 @@ public class UserController {
     @DeleteMapping("/api/v1/users/me/billing-key")
     public ResponseEntity<ApiResponseDto<Void>> deleteBillingKey(@AuthenticationPrincipal CustomUserDetails userDetails) {
         userCommandService.deleteBillingKey(userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
+    }
+
+    @PutMapping("/api/v1/users/me/billing-key")
+    public ResponseEntity<ApiResponseDto<Void>> updateBillingKey(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody UpdateBillingKeyRequest request) {
+        userCommandService.updateBillingKey(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 
@@ -64,8 +74,10 @@ public class UserController {
 
     @GetMapping("/api/v1/admin/users")
     public ResponseEntity<ApiResponseDto<PageResponseDto<UserResponse>>> getAllUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean isBidBlocked,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<UserResponse> page = userQueryService.getAllUsers(pageable);
+        Page<UserResponse> page = userQueryService.getAllUsers(keyword, isBidBlocked, pageable);
         PageResponseDto<UserResponse> pageResponse = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }

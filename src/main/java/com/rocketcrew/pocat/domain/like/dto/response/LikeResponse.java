@@ -1,21 +1,16 @@
 package com.rocketcrew.pocat.domain.like.dto.response;
 
-import com.rocketcrew.pocat.domain.like.entity.Like;
-
 import java.time.LocalDateTime;
 
 public record LikeResponse(
-        Long id,
-        Long userId,
+        Long likeId,
         Long auctionId,
+        String auctionTitle,
+        String cardName,
+        String grade,
+        String cardImageUrl,
+        Long highestPrice,
+        LocalDateTime endedAt,
+        String status,
         LocalDateTime createdAt
-) {
-    public static LikeResponse from(Like like) {
-        return new LikeResponse(
-                like.getId(),
-                like.getUserId(),
-                like.getAuctionId(),
-                like.getCreatedAt()
-        );
-    }
-}
+) {}
