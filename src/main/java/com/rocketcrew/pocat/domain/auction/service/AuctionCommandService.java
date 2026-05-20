@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
@@ -24,13 +25,14 @@ public class AuctionCommandService {
     private final CardQueryService cardQueryService;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
-        cardQueryService.validateRegistrableForAuction(request.cardId());
+        Card card = cardQueryService.validateRegistrableForAuction(request.cardId());
         validateBuyoutPrice(request.startingPrice(), request.buyoutPrice());
         Auction auction = Auction.builder()
                 .cardId(request.cardId())
                 .sellerId(sellerId)
                 .title(request.title())
                 .description(request.description())
+                .cardImageUrl(card.getImageUrl())
                 .startingPrice(request.startingPrice())
                 .buyoutPrice(request.buyoutPrice())
                 .status(AuctionStatus.PENDING)

@@ -6,9 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface AuctionRepository extends JpaRepository<Auction, Long> {
+public interface AuctionRepository extends JpaRepository<Auction, Long>, AuctionRepositoryCustom {
 
     Page<Auction> findByStatus(AuctionStatus status, Pageable pageable);
 
     Page<Auction> findBySellerId(Long sellerId, Pageable pageable);
+
+    Page<Auction> findBySellerIdAndStatus(Long sellerId, AuctionStatus status, Pageable pageable);
+
 }

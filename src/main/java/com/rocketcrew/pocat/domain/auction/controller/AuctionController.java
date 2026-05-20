@@ -2,12 +2,16 @@ package com.rocketcrew.pocat.domain.auction.controller;
 
 import com.rocketcrew.pocat.domain.auction.dto.request.CreateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.UpdateAuctionRequest;
+import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CreateAuctionResponse;
-import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
+import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.service.AuctionCommandService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionQueryService;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -15,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -35,23 +41,56 @@ public class AuctionController {
     private final AuctionQueryService auctionQueryService;
     private final AuctionCommandService auctionCommandService;
 
-    // Todo : 경매 목록 조회 API
+    // Search active auctions.
     @GetMapping("/auctions")
-    public ResponseEntity<ApiResponseDto<PageResponseDto<AuctionResponse>>> getAuctions(
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<AuctionResponse> page = auctionQueryService.getAuctions(pageable);
-        PageResponseDto<AuctionResponse> response = PageResponseDto.of(page, page.getContent());
+    public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getAuctions(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) String setName,
+            @RequestParam(required = false) CardGrade grade,
+            @RequestParam(required = false) CardCategory category,
+            @PageableDefault(size = 20, sort = {"startedAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<SearchAuctionResponse> page = auctionQueryService.getAuctions(
+                keyword, series, setName, grade, category, AuctionStatus.ACTIVE, pageable);
+        PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    // Todo : 경매 상세 조회 API
+    // Search auctions for administrators.
+    @GetMapping("/admin/auctions")
+    public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getAdminAuctions(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) String setName,
+            @RequestParam(required = false) CardGrade grade,
+            @RequestParam(required = false) CardCategory category,
+            @RequestParam(required = false) AuctionStatus status,
+            @PageableDefault(size = 20, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<SearchAuctionResponse> page = auctionQueryService.getAuctions(
+                keyword, series, setName, grade, category, status, pageable);
+        PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
+    // Search auctions owned by the authenticated seller.
+    @GetMapping("/auctions/me")
+    public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getMyAuctions(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) AuctionStatus status,
+            @PageableDefault(size = 20, sort = {"startedAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<SearchAuctionResponse> page = auctionQueryService.getMyAuctions(userDetails.getUserId(), status, pageable);
+        PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
+    // Get auction details.
     @GetMapping("/auctions/{auctionId}")
     public ResponseEntity<ApiResponseDto<AuctionResponse>> getAuction(@PathVariable Long auctionId) {
         AuctionResponse response = auctionQueryService.getAuction(auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    // 경매 등록 API (판매자)
+    // Create an auction.
     @PostMapping("/auctions")
     public ResponseEntity<ApiResponseDto<CreateAuctionResponse>> createAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -61,7 +100,7 @@ public class AuctionController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    // 경매 수정 API (판매자)
+    // Update an auction.
     @PatchMapping("/auctions/{auctionId}")
     public ResponseEntity<ApiResponseDto<UpdateAuctionResponse>> updateAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -71,7 +110,7 @@ public class AuctionController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    // 경매 취소 API (판매자)
+    // Cancel an auction.
     @PatchMapping("/auctions/{auctionId}/cancel")
     public ResponseEntity<ApiResponseDto<CancelAuctionResponse>> cancelAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,

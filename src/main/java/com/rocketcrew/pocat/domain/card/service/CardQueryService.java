@@ -39,12 +39,13 @@ public class CardQueryService {
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
         return orderQueryService.getAveragePriceByCard(cardId);
     }
-    public void validateRegistrableForAuction(Long cardId) {
+    public Card validateRegistrableForAuction(Long cardId) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
         }
+        return card;
     }
     
     public List<Long> searchCardIds(CardSearchCondition condition) {
