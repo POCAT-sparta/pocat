@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.community.tradepost.dto.response.CreateTradeP
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.UpdateTradePostResponse;
 import com.rocketcrew.pocat.domain.community.tradepost.entity.TradePost;
 import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
+import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
 import lombok.RequiredArgsConstructor;
@@ -41,12 +42,17 @@ public class TradePostCommandService {
         return UpdateTradePostResponse.from(tradePost);
     }
 
-    public void deletePost(Long id, Long userId) {
+    public void deletePost(Long id, Long userId, String role) {
         TradePost tradePost = tradePostRepository.findById(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
-        if (!tradePost.getUserId().equals(userId)) {
+
+        boolean isOwner = tradePost.getUserId().equals(userId);
+        boolean isAdmin = UserRole.ADMIN.name().equals(role);
+
+        if (!isOwner && !isAdmin) {
             throw new TradePostException(ErrorCode.USER_FORBIDDEN);
         }
+
         tradePostRepository.delete(tradePost);
     }
 }
