@@ -47,6 +47,17 @@ public class TradePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostListResponse>>> getPosts(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Page<TradePostListResponse> page = tradePostQueryService.getPostsByUserId(customUserDetails.getUserId(), pageable);
+        List<TradePostListResponse> content = page.getContent();
+        PageResponseDto<TradePostListResponse> pageResponse = PageResponseDto.of(page, content);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
+    }
+
     @GetMapping("/{tradePostId}")
     public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(
             @PathVariable Long tradePostId,
