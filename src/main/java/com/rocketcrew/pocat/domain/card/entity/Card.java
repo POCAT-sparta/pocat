@@ -90,16 +90,16 @@ public class Card extends BaseEntity {
     public void update(String tcgdexId, String name, String series, String setId, String setName,
                        String cardNumber, String rarity, CardCategory category, CardGrade grade,
                        String imageUrl, CardSource source) {
-        this.tcgdexId = tcgdexId;
-        this.name = name;
-        this.series = series;
-        this.setId = setId;
-        this.setName = setName;
-        this.cardNumber = cardNumber;
-        this.rarity = rarity;
-        this.category = category;
-        this.grade = grade;
-        this.imageUrl = imageUrl;
-        this.source = source;
+        if (tcgdexId != null) this.tcgdexId = tcgdexId;
+        if (name != null && !name.isBlank()) this.name = name;
+        if (series != null && !series.isBlank()) this.series = series;
+        if (setId != null && !setId.isBlank()) this.setId = setId;
+        if (setName != null && !setName.isBlank()) this.setName = setName;
+        if (cardNumber != null && !cardNumber.isBlank()) this.cardNumber = cardNumber;
+        if (rarity != null) this.rarity = rarity;
+        if (category != null) this.category = category;
+        if (grade != null) this.grade = grade;
+        if (imageUrl != null) this.imageUrl = imageUrl;
+        if (source != null) this.source = source;
     }
 }
