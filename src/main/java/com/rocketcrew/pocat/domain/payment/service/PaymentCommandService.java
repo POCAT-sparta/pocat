@@ -197,6 +197,12 @@ public class PaymentCommandService {
     public PaymentResponse attemptBillingKeyPayment(Long orderId) {
         Order order = findOrder(orderId);
 
+        if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) {
+            return paymentRepository.findByOrderId(order.getId())
+                    .map(PaymentResponse::from)
+                    .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+        }
+
         User user = findUser(order.getBuyerId());
         String billingKey = user.getBillingKey();
 
@@ -204,15 +210,15 @@ public class PaymentCommandService {
             throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
 
-        Payment payment = Payment.builder()
-                .orderId(orderId)
-                .paymentUid(TsidGenerator.generatePaymentUid())
-                .amount(order.getFinalPrice())
-                .paymentType(PaymentType.BILLING_KEY)
-                .status(PaymentStatus.PENDING)
-                .build();
-
-        paymentRepository.save(payment);
+        Payment payment = paymentRepository.findByOrderIdAndStatus(order.getId(), PaymentStatus.PENDING)
+                .orElseGet(() -> paymentRepository.save(Payment.builder()
+                        .orderId(orderId)
+                        .paymentUid(TsidGenerator.generatePaymentUid())
+                        .amount(order.getFinalPrice())
+                        .paymentType(PaymentType.BILLING_KEY)
+                        .status(PaymentStatus.PENDING)
+                        .build())
+                );
 
         PortOnePaymentResponse response = portOneClient.attemptBillingKeyPayment(
                 payment.getPaymentUid(), billingKey, payment.getAmount()
