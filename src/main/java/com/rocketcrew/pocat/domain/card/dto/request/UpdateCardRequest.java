@@ -14,7 +14,7 @@ public record UpdateCardRequest(
         @NotBlank String setName,
         @NotBlank String cardNumber,
         @NotBlank String rarity,
-        @NotBlank CardCategory category,
+        @NotNull CardCategory category,
         @NotNull CardGrade grade,
         String imageUrl,
         @NotNull CardSource source

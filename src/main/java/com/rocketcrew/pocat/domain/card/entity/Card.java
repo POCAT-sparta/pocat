@@ -51,18 +51,18 @@ public class Card extends BaseEntity {
     private CardCategory category;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "grade", nullable = false, length = 20, nullable = false)
+    @Column(name = "grade", nullable = false, length = 20)
     private CardGrade grade;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source", nullable = false, length = 20, nullable = false)
+    @Column(name = "source", nullable = false, length = 20)
     private CardSource source;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20, nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     private CardStatus status;
 
     @Column(name = "reject_reason", columnDefinition = "TEXT")
