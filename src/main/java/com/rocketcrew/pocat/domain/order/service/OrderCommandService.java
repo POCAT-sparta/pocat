@@ -22,9 +22,13 @@ public class OrderCommandService {
     private final OrderRepository orderRepository;
     private final CardRepository cardRepository;
 
-    public OrderResponse cancelOrder(String orderUid, String reason) {
+    public OrderResponse cancelOrder(Long userId, String orderUid, String reason) {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (!order.getBuyerId().equals(userId)) {
+            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
+        }
 
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new OrderException(ErrorCode.ORDER_ALREADY_CANCELLED);
