@@ -29,7 +29,7 @@ public class AdminCardController {
     @GetMapping("/requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getRequests(
             @RequestParam(required = false) CardStatus status,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<CardResponse> page = cardQueryService.getRequests(status, pageable);
         PageResponseDto<CardResponse> pageResponse = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -58,8 +58,8 @@ public class AdminCardController {
     }
 
     @DeleteMapping("/{cardId}")
-    public ResponseEntity<Void> deleteCard(@PathVariable Long cardId) {
+    public ResponseEntity<ApiResponseDto<Void>> deleteCard(@PathVariable Long cardId) {
         cardCommandService.deleteCard(cardId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }

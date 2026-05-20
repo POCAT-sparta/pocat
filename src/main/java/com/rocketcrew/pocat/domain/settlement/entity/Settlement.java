@@ -2,6 +2,8 @@ package com.rocketcrew.pocat.domain.settlement.entity;
 
 import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -45,6 +47,9 @@ public class Settlement extends BaseEntity {
     private LocalDateTime settledAt;
 
     public void complete() {
+        if (this.status != SettlementStatus.PENDING) {
+            throw new SettlementException(ErrorCode.SETTLEMENT_CANNOT_COMPLETE);
+        }
         this.status = SettlementStatus.COMPLETED;
         this.settledAt = LocalDateTime.now();
     }

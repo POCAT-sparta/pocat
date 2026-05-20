@@ -14,8 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +26,9 @@ public class CardQueryService {
     private final OrderQueryService orderQueryService;
 
     public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
+        if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() < 2) {
+            throw new CardException(ErrorCode.INVALID_INPUT);
+        }
         return cardRepository.searchCards(condition, pageable)
                 .map(CardResponse::from);
     }
@@ -33,6 +36,9 @@ public class CardQueryService {
     public CardResponse getCard(Long id) {
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            throw new CardException(ErrorCode.CARD_NOT_FOUND);
+        }
         return CardResponse.from(card);
     }
 
@@ -46,26 +52,24 @@ public class CardQueryService {
             throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
         }
     }
-
-    public List<Long> searchCardIds(CardSearchCondition condition) {
-        return cardRepository.searchCardIds(condition);
-    }
-
+    
     public Page<CardResponse> getMyRequests(Long userId, CardStatus status, Pageable pageable) {
+        // status 유무에 따라 분기 — 두 map() 중 하나만 실행되므로 이중 순회 없음
         if (status != null) {
             return cardRepository.findByUserIdAndStatus(userId, status, pageable)
-                    .map(CardResponse::from);
+                    .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
         }
         return cardRepository.findByUserId(userId, pageable)
-                .map(CardResponse::from);
+                .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
     }
 
     public Page<CardResponse> getRequests(CardStatus status, Pageable pageable) {
+        // status 유무에 따라 분기 — 두 map() 중 하나만 실행되므로 이중 순회 없음
         if (status != null) {
             return cardRepository.findByStatus(status, pageable)
-                    .map(CardResponse::from);
+                    .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
         }
         return cardRepository.findAll(pageable)
-                .map(CardResponse::from);
+                .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
     }
 }

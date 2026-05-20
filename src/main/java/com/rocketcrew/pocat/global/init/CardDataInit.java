@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
+@Profile("local")
 @Component
 @RequiredArgsConstructor
 public class CardDataInit implements ApplicationRunner {
@@ -67,6 +69,11 @@ public class CardDataInit implements ApplicationRunner {
             String setResponse = restTemplate.getForObject(TCGDEX_SET_URL, String.class);
             JsonNode setRoot = objectMapper.readTree(setResponse);
 
+            String setId = setRoot.path("id").asText("");
+            if (setId.isBlank()) {
+                log.error("[CardDataInit] TCGdex 응답에 세트 ID가 없어 초기화를 중단합니다.");
+                return;
+            }
             String seriesName = setRoot.path("serie").path("name").asText("Sword & Shield");
             String setName = setRoot.path("name").asText("Darkness Ablaze");
             JsonNode cardNodes = setRoot.path("cards");
@@ -104,9 +111,10 @@ public class CardDataInit implements ApplicationRunner {
                             .tcgdexId(tcgdexId)
                             .name(name)
                             .series(seriesName)
+                            .setId(setId)
                             .setName(setName)
                             .cardNumber(localId)
-                            .rarity(rarity.isEmpty() ? null : rarity)
+                            .rarity(rarity.isEmpty() ? "UNKNOWN" : rarity)
                             .category(category)
                             .grade(grade)
                             .imageUrl(imageUrl)
@@ -153,12 +161,12 @@ public class CardDataInit implements ApplicationRunner {
     }
 
     private CardCategory parseCategory(String category) {
-        if (category == null || category.isBlank()) return null;
+        if (category == null || category.isBlank()) return CardCategory.UNKNOWN;
         return switch (category.toUpperCase()) {
             case "POKEMON" -> CardCategory.POKEMON;
             case "TRAINER", "TRAINERS" -> CardCategory.TRAINERS;
             case "ENERGY" -> CardCategory.ENERGY;
-            default -> null;
+            default -> CardCategory.UNKNOWN;
         };
     }
 }

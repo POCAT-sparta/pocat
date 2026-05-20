@@ -6,6 +6,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 
 public record CardSearchCondition(
         String keyword,
+        String series,
+        String setName,
         CardGrade grade,
         CardCategory category,
         CardStatus status

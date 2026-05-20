@@ -6,12 +6,12 @@ import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 
 @RequiredArgsConstructor
 public class CardRepositoryImpl implements CardRepositoryCustom {
@@ -40,28 +40,25 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
-    @Override
-    public List<Long> searchCardIds(CardSearchCondition condition) {
-        QCard card = QCard.card;
-
-        return queryFactory
-                .select(card.id)
-                .from(card)
-                .where(buildCondition(condition))
-                .fetch();
-    }
-
     private BooleanBuilder buildCondition(CardSearchCondition condition) {
         QCard card = QCard.card;
         BooleanBuilder builder = new BooleanBuilder();
 
-        if (StringUtils.hasText(condition.keyword())) {
-            String kw = condition.keyword();
+        // LIKE '%keyword%' 는 풀 스캔을 유발하므로 2자 미만 키워드는 무시
+        if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() >= 2) {
+            String kw = condition.keyword().trim();
             builder.and(
                 card.name.containsIgnoreCase(kw)
                     .or(card.series.containsIgnoreCase(kw))
                     .or(card.setName.containsIgnoreCase(kw))
             );
+        }
+        if (StringUtils.hasText(condition.series())) {
+            builder.and(card.series.equalsIgnoreCase(condition.series().trim()));
+        }
+        if (StringUtils.hasText(condition.setName())) {
+            String normalizedSetName = condition.setName().trim();
+            builder.and(card.setName.equalsIgnoreCase(normalizedSetName));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));

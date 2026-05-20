@@ -1,13 +1,12 @@
 package com.rocketcrew.pocat.domain.community.freepost.service;
 
-import com.rocketcrew.pocat.domain.comment.repository.CommentRepository;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.CreateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
-import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
@@ -22,11 +21,9 @@ public class FreePostCommandService {
 
     private final FreePostRepository freePostRepository;
     private final UserRepository userRepository;
-    private final CommentRepository commentRepository;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        User user = findUserOrThrow(userId);
         FreePost freePost = FreePost.builder()
                 .userId(userId)
                 .title(request.title())
@@ -38,43 +35,37 @@ public class FreePostCommandService {
     }
 
     public FreePostResponse updatePost(Long postId, Long userId, UpdateFreePostRequest request) {
-        FreePost freePost = freePostRepository.findById(postId)
-                .orElseThrow(() -> new FreePostException(ErrorCode.FREE_POST_NOT_FOUND));
-        if (!freePost.getUserId().equals(userId)) {
-            throw new FreePostException(ErrorCode.USER_FORBIDDEN);
-        }
-        if (request.title() != null) {
-            if (request.title().isBlank()) {
-                throw new FreePostException(ErrorCode.INVALID_CONTENT);
-            }
-            freePost.updateTitle(request.title());
-        }
-        if (request.content() != null) {
-            if (request.content().isBlank()) {
-                throw new FreePostException(ErrorCode.INVALID_CONTENT);
-            }
-            freePost.updateContent(request.content());
-        }
-        User user = userRepository.findById(freePost.getUserId())
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        String nickname = user.getNickname();
-        int commentCount = commentRepository.countByFreePostId(freePost.getId());
-        return FreePostResponse.of(freePost, nickname, commentCount);
+        FreePost freePost = findFreePostAndVerifyOwner(postId, userId);
+        validateIfPresent(request.title());
+        if (request.title() != null) freePost.updateTitle(request.title());
+        validateIfPresent(request.content());
+        if (request.content() != null) freePost.updateContent(request.content());
+        User user = findUserOrThrow(freePost.getUserId());
+        return FreePostResponse.of(freePost, user.getNickname(), freePost.getCommentCount());
     }
 
     public void deletePost(Long postId, Long userId) {
+        FreePost freePost = findFreePostAndVerifyOwner(postId, userId);
+        freePostRepository.delete(freePost);
+    }
+
+    private FreePost findFreePostAndVerifyOwner(Long postId, Long userId) {
         FreePost freePost = freePostRepository.findById(postId)
                 .orElseThrow(() -> new FreePostException(ErrorCode.FREE_POST_NOT_FOUND));
         if (!freePost.getUserId().equals(userId)) {
             throw new FreePostException(ErrorCode.USER_FORBIDDEN);
         }
-        freePostRepository.delete(freePost);
+        return freePost;
     }
 
-    public void incrementViewCount(Long postId) {
-        int updated = freePostRepository.incrementViewCount(postId);
-        if (updated == 0) {
-            throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
+    private User findUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void validateIfPresent(String value) {
+        if (value != null && value.isBlank()) {
+            throw new FreePostException(ErrorCode.INVALID_CONTENT);
         }
     }
 }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
+import com.rocketcrew.pocat.domain.payment.client.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
@@ -15,6 +17,7 @@ import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class PaymentCommandService {
     private final ObjectMapper objectMapper;
     private final PaymentFailureService paymentFailureService;
     private final SettlementCommandService settlementCommandService;
+    private final PortOneClient portOneClient;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -85,24 +88,29 @@ public class PaymentCommandService {
 
         validateBuyer(order, buyerId);
 
-        // 멱등성: 이미 최종 처리된 경우 현재 상태 그대로 반환
-        if (isFinalized(payment.getStatus())) {
-            return PaymentResponse.from(payment);
+        if (isFinalized(payment.getStatus())) return PaymentResponse.from(payment);
+
+        PortOnePaymentResponse portOneClientPayment = portOneClient.getPayment(paymentUid);
+
+        payment = findPaymentByUidWithLock(paymentUid);
+
+        if (isFinalized(payment.getStatus())) return PaymentResponse.from(payment);
+
+        if (!"PAID".equals(portOneClientPayment.status())) {
+            paymentFailureService.markFailed(payment.getId());
+            throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
-        // TODO: PortOne API 호출 → GET https://api.portone.io/v2/payments/{paymentUid}
-        //   ① 응답 status가 "PAID"인지 확인
-        //   ② 응답 amount.total이 payment.getAmount()와 일치하는지 검증
-        //   ③ 불일치 시: PortOne 결제 취소 API 호출 후
-        //      paymentFailureService.markFailed(payment.getId()) 호출 (REQUIRES_NEW)
-        //      → 외부 트랜잭션 롤백과 무관하게 실패 상태가 커밋됨
-        //      → 이후 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH)
-        //   ④ 검증 통과 시: payment.complete(method, paidAt), order.completePayment() 호출
-        //      이후 settlementCommandService.createSettlement(order.getOrderUid()) 호출
-        //
-        // [fail-closed] PortOne 연동 완료 전까지 이 경로는 차단한다.
-        // 하드코딩된 플레이스홀더로 결제가 우회 완료되는 보안 취약점을 방지.
-        throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+        if (!payment.getAmount().equals(portOneClientPayment.amount())) {
+            paymentFailureService.markFailed(payment.getId());
+            throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        }
+
+        payment.complete(portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
+        order.completePayment();
+        settlementCommandService.createSettlement(order.getOrderUid());
+
+        return PaymentResponse.from(payment);
     }
 
     /**
@@ -127,14 +135,7 @@ public class PaymentCommandService {
         //     throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
         // }
 
-        // [fail-closed] 서명 검증이 TODO인 동안은 상태 변경 경로 전체를 차단한다.
-        // permitAll 엔드포인트이므로 위조 이벤트가 주문·결제 상태를 바꾸는 것을 방지.
-        // 서명 검증 구현 완료 후 이 블록을 제거하고 아래 처리 로직을 활성화한다.
-        throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
-
         // ── 아래는 서명 검증 완료 후 활성화 ────────────────────────────────────
-
-        /*
         WebhookRequest request;
         try {
             request = objectMapper.readValue(rawBody, WebhookRequest.class);
@@ -143,39 +144,61 @@ public class PaymentCommandService {
             throw new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY);
         }
 
-        // 핵심 필드 null 가드 — 서비스 내 역직렬화이므로 Bean Validation 자동 실행 안 됨
-        if (request.data() == null
-                || request.data().paymentId() == null
-                || request.data().status() == null
-                || request.data().amount() == null
-                || request.data().amount().total() == null) {
-            throw new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY);
-        }
-        // 아래 로직은 서명 검증 완료 후 주석 해제
-        // String paymentId = request.data().paymentId();
-        // Payment payment = paymentRepository.findByPaymentUid(paymentId).orElse(null);
-        // if (payment == null) { return; }
-        // if (isFinalized(payment.getStatus())) { return; }
-        // TODO: PortOne API 재조회 → 상태·금액 2차 검증
-        // Order order = findOrder(payment.getOrderId());
-        // if ("PAID".equals(portOneStatus)) {
-        //     if (!payment.getAmount().equals(portOneAmount)) {
-        //         paymentFailureService.markFailed(payment.getId()); // REQUIRES_NEW
-        //         return;
-        //     }
-        //     payment.complete(portOneMethod, portOnePaidAt);
-        //     order.completePayment();
-        //     settlementCommandService.createSettlement(order.getOrderUid());
-        // } else {
-        //     paymentFailureService.markFailed(payment.getId()); // REQUIRES_NEW
-        // }
-         */
+        throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+
+//        // 핵심 필드 null 가드 — 서비스 내 역직렬화이므로 Bean Validation 자동 실행 안 됨
+//        if (request.data() == null
+//                || request.data().paymentId() == null
+//                || request.data().status() == null
+//                || request.data().amount() == null
+//                || request.data().amount().total() == null) {
+//            throw new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY);
+//        }
+//
+//        String paymentId = request.data().paymentId();
+//        String status = request.data().status();
+//
+//        Payment payment = paymentRepository.findByPaymentUidWithLock(paymentId).orElse(null);
+//
+//        if (payment == null) {
+//            return;
+//        }
+//
+//        if (isFinalized(payment.getStatus())) {
+//            return;
+//        }
+//
+//        if ("PAID".equals(status)) {
+//            Order order = findOrder(payment.getOrderId());
+//
+//            PortOnePaymentResponse portOneClientPayment = portOneClient.getPayment(paymentId);
+//            Long amount = portOneClientPayment.amount();
+//
+//            if (!payment.getAmount().equals(amount)) {
+//                paymentFailureService.markFailed(payment.getId());
+//                throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+//            }
+//
+//            String paymentMethod = portOneClientPayment.paymentMethod();
+//            LocalDateTime paidAt = portOneClientPayment.paidAt();
+//
+//            payment.complete(paymentMethod, paidAt);
+//            order.completePayment();
+//            settlementCommandService.createSettlement(order.getOrderUid());
+//        } else {
+//            paymentFailureService.markFailed(payment.getId());
+//        }
     }
 
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
 
     private Payment findPaymentByUid(String paymentUid) {
         return paymentRepository.findByPaymentUid(paymentUid)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+    }
+
+    private Payment findPaymentByUidWithLock(String paymentUid) {
+        return paymentRepository.findByPaymentUidWithLock(paymentUid)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
@@ -197,6 +220,6 @@ public class PaymentCommandService {
     }
 
     private String generatePaymentUid() {
-        return "pocat-payment-" + UUID.randomUUID().toString().replace("-", "");
+        return TsidGenerator.generatePaymentUid();
     }
 }

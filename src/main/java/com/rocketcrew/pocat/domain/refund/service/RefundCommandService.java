@@ -38,7 +38,7 @@ public class RefundCommandService {
 
     // 환불 요청 가능한 주문 상태
     private static final Set<OrderStatus> REFUNDABLE_STATUSES =
-            EnumSet.of(OrderStatus.PAYMENT_COMPLETED, OrderStatus.SHIPPING, OrderStatus.COMPLETED);
+            EnumSet.of(OrderStatus.PAYMENT_COMPLETED, OrderStatus.SHIPPING, OrderStatus.ORDER_COMPLETED);
 
     /**
      * 7.1 환불 요청
