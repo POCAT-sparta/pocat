@@ -47,8 +47,8 @@ public class Settlement extends BaseEntity {
     private LocalDateTime settledAt;
 
     public void complete() {
-        if (this.status == SettlementStatus.COMPLETED) {
-            throw new SettlementException(ErrorCode.SETTLEMENT_ALREADY_COMPLETED);
+        if (this.status != SettlementStatus.PENDING) {
+            throw new SettlementException(ErrorCode.SETTLEMENT_CANNOT_COMPLETE);
         }
         this.status = SettlementStatus.COMPLETED;
         this.settledAt = LocalDateTime.now();
