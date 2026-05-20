@@ -5,7 +5,6 @@ import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +34,7 @@ public class PaymentFailureService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
         Order order = orderRepository.findById(payment.getOrderId())
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+                .orElseThrow(() -> new PaymentException(ErrorCode.ORDER_NOT_FOUND));
 
         payment.fail();
         order.failPayment();

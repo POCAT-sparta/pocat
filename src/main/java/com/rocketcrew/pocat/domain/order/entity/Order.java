@@ -3,9 +3,12 @@ package com.rocketcrew.pocat.domain.order.entity;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -14,6 +17,7 @@ import org.hibernate.annotations.SQLDelete;
 @Entity
 @Table(name = "orders")
 @SQLDelete(sql = "UPDATE orders SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Order extends BaseEntity {
 
     @Column(name = "auction_id")
@@ -56,7 +60,7 @@ public class Order extends BaseEntity {
     // 빌링키 자동결제(PAYMENT_PENDING) 또는 PG 직접결제(PAYMENT_FAILED) 성공 시 호출
     public void completePayment() {
         if (this.status != OrderStatus.PAYMENT_PENDING && this.status != OrderStatus.PAYMENT_FAILED) {
-            throw new IllegalStateException("결제 완료 전이가 불가능한 주문 상태입니다: " + this.status);
+            throw new OrderException(ErrorCode.ORDER_CANNOT_COMPLETE_PAYMENT);
         }
         this.status = OrderStatus.PAYMENT_COMPLETED;
     }
@@ -64,7 +68,7 @@ public class Order extends BaseEntity {
     // 빌링키 자동결제 실패(PAYMENT_PENDING) 또는 PG 직접결제 실패(PAYMENT_FAILED, 멱등) 시 호출
     public void failPayment() {
         if (this.status != OrderStatus.PAYMENT_PENDING && this.status != OrderStatus.PAYMENT_FAILED) {
-            throw new IllegalStateException("결제 실패 전이가 불가능한 주문 상태입니다: " + this.status);
+            throw new OrderException(ErrorCode.ORDER_CANNOT_FAIL_PAYMENT);
         }
         this.status = OrderStatus.PAYMENT_FAILED;
     }
