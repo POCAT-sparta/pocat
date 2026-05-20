@@ -64,9 +64,12 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @GetMapping("/popular")
+    `@GetMapping`("/popular")
     public ResponseEntity<ApiResponseDto<List<FreePostResponse>>> getPopularPosts(
-            @RequestParam(defaultValue = "20") int size) {
+            `@RequestParam`(defaultValue = "20") int size) {
+        if (size < 1 || size > 100) {
+            size = 20;
+        }
         List<FreePostResponse> response = freePostRankingService.getPopular(size);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
