@@ -16,6 +16,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.ChatException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +45,11 @@ public class ChatCommandService {
                 .postId(request.postId())
                 .status(ChatStatus.ACTIVE)
                 .build();
-        return ChatResponse.from(chatRepository.save(chat));
+        try {
+            return ChatResponse.from(chatRepository.save(chat));
+        } catch (DataIntegrityViolationException e) {
+            throw new ChatException(ErrorCode.CHAT_ALREADY_EXISTS);
+        }
     }
 
     public ChatMessagePublishDto sendMessage(Long chatId, Long senderId, String message) {
