@@ -13,9 +13,11 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -29,7 +31,8 @@ public class FreePostRankingService {
 
     static final String RANKING_KEY = "ranking:free:popular";
     private static final int RANKING_TTL_SECONDS = 70;
-    private static final int LIKE_WEIGHT = 3;
+    private static final int COMMENT_WEIGHT = FreePostRepository.COMMENT_WEIGHT;
+    private static final int POPULAR_DAYS = 7;
 
     public List<FreePostResponse> getPopular(int size) {
         int clampedSize = Math.min(Math.max(size, 1), 50);
@@ -41,8 +44,20 @@ public class FreePostRankingService {
         }
 
         List<Long> postIds = entries.stream()
-                .map(e -> Long.parseLong(e.getValue()))
+                .filter(e -> e.getValue() != null)
+                .flatMap(e -> {
+                    try {
+                        return Stream.of(Long.parseLong(e.getValue()));
+                    } catch (NumberFormatException ex) {
+                        log.warn("invalid ranking entry in Redis, skipping: value={}", e.getValue());
+                        return Stream.empty();
+                    }
+                })
                 .collect(Collectors.toList());
+
+        if (postIds.isEmpty()) {
+            return fallbackFromDb(clampedSize);
+        }
 
         Map<Long, FreePost> postMap = freePostRepository.findAllById(postIds).stream()
                 .collect(Collectors.toMap(FreePost::getId, p -> p));
@@ -61,25 +76,27 @@ public class FreePostRankingService {
     }
 
     private List<FreePostResponse> fallbackFromDb(int size) {
-        return freePostRepository.findTopByPopularScore(PageRequest.of(0, size)).stream()
-                .map(p -> {
-                    String nickname = userRepository.findById(p.getUserId())
-                            .map(User::getNickname).orElse("");
-                    return FreePostResponse.of(p, nickname, p.getCommentCount());
-                })
+        List<FreePost> posts = freePostRepository.findTopByPopularScore(
+                PageRequest.of(0, size), LocalDateTime.now().minusDays(POPULAR_DAYS));
+        List<Long> userIds = posts.stream().map(FreePost::getUserId).distinct().toList();
+        Map<Long, String> nicknameMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getNickname));
+        return posts.stream()
+                .map(p -> FreePostResponse.of(p, nicknameMap.getOrDefault(p.getUserId(), ""), p.getCommentCount()))
                 .collect(Collectors.toList());
     }
 
     public void refreshRanking() {
         try {
-            List<FreePost> posts = freePostRepository.findTopByPopularScore(PageRequest.of(0, 100));
+            List<FreePost> posts = freePostRepository.findTopByPopularScore(
+                    PageRequest.of(0, 100), LocalDateTime.now().minusDays(POPULAR_DAYS));
             if (posts.isEmpty()) return;
 
             String newKey = RANKING_KEY + ":new";
             redisTemplate.delete(newKey);
 
             for (FreePost post : posts) {
-                double score = post.getViewCount() + (double) post.getCommentCount() * LIKE_WEIGHT;
+                double score = post.getViewCount() + (double) post.getCommentCount() * COMMENT_WEIGHT;
                 redisTemplate.opsForZSet().add(newKey, post.getId().toString(), score);
             }
 

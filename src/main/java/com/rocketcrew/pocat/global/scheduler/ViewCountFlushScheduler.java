@@ -4,10 +4,13 @@ import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostReposit
 import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
@@ -20,6 +23,10 @@ public class ViewCountFlushScheduler {
     private final StringRedisTemplate redisTemplate;
     private final TradePostRepository tradePostRepository;
     private final FreePostRepository freePostRepository;
+
+    @Autowired
+    @Lazy
+    private ViewCountFlushScheduler self;
 
     private static final String TRADE_BUFFER_KEY = "view:buffer";
     private static final String TRADE_PROCESSING_KEY = "view:buffer:processing";
@@ -34,11 +41,25 @@ public class ViewCountFlushScheduler {
         FREE_COMMENT
     }
 
-    @Transactional
     @Scheduled(fixedDelay = 60_000)
     public void flush() {
+        try { self.flushTrade(); } catch (Exception e) { log.error("flushTrade failed", e); }
+        try { self.flushFreeView(); } catch (Exception e) { log.error("flushFreeView failed", e); }
+        try { self.flushFreeComment(); } catch (Exception e) { log.error("flushFreeComment failed", e); }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void flushTrade() {
         flushBuffer(TRADE_PROCESSING_KEY, TRADE_BUFFER_KEY, RepositoryType.TRADE_VIEW);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void flushFreeView() {
         flushBuffer(FREE_PROCESSING_KEY, FREE_BUFFER_KEY, RepositoryType.FREE_VIEW);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void flushFreeComment() {
         flushBuffer(FREE_COMMENT_PROCESSING_KEY, FREE_COMMENT_BUFFER_KEY, RepositoryType.FREE_COMMENT);
     }
 

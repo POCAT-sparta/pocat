@@ -49,23 +49,24 @@ public class CommentCommandService {
     }
 
     public CommentResponse updateComment(Long id, Long userId, UpdateCommentRequest request) {
-        Comment comment = commentRepository.findById(id)
-                .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
-        if (!comment.getUserId().equals(userId)) {
-            throw new CommentException(ErrorCode.USER_FORBIDDEN);
-        }
+        Comment comment = findCommentAndVerifyOwner(id, userId);
         comment.update(request.content());
         return CommentResponse.from(comment);
     }
 
     public void deleteComment(Long id, Long userId) {
+        Comment comment = findCommentAndVerifyOwner(id, userId);
+        Long freePostId = comment.getFreePostId();
+        commentRepository.delete(comment);
+        freePostCommentCountService.decrement(freePostId);
+    }
+
+    private Comment findCommentAndVerifyOwner(Long id, Long userId) {
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
         if (!comment.getUserId().equals(userId)) {
             throw new CommentException(ErrorCode.USER_FORBIDDEN);
         }
-        Long freePostId = comment.getFreePostId();
-        commentRepository.delete(comment);
-        freePostCommentCountService.decrement(freePostId);
+        return comment;
     }
 }
