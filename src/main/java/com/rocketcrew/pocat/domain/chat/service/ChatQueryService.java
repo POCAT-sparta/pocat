@@ -2,12 +2,9 @@ package com.rocketcrew.pocat.domain.chat.service;
 
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatMessageResponse;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatRoomListResponse;
-import com.rocketcrew.pocat.domain.chat.entity.Chat;
 import com.rocketcrew.pocat.domain.chat.entity.ChatMessage;
 import com.rocketcrew.pocat.domain.chat.repository.ChatMessageRepository;
 import com.rocketcrew.pocat.domain.chat.repository.ChatRepository;
-import com.rocketcrew.pocat.domain.community.tradepost.entity.TradePost;
-import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -22,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -31,38 +27,10 @@ public class ChatQueryService {
 
     private final ChatRepository chatRepository;
     private final ChatMessageRepository chatMessageRepository;
-    private final TradePostRepository tradePostRepository;
     private final UserRepository userRepository;
 
     public List<ChatRoomListResponse> getMyChats(Long userId) {
-        List<Chat> chats = chatRepository.findMyChats(userId);
-
-        Set<Long> postIds = chats.stream().map(Chat::getPostId).collect(Collectors.toSet());
-        Set<Long> userIds = chats.stream()
-                .flatMap(c -> Stream.of(c.getOwnerId(), c.getGuestId()))
-                .collect(Collectors.toSet());
-
-        Map<Long, String> postTitles = tradePostRepository.findAllById(postIds).stream()
-                .collect(Collectors.toMap(TradePost::getId, TradePost::getTitle));
-
-        Map<Long, String> nicknames = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, User::getNickname));
-
-        return chats.stream().map(chat -> {
-            Long opponentId = chat.getOwnerId().equals(userId) ? chat.getGuestId() : chat.getOwnerId();
-            String lastMessage = chatMessageRepository
-                    .findLastMessage(chat.getId())
-                    .map(ChatMessage::getMessage)
-                    .orElse(null);
-            return new ChatRoomListResponse(
-                    chat.getId(),
-                    postTitles.getOrDefault(chat.getPostId(), ""),
-                    nicknames.getOrDefault(opponentId, ""),
-                    lastMessage,
-                    chat.getStatus(),
-                    chat.getUpdatedAt()
-            );
-        }).toList();
+        return chatRepository.findMyChatsWithDetails(userId);
     }
 
     public Page<ChatMessageResponse> getMessages(Long chatId, Long userId, Pageable pageable) {
