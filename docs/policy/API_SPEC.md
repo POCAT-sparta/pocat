@@ -387,7 +387,7 @@ Authorization: Bearer {accessToken}
 | `grade` | String | N | 등급 필터 (PSA_10, PSA_9, BGS_10 등) |
 | `category` | String | N | 카테고리 필터 (POKEMON, TRAINERS, ENERGY, UNKNOWN) |
 | `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 10) |
+| `size` | int | N | 페이지 크기 (default: 20) |
 | `sort` | String | N | 정렬 기준 (createdAt,desc) |
 
 **Response** `200 OK`
