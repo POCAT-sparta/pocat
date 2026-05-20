@@ -19,12 +19,12 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/settlements")
+@RequestMapping("/api")
 public class SettlementController {
 
     private final SettlementQueryService settlementQueryService;
 
-    @GetMapping("/me")
+    @GetMapping("/v1/settlements/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<SettlementResponse>>> getSettlements(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -35,7 +35,7 @@ public class SettlementController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/{settlementUid}")
+    @GetMapping("/v1/settlements/{settlementUid}")
     public ResponseEntity<ApiResponseDto<SettlementResponse>> getOneSettlement(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String settlementUid

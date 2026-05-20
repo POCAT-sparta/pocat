@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/admin/cards")
+@RequestMapping("/api")
 public class AdminCardController {
 
     private final CardQueryService cardQueryService;
     private final CardCommandService cardCommandService;
 
-    @GetMapping("/requests")
+    @GetMapping("/v1/admin/cards/requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getRequests(
             @RequestParam(required = false) CardStatus status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -35,13 +35,13 @@ public class AdminCardController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @PatchMapping("/{cardId}/approve")
+    @PatchMapping("/v1/admin/cards/{cardId}/approve")
     public ResponseEntity<ApiResponseDto<CardResponse>> approveCard(@PathVariable Long cardId) {
         CardResponse response = cardCommandService.approveCard(cardId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PatchMapping("/{cardId}/reject")
+    @PatchMapping("/v1/admin/cards/{cardId}/reject")
     public ResponseEntity<ApiResponseDto<CardResponse>> rejectCard(
             @PathVariable Long cardId,
             @Valid @RequestBody RejectCardRequest request) {
@@ -49,7 +49,7 @@ public class AdminCardController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PatchMapping("/{cardId}")
+    @PatchMapping("/v1/admin/cards/{cardId}")
     public ResponseEntity<ApiResponseDto<CardResponse>> updateCard(
             @PathVariable Long cardId,
             @Valid @RequestBody UpdateCardRequest request) {
@@ -57,7 +57,7 @@ public class AdminCardController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @DeleteMapping("/{cardId}")
+    @DeleteMapping("/v1/admin/cards/{cardId}")
     public ResponseEntity<ApiResponseDto<Void>> deleteCard(@PathVariable Long cardId) {
         cardCommandService.deleteCard(cardId);
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());

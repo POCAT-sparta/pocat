@@ -21,14 +21,14 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/refunds")
+@RequestMapping("/api")
 public class RefundController {
 
     private final RefundCommandService refundCommandService;
     private final RefundQueryService refundQueryService;
 
     /** 7.1 환불 요청 */
-    @PostMapping
+    @PostMapping("/v1/refunds")
     public ResponseEntity<ApiResponseDto<RefundResponse>> createRefund(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateRefundRequest request) {
@@ -38,7 +38,7 @@ public class RefundController {
     }
 
     /** 7.2 내 환불 내역 조회 */
-    @GetMapping("/me")
+    @GetMapping("/v1/refunds/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<RefundResponse>>> getMyRefunds(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) RefundStatus status,
@@ -49,7 +49,7 @@ public class RefundController {
     }
 
     /** 7.3 환불 상세 조회 (본인 또는 ADMIN) */
-    @GetMapping("/{refundId}")
+    @GetMapping("/v1/refunds/{refundId}")
     public ResponseEntity<ApiResponseDto<RefundResponse>> getRefund(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long refundId) {

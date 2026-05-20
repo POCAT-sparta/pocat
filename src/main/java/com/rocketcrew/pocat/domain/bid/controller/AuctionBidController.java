@@ -28,14 +28,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1")
+@RequestMapping("/api")
 public class AuctionBidController {
 
     private final AuctionBidQueryService auctionBidQueryService;
     private final AuctionBidCommandService auctionBidCommandService;
 
     // Get bid history for an auction.
-    @GetMapping("/auctions/{auctionId}/bids")
+    @GetMapping("/v1/auctions/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<PageResponseDto<AuctionBidHistoryResponse>>> getBidsByAuction(
             @PathVariable Long auctionId,
             @PageableDefault(size = 20) Pageable pageable) {
@@ -45,7 +45,7 @@ public class AuctionBidController {
     }
 
     // Search bids placed by the authenticated user.
-    @GetMapping("/bids/me")
+    @GetMapping("/v1/bids/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<MyBidResponse>>> getMyBids(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) BidStatus status,
@@ -57,7 +57,7 @@ public class AuctionBidController {
 
     // Place a bid on an auction.
     // Todo : 입찰 생성 내부 로직 구현 미완료
-    @PostMapping("/auctions/{auctionId}/bids")
+    @PostMapping("/v1/auctions/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<CreateAuctionBidResponse>> createBid(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,

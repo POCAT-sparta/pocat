@@ -26,14 +26,14 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/posts/free")
+@RequestMapping("/api")
 public class FreePostController {
 
     private final FreePostQueryService freePostQueryService;
     private final FreePostCommandService freePostCommandService;
     private final FreePostRankingService freePostRankingService;
 
-    @GetMapping
+    @GetMapping("/v1/posts/free")
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getPosts(
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -43,7 +43,7 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/v1/posts/free/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getMyPosts(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -53,7 +53,7 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/{freePostId}")
+    @GetMapping("/v1/posts/free/{freePostId}")
     public ResponseEntity<ApiResponseDto<FreePostResponse>> getPost(
             @PathVariable Long freePostId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -64,7 +64,7 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @GetMapping("/popular")
+    @GetMapping("/v1/posts/free/popular")
     public ResponseEntity<ApiResponseDto<List<FreePostResponse>>> getPopularPosts(
             @RequestParam(defaultValue = "20") int size) {
         if (size < 1 || size > 100) {
@@ -74,7 +74,7 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PostMapping
+    @PostMapping("/v1/posts/free")
     public ResponseEntity<ApiResponseDto<FreePostResponse>> createPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateFreePostRequest request) {
@@ -83,7 +83,7 @@ public class FreePostController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PatchMapping("/{freePostId}")
+    @PatchMapping("/v1/posts/free/{freePostId}")
     public ResponseEntity<ApiResponseDto<FreePostResponse>> updatePost(
             @PathVariable Long freePostId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -92,7 +92,7 @@ public class FreePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @DeleteMapping("/{freePostId}")
+    @DeleteMapping("/v1/posts/free/{freePostId}")
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
             @PathVariable Long freePostId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

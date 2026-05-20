@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@RequestMapping("/api/v1/admin/settlements")
+@RequestMapping("/api")
 public class AdminSettlementController {
 
     private final AdminSettlementCommandService adminSettlementCommandService;
     private final AdminSettlementQueryService adminSettlementQueryService;
 
-    @GetMapping
+    @GetMapping("/v1/admin/settlements")
     public ResponseEntity<ApiResponseDto<PageResponseDto<AdminSettlementResponse>>> getAdminSettlements(
             @ModelAttribute AdminSettlementSearchCondition condition,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -35,7 +35,7 @@ public class AdminSettlementController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
-    @PatchMapping("/{settlementUid}/complete")
+    @PatchMapping("/v1/admin/settlements/{settlementUid}/complete")
     public ResponseEntity<ApiResponseDto<SettlementCompleteResponse>> completeSettlement(
             @PathVariable String settlementUid
     ) {
