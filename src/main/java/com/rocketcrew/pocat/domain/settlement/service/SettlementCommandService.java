@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
 import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class SettlementCommandService {
 
     public void createSettlement(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+                .orElseThrow(() -> new SettlementException(ErrorCode.ORDER_NOT_FOUND));
 
         if (settlementRepository.existsByOrderId(order.getId())) {
             return;
