@@ -12,6 +12,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,5 +32,10 @@ public class UserQueryService {
     public Page<AdminUserResponse> getAllUsers(String keyword, Boolean isBidBlocked, Pageable pageable) {
         return userRepository.searchUsers(keyword, isBidBlocked, pageable)
                 .map(AdminUserResponse::from);
+    }
+
+    public Map<Long, String> getNicknamesByUserIds(List<Long> ids) {
+        return userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getId, User::getNickname));
     }
 }
