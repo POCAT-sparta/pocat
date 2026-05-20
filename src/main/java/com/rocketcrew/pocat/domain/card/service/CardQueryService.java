@@ -5,6 +5,8 @@ import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import java.util.List;
 public class CardQueryService {
 
     private final CardRepository cardRepository;
+    private final OrderQueryService orderQueryService;
 
     public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
         return cardRepository.searchCards(condition, pageable)
@@ -33,12 +36,17 @@ public class CardQueryService {
         return CardResponse.from(card);
     }
 
+    public CardAveragePriceResponse getAveragePrice(Long cardId) {
+        return orderQueryService.getAveragePriceByCard(cardId);
+    }
     public void validateRegistrableForAuction(Long cardId) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
         }
+    }
+    
     public List<Long> searchCardIds(CardSearchCondition condition) {
         return cardRepository.searchCardIds(condition);
     }

@@ -8,10 +8,10 @@ import jakarta.validation.constraints.NotNull;
 public record CreateCardRequest(
         String tcgdexId,
         @NotBlank String name,
-        String series,
-        String setName,
-        String cardNumber,
-        String rarity,
+        @NotBlank String series,
+        @NotBlank String setName,
+        @NotBlank String cardNumber,
+        @NotBlank String rarity,
         @NotNull CardGrade grade,
         String imageUrl,
         @NotNull CardSource source

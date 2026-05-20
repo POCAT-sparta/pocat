@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.settlement.entity;
+package com.rocketcrew.pocat.domain.settlement.enums;
 
 public enum SettlementStatus {
     PENDING,

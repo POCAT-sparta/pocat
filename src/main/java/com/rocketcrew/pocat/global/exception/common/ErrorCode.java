@@ -35,6 +35,7 @@ public enum ErrorCode {
 
     // Order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
+    ORDER_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 주문에 대한 접근 권한이 없습니다."),
     ORDER_ALREADY_CANCELLED(HttpStatus.CONFLICT, "이미 취소된 주문입니다."),
     ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문 상태입니다."),
     ORDER_CANNOT_COMPLETE_PAYMENT(HttpStatus.CONFLICT, "결제 완료 처리가 불가능한 주문 상태입니다."),
@@ -64,6 +65,7 @@ public enum ErrorCode {
 
     // Settlement
     SETTLEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "정산을 찾을 수 없습니다."),
+    SETTLEMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 정산이 완료된 건입니다."),
 
     // FreePost
     FREE_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "자유 게시글을 찾을 수 없습니다."),
