@@ -21,12 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@RequestMapping("/api/v1/admin/orders")
+@RequestMapping("/api")
 public class AdminOrderController {
 
     private final AdminOrderQueryService adminOrderQueryService;
 
-    @GetMapping
+    @GetMapping("/v1/admin/orders")
     public ResponseEntity<ApiResponseDto<PageResponseDto<AdminOrderResponse>>> getAdminOrders(
             @ModelAttribute AdminOrderSearchCondition condition,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable

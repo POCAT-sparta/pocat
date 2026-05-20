@@ -21,13 +21,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/comments")
+@RequestMapping("/api")
 public class CommentController {
 
     private final CommentQueryService commentQueryService;
     private final CommentCommandService commentCommandService;
 
-    @GetMapping
+    @GetMapping("/v1/comments")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CommentTreeResponse>>> getCommentsByPost(
             @RequestParam Long freePostId,
             @PageableDefault(size = 20) Pageable pageable) {
@@ -35,7 +35,7 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
-    @PostMapping
+    @PostMapping("/v1/comments")
     public ResponseEntity<ApiResponseDto<CommentResponse>> createComment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateCommentRequest request) {
@@ -44,7 +44,7 @@ public class CommentController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PatchMapping("/{commentId}")
+    @PatchMapping("/v1/comments/{commentId}")
     public ResponseEntity<ApiResponseDto<CommentResponse>> updateComment(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -53,7 +53,7 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @DeleteMapping("/{commentId}")
+    @DeleteMapping("/v1/comments/{commentId}")
     public ResponseEntity<ApiResponseDto<Void>> deleteComment(
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

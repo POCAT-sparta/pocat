@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/likes")
+@RequestMapping("/api")
 public class LikeController {
 
     private final LikeCommandService likeCommandService;
     private final LikeQueryService likeQueryService;
 
-    @PostMapping
+    @PostMapping("/v1/likes")
     public ResponseEntity<ApiResponseDto<ToggleLikeResponse>> toggleLike(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ToggleLikeRequest request) {
@@ -34,7 +34,7 @@ public class LikeController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/v1/likes/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<LikeResponse>>> getMyLikes(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 10) Pageable pageable) {

@@ -35,14 +35,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1")
+@RequestMapping("/api")
 public class AuctionController {
 
     private final AuctionQueryService auctionQueryService;
     private final AuctionCommandService auctionCommandService;
 
     // Search active auctions.
-    @GetMapping("/auctions")
+    @GetMapping("/v1/auctions")
     public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getAuctions(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String series,
@@ -57,7 +57,7 @@ public class AuctionController {
     }
 
     // Search auctions for administrators.
-    @GetMapping("/admin/auctions")
+    @GetMapping("/v1/admin/auctions")
     public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getAdminAuctions(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String series,
@@ -73,7 +73,7 @@ public class AuctionController {
     }
 
     // Search auctions owned by the authenticated seller.
-    @GetMapping("/auctions/me")
+    @GetMapping("/v1/auctions/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getMyAuctions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) AuctionStatus status,
@@ -84,14 +84,14 @@ public class AuctionController {
     }
 
     // Get auction details.
-    @GetMapping("/auctions/{auctionId}")
+    @GetMapping("/v1/auctions/{auctionId}")
     public ResponseEntity<ApiResponseDto<AuctionResponse>> getAuction(@PathVariable Long auctionId) {
         AuctionResponse response = auctionQueryService.getAuction(auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     // Create an auction.
-    @PostMapping("/auctions")
+    @PostMapping("/v1/auctions")
     public ResponseEntity<ApiResponseDto<CreateAuctionResponse>> createAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateAuctionRequest request) {
@@ -101,7 +101,7 @@ public class AuctionController {
     }
 
     // Update an auction.
-    @PatchMapping("/auctions/{auctionId}")
+    @PatchMapping("/v1/auctions/{auctionId}")
     public ResponseEntity<ApiResponseDto<UpdateAuctionResponse>> updateAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,

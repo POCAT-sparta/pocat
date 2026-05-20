@@ -27,13 +27,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/cards")
+@RequestMapping("/api")
 public class CardController {
 
     private final CardQueryService cardQueryService;
     private final CardCommandService cardCommandService;
 
-    @GetMapping
+    @GetMapping("/v1/cards")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getCards(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String setName,
@@ -48,13 +48,13 @@ public class CardController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/{cardId}")
+    @GetMapping("/v1/cards/{cardId}")
     public ResponseEntity<ApiResponseDto<CardResponse>> getCard(@PathVariable Long cardId) {
         CardResponse response = cardQueryService.getCard(cardId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PostMapping
+    @PostMapping("/v1/cards")
     public ResponseEntity<ApiResponseDto<CardResponse>> createCard(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateCardRequest request) {
@@ -62,14 +62,14 @@ public class CardController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
-    @GetMapping("/{cardId}/average-price")
+    @GetMapping("/v1/cards/{cardId}/average-price")
     public ResponseEntity<ApiResponseDto<CardAveragePriceResponse>> getAveragePrice(
             @PathVariable Long cardId) {
         CardAveragePriceResponse response = cardQueryService.getAveragePrice(cardId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @GetMapping("/my-requests")
+    @GetMapping("/v1/cards/my-requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getMyRequests(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) CardStatus status,
