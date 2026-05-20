@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.global.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.lang.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -62,6 +63,38 @@ public class JwtUtil {
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
+        }
+    }
+
+    /**
+     * JWT를 1회 파싱하여 Claims 반환. 유효하지 않으면 null 반환.
+     * JwtAuthenticationFilter에서 파싱 횟수를 줄이기 위해 사용.
+     */
+    @Nullable
+    public Claims parseClaimsOrNull(String token) {
+        try {
+            return getClaims(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 만료된 토큰에서도 userId 추출. 로그아웃 시 refresh 토큰 삭제에 사용.
+     * 서명 자체가 유효하지 않으면 null 반환.
+     */
+    @Nullable
+    public Long getUserIdIgnoringExpiration(String token) {
+        try {
+            return Long.parseLong(getClaims(token).getSubject());
+        } catch (ExpiredJwtException e) {
+            try {
+                return Long.parseLong(e.getClaims().getSubject());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
         }
     }
 

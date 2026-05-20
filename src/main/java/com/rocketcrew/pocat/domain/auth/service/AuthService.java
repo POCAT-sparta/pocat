@@ -9,7 +9,7 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.exception.domain.AuthException;
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -31,7 +31,7 @@ public class AuthService {
     @Transactional
     public SignupResponse signup(SignupRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new ServiceException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            throw new AuthException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
         User user = User.builder()
@@ -49,10 +49,10 @@ public class AuthService {
     @Transactional(readOnly = true)
     public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new ServiceException(ErrorCode.USER_INFO_MISMATCH);
+            throw new AuthException(ErrorCode.USER_INFO_MISMATCH);
         }
 
         return issueTokens(user);
@@ -62,7 +62,7 @@ public class AuthService {
         String refreshToken = request.refreshToken();
 
         if (!jwtUtil.validateToken(refreshToken)) {
-            throw new ServiceException(ErrorCode.INVALID_REFRESH_TOKEN);
+            throw new AuthException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         Long userId = jwtUtil.getUserId(refreshToken);
@@ -71,25 +71,31 @@ public class AuthService {
         if (!refreshToken.equals(storedToken)) {
             // 이미 사용된 토큰 → 탈취 가능성으로 판단하여 저장된 토큰도 삭제
             redisTemplate.delete("refresh:" + userId);
-            throw new ServiceException(ErrorCode.INVALID_REFRESH_TOKEN);
+            throw new AuthException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ServiceException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
 
         redisTemplate.delete("refresh:" + userId);
         return issueTokens(user);
     }
 
     public void logout(String accessToken) {
-        long expiration = jwtUtil.getExpiration(accessToken);
-        if (expiration > 0) {
-            redisTemplate.opsForValue()
-                    .set("blacklist:" + accessToken, "logout", expiration, TimeUnit.MILLISECONDS);
+        // 아직 유효한 토큰만 블랙리스트 등록 — 만료된 토큰은 이미 무효이므로 등록 불필요
+        if (jwtUtil.validateToken(accessToken)) {
+            long expiration = jwtUtil.getExpiration(accessToken);
+            if (expiration > 0) {
+                redisTemplate.opsForValue()
+                        .set("blacklist:" + accessToken, "logout", expiration, TimeUnit.MILLISECONDS);
+            }
         }
 
-        Long userId = jwtUtil.getUserId(accessToken);
-        redisTemplate.delete("refresh:" + userId);
+        // 만료 여부와 관계없이 refresh 토큰은 항상 삭제
+        Long userId = jwtUtil.getUserIdIgnoringExpiration(accessToken);
+        if (userId != null) {
+            redisTemplate.delete("refresh:" + userId);
+        }
     }
 
     private TokenResponse issueTokens(User user) {
