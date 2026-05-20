@@ -8,14 +8,18 @@ import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 @Entity
-@Table(name = "cards")
+@Table(name = "cards", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"tcgdex_id"})
+})
 @SQLDelete(sql = "UPDATE cards SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Card extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
@@ -60,6 +64,28 @@ public class Card extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private CardStatus status;
+
+    @Column(name = "reject_reason", columnDefinition = "TEXT")
+    private String rejectReason;
+
+    public void approve() {
+        if (this.status != CardStatus.PENDING) {
+            throw new IllegalStateException("PENDING 상태에서만 승인할 수 있습니다.");
+        }
+        this.status = CardStatus.ACTIVE;
+        this.rejectReason = null;
+    }
+
+    public void reject(String rejectReason) {
+        if (this.status != CardStatus.PENDING) {
+            throw new IllegalStateException("PENDING 상태에서만 거절할 수 있습니다.");
+        }
+        if (rejectReason == null || rejectReason.isBlank()) {
+            throw new IllegalArgumentException("거절 사유는 필수입니다.");
+        }
+        this.status = CardStatus.REJECTED;
+        this.rejectReason = rejectReason;
+    }
 
     public void update(String tcgdexId, String name, String series, String setId, String setName,
                        String cardNumber, String rarity, CardCategory category, CardGrade grade,

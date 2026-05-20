@@ -1327,18 +1327,26 @@ Authorization: Bearer {accessToken}
 
 > 담당자: 이재민
 
-### 6.1 결제 요청 (PG 직접결제)
+### 6.1 결제 요청 (PG 직접결제, 낙찰 실패 후 1h)
 
 - **POST** `/api/v1/payments`
 - **권한**: `USER`
-- **설명**: 낙찰 자동결제 실패 후 1시간 이내에만 허용되는 직접결제
+- **설명**:
+  - 낙찰 후 자동결제(billingKey)가 실패한 경우, 구매자가 PG 직접결제를 시작하기 전에 서버에 결제 레코드를 미리 생성하고 `paymentUid`를 발급받는 API.
+  - 클라이언트는 이 API에서 받은 `paymentUid`와 `amount`를 PortOne SDK에 전달하여 결제창을 호출한다.
+  - 이렇게 하면 서버가 금액을 먼저 확정해두기 때문에 클라이언트의 금액 위변조를 원천 차단할 수 있다.
+  - **이 API는 PG 직접결제 전용이다. 빌링키 자동결제는 서버 내부에서 처리되므로 호출하지 않는다.**
+    - 주문 상태가 `PAYMENT_FAILED`여야만 요청 가능
+    - 결제 실패 시각 기준 **1시간 초과** 시 요청 불가
+    - 요청자가 해당 주문의 `buyer_id`와 동일해야 함
+    - 동일 주문에 `PENDING` 상태 결제 레코드가 이미 존재하면 신규 생성하지 않고 기존 `paymentUid` 반환 (중복 방지)
+    - 금액은 클라이언트 요청값을 신뢰하지 않고 서버가 `orders.final_price`에서 직접 확정
 
 **Request Body**
 
 ```json
 {
-  "orderUid": "ORDER-UUID-001",
-  "paymentMethod": "CARD"
+  "orderId": 1
 }
 ```
 
@@ -1346,13 +1354,16 @@ Authorization: Bearer {accessToken}
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "201",
   "data": {
-    "paymentUid": "PAYMENT-UUID-001",
-    "amount": 250000,
-    "status": "PENDING"
+    "paymentUid": "pocat-payment-a1b2c3d4",
+    "orderId": 1,
+    "amount": 150000,
+    "status": "PENDING",
+    "createdAt": "2026-05-15T14:30:00.000000"
   },
-  "message": "결제 요청 완료"
+  "timestamp": "2026-05-15T14:30:00.000000"
 }
 ```
 
@@ -1362,7 +1373,24 @@ Authorization: Bearer {accessToken}
 
 - **PATCH** `/api/v1/payments/{paymentUid}`
 - **권한**: `USER`
-- **설명**: PortOne 결제창 완료 후 서버 사이드 금액 검증 및 확정
+- **설명**: 
+  - 클라이언트가 PortOne SDK로 결제창에서 결제를 완료한 뒤, 서버에 결제 확정을 요청하는 API.
+  - 서버는 전달받은 `paymentUid`로 PortOne API를 직접 조회하여 결제 상태·금액을 검증하고, 검증 통과 시 `payments`와 `orders` 상태를 업데이트한다. 
+  - 이 흐름은 빠른 UX를 위한 경로(Client Confirm)이며, Webhook이 안전장치로 병렬 동작한다.
+
+```json
+클라이언트 결제 완료
+  ↓
+PATCH /api/v1/payments/{paymentUid}   ← 이 API
+  ↓
+서버가 PortOne API 조회 (paymentUid)
+  ↓
+금액 검증 → DB 업데이트
+(Webhook이 먼저 처리했으면 멱등성 체크 후 200 반환)
+```
+- 요청자가 해당 결제의 주문 `buyer_id`와 동일해야 함
+- 이미 `COMPLETED` 또는 `REFUNDED` 상태면 재처리 없이 현재 상태 그대로 200 반환 (멱등성)
+- PortOne 조회 결과 금액이 `payments.amount`와 불일치하면 결제 취소 후 실패 처리
 
 **Path Variables**
 
@@ -1374,14 +1402,19 @@ Authorization: Bearer {accessToken}
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "200",
   "data": {
-    "paymentUid": "PAYMENT-UUID-001",
-    "amount": 250000,
+    "paymentUid": "pocat-payment-a1b2c3d4",
+    "orderId": 1,
+    "amount": 150000,
+    "paymentType": "PG_DIRECT",
+    "paymentMethod": "CARD",
     "status": "COMPLETED",
-    "paidAt": "2026-05-04T13:00:00"
+    "paidAt": "2026-05-15T14:32:00.000000",
+    "createdAt": "2026-05-15T14:30:00.000000"
   },
-  "message": "결제 확정 완료"
+  "timestamp": "2026-05-15T14:32:05.000000"
 }
 ```
 
@@ -1391,32 +1424,55 @@ Authorization: Bearer {accessToken}
 
 - **GET** `/api/v1/payments/{paymentUid}`
 - **권한**: `USER` (본인) / `ADMIN`
+- **설명**:
+  - `paymentUid`로 특정 결제 건의 상세 정보를 조회하는 API.
+  - 요청자가 해당 결제의 주문 `buyer_id` 또는 `ADMIN`이어야 함
 
 **Response** `200 OK`
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "200",
   "data": {
-    "paymentUid": "PAYMENT-UUID-001",
-    "orderUid": "ORDER-UUID-001",
-    "amount": 250000,
-    "paymentType": "PG_DIRECT",
+    "paymentUid": "portone_abc123xyz",
+    "orderId": 42,
+    "amount": 150000,
+    "paymentType": "BILLING_KEY",
     "paymentMethod": "CARD",
     "status": "COMPLETED",
-    "paidAt": "2026-05-04T13:00:00"
+    "paidAt": "2026-05-15T13:00:00.000000",
+    "createdAt": "2026-05-15T12:59:58.000000"
   },
-  "message": ""
+  "timestamp": "2026-05-15T13:05:00.000000"
 }
 ```
 
 ---
 
-### 6.4 PortOne Webhook 수신
+### 6.4 PortOne Webhook 수신 (서명 검증)
 
 - **POST** `/api/v1/payments/webhook`
 - **권한**: `PUBLIC` (PortOne 서버 → 우리 서버)
-- **설명**: PortOne 서버가 결제 상태 변경 시 호출. `X-PortOne-Signature` 검증 필수
+- **설명**:
+  - PortOne이 결제 이벤트 발생 시 서버로 직접 전송하는 Webhook을 수신하는 API. 
+  - Client Confirm(PATCH)과 **동일한 결제 확정 로직을 공유**하며, 둘 중 먼저 도착한 쪽이 처리하고 나머지는 멱등성 체크로 스킵한다. 최종 정합성은 이 Webhook이 보장한다.
+  - **빌링키 자동결제의 결과도 이 Webhook으로 수신한다.** 자동결제는 Client Confirm 경로가 없으므로 Webhook이 유일한 수신 경로다.
+
+```json
+[PG 직접결제]
+Client Confirm(PATCH) ──┐
+                        ├── 먼저 도착한 쪽 처리, 나머지 멱등성 스킵
+Webhook ────────────────┘
+
+[빌링키 자동결제]
+Webhook ───── 유일한 수신 경로 ───── 결제 확정 처리
+```
+- **별도 사용자 인증 없음** (PortOne 서버가 직접 호출)
+- `X-PortOne-Signature` 헤더 서명 검증 필수 → 실패 시 즉시 거절
+- 서명 검증 통과 후 PortOne API를 재조회하여 실제 상태·금액 2차 검증
+- **멱등성 보장**: 이미 최종 상태(`COMPLETED` / `FAILED` / `REFUNDED`)면 처리 없이 200 반환
+- PortOne은 200을 받지 못하면 재전송하므로 반드시 200 반환
 
 **Request Header**
 
@@ -1428,12 +1484,30 @@ X-PortOne-Signature: {서명값}
 
 ```json
 {
-  "paymentId": "PAYMENT-UUID-001",
-  "status": "PAID"
+  "type": "Transaction.Paid",
+  "timestamp": "2026-05-15T14:32:00.000000Z",
+  "data": {
+    "paymentId": "pocat-payment-a1b2c3d4",
+    "transactionId": "tx_xyz789",
+    "storeId": "store_pocat",
+    "amount": {
+      "total": 150000
+    },
+    "status": "PAID"
+  }
 }
 ```
 
 **Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "data": null,
+  "timestamp": "2026-05-15T14:32:01.000000"
+}
+```
 
 ---
 
@@ -1445,15 +1519,20 @@ X-PortOne-Signature: {서명값}
 
 - **POST** `/api/v1/refunds`
 - **권한**: `USER`
+- **설명**: 
+  - 결제 완료된 주문에 대해 구매자가 환불을 요청하는 API.
+  - `orders.status`가 `PAYMENT_COMPLETED` / `SHIPPING` / `COMPLETED` 중 하나여야 요청 가능
+  - 동일 주문에 `REQUESTED` 또는 `COMPLETED` 상태 환불이 이미 존재하면 중복 요청 불가
+  - 실제 환불 처리(이체)는 관리자 승인 후 수동 진행 (PortOne 부분환불 미구현)
+  - 환불 금액은 `payments.amount` 전액 자동 적용
+  - 요청자가 해당 주문의 `buyer_id`와 동일해야 함
 
 **Request Body**
 
 ```json
 {
-  "orderId": 5,
-  "paymentId": 3,
-  "amount": 250000,
-  "reason": "상품 설명과 다름"
+  "orderId": 1,
+  "reason": "상품 상태 불량"
 }
 ```
 
@@ -1461,14 +1540,22 @@ X-PortOne-Signature: {서명값}
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "201",
   "data": {
-    "refundId": 1,
-    "status": "REQUESTED"
+    "refundId": 7,
+    "orderId": 42,
+    "paymentId": 15,
+    "amount": 150000,
+    "reason": "상품 상태 불량",
+    "status": "REQUESTED",
+    "createdAt": "2026-05-15T15:00:00.000000"
   },
-  "message": "환불 요청 완료"
+  "timestamp": "2026-05-15T15:00:00.000000"
 }
 ```
+
+- PortOne이 200을 받지 못하면 재전송한다. 처리 결과와 무관하게 서명 검증만 통과하면 200을 반환하고 내부 처리는 별도로 진행한다.
 
 ---
 
@@ -1476,13 +1563,47 @@ X-PortOne-Signature: {서명값}
 
 - **GET** `/api/v1/refunds/me`
 - **권한**: `USER`
+- **설명**:
+  - 로그인한 사용자의 환불 내역을 페이지네이션으로 조회하는 API.
+    - `status` 쿼리 파라미터로 상태 필터링 가능 (미입력 시 전체 조회)
+    - Offset 기반 페이징 (기본 10개, 생성일 내림차순)
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
-| `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 20) |
+| 파라미터 | 타입 | 필수 | 설명                                        |
+|---|---|---|-------------------------------------------|
+|`status`|String|N| REQUESTED / COMPLETED / REJECTED / FAILED |
+| `page` | int | N | 페이지 번호 (default: 0)                       |
+| `size` | int | N | 페이지 크기 (default: 10)                      |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "data": {
+    "content": [
+      {
+        "refundId": 7,
+        "orderId": 1,
+        "amount": 150000,
+        "reason": "상품 상태 불량",
+        "status": "REQUESTED",
+        "createdAt": "2026-05-15T15:00:00.000000",
+        "updatedAt": "2026-05-15T15:00:00.000000"
+      }
+    ],
+    "pageable": {...},
+    "totalElements": 1,
+    "totalPages": 1,
+    "last": true,
+    "size": 10,
+    "number": 0
+  },
+  "timestamp": "2026-05-15T15:05:00.000000"
+}
+```
 
 ---
 
@@ -1490,23 +1611,27 @@ X-PortOne-Signature: {서명값}
 
 - **GET** `/api/v1/refunds/{refundId}`
 - **권한**: `USER` (본인) / `ADMIN`
+- **설명**: 
+  - `refundId`로 특정 환불 건의 상세 정보를 조회하는 API.
+    - 해당 환불의 주문 `buyer_id` 또는 `ADMIN`만 접근 가능
 
 **Response** `200 OK`
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "200",
   "data": {
-    "refundId": 1,
-    "orderId": 5,
-    "paymentId": 3,
-    "amount": 250000,
-    "reason": "상품 설명과 다름",
-    "rejectReason": null,
-    "status": "REQUESTED",
-    "createdAt": "2026-05-05T10:00:00"
+    "refundId": 7,
+    "orderId": 1,
+    "paymentId": 15,
+    "amount": 150000,
+    "reason": "상품 상태 불량",
+    "status": "COMPLETED",
+    "createdAt": "2026-05-15T15:00:00.000000",
+    "updatedAt": "2026-05-15T16:00:00.000000"
   },
-  "message": ""
+  "timestamp": "2026-05-15T16:05:00.000000"
 }
 ```
 
@@ -1516,17 +1641,30 @@ X-PortOne-Signature: {서명값}
 
 - **PATCH** `/api/v1/admin/refunds/{refundId}/approve`
 - **권한**: `ADMIN`
+- **설명**: 
+  - 관리자가 `REQUESTED` 상태의 환불을 승인하는 API.
+  - ADMIN 권한 필수
+  - 환불 상태가 `REQUESTED`여야만 처리 가능
+  - 승인 시 3개 테이블 상태 일괄 변경
+      - `refunds.status` → `COMPLETED`
+      - `payments.status` → `REFUNDED`
+      - `orders.status` → `REFUNDED`
+  - 실제 금액 이체는 관리자가 별도 수동 처리 (PortOne 부분환불 미구현)
 
 **Response** `200 OK`
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "200",
   "data": {
-    "refundId": 1,
-    "status": "COMPLETED"
+    "refundId": 7,
+    "orderId": 1,
+    "amount": 150000,
+    "status": "COMPLETED",
+    "updatedAt": "2026-05-15T16:00:00.000000"
   },
-  "message": "환불 승인 완료"
+  "timestamp": "2026-05-15T16:00:00.000000"
 }
 ```
 
@@ -1536,12 +1674,17 @@ X-PortOne-Signature: {서명값}
 
 - **PATCH** `/api/v1/admin/refunds/{refundId}/reject`
 - **권한**: `ADMIN`
+- **설명**: 
+  - 관리자가 `REQUESTED` 상태의 환불을 거절하는 API.
+    - ADMIN 권한 필수
+    - 환불 상태가 `REQUESTED`여야만 처리 가능
+    - 거절 시: `refunds.status` → `REJECTED`, `orders.status`는 기존 상태 유지
 
 **Request Body**
 
 ```json
 {
-  "rejectReason": "환불 기간 초과"
+  "rejectReason": "환불 정책 기간 초과"
 }
 ```
 
@@ -1549,13 +1692,17 @@ X-PortOne-Signature: {서명값}
 
 ```json
 {
-  "status": "SUCCESS",
+  "success": true,
+  "code": "200",
   "data": {
-    "refundId": 1,
+    "refundId": 7,
+    "orderId": 42,
+    "amount": 150000,
     "status": "REJECTED",
-    "rejectReason": "환불 기간 초과"
+    "rejectReason": "환불 정책 기간 초과",
+    "updatedAt": "2026-05-15T16:00:00.000000"
   },
-  "message": "환불 거절 완료"
+  "timestamp": "2026-05-15T16:00:00.000000"
 }
 ```
 
@@ -1565,14 +1712,52 @@ X-PortOne-Signature: {서명값}
 
 - **GET** `/api/v1/admin/refunds`
 - **권한**: `ADMIN`
+- **설명**: 
+  - 관리자가 전체 환불 내역을 페이지네이션으로 조회하는 API.
+    - ADMIN 권한 필수
+    - `status` 쿼리 파라미터로 상태 필터링 가능 (미입력 시 전체 조회)
+    - Offset 기반 페이징 (기본 20개, 생성일 내림차순)
+    - QueryDSL Projections로 DTO 직접 조회
 
 **Query Parameters**
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|---|---|---|---|
+| 파라미터     | 타입     | 필수 | 설명 |
+|----------|--------|---|---|
 | `status` | String | N | 상태 필터 (REQUESTED, COMPLETED, REJECTED, FAILED) |
-| `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 20) |
+| `page`   | int    | N | 페이지 번호 (default: 0) |
+| `size`   | int    | N | 페이지 크기 (default: 20) |
+| `sort`   | String      | N | 정렬 기준 |
+
+**Response** `200 OK`
+
+```json
+{
+  "success": true,
+  "code": "200",
+  "data": {
+    "content": [
+      {
+        "refundId": 7,
+        "orderId": 42,
+        "buyerNickname": "trainer_ash",
+        "amount": 150000,
+        "reason": "상품 상태 불량",
+        "status": "REQUESTED",
+        "createdAt": "2026-05-15T15:00:00.000000",
+        "updatedAt": "2026-05-15T15:00:00.000000"
+      }
+    ],
+    "pageable": {...},
+    "totalElements": 35,
+    "totalPages": 2,
+    "last": false,
+    "size": 20,
+    "number": 0
+  },
+  "timestamp": "2026-05-15T16:05:00.000000"
+}
+```
+
 
 ---
 

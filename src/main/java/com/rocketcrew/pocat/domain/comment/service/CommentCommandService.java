@@ -5,8 +5,10 @@ import com.rocketcrew.pocat.domain.comment.dto.request.UpdateCommentRequest;
 import com.rocketcrew.pocat.domain.comment.dto.response.CommentResponse;
 import com.rocketcrew.pocat.domain.comment.entity.Comment;
 import com.rocketcrew.pocat.domain.comment.repository.CommentRepository;
+import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CommentException;
+import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,15 +19,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommentCommandService {
 
     private final CommentRepository commentRepository;
+    private final com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository freePostRepository;
 
     public CommentResponse createComment(Long userId, CreateCommentRequest request) {
+        if (!freePostRepository.existsById(request.freePostId())) {
+            throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
+        }
         if (request.content() == null || request.content().isBlank()) {
             throw new CommentException(ErrorCode.INVALID_CONTENT);
         }
         if (request.parentId() != null) {
             Comment parentComment = commentRepository.findById(request.parentId())
                     .orElseThrow(() -> new CommentException(ErrorCode.INVALID_PARENT_COMMENT));
-            if (!parentComment.getPostId().equals(request.postId())) {
+            if (!parentComment.getFreePostId().equals(request.freePostId())) {
                 throw new CommentException(ErrorCode.INVALID_PARENT_COMMENT);
             }
             if (parentComment.getParentId() != null) {
@@ -34,7 +40,7 @@ public class CommentCommandService {
         }
         Comment comment = Comment.builder()
                 .userId(userId)
-                .postId(request.postId())
+                .freePostId(request.freePostId())
                 .parentId(request.parentId())
                 .content(request.content())
                 .build();

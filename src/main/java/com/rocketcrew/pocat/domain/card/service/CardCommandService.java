@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,9 @@ public class CardCommandService {
     private final CardRepository cardRepository;
 
     public CardResponse createCard(Long userId, CreateCardRequest request) {
+        if (request.tcgdexId() != null && cardRepository.existsByTcgdexId(request.tcgdexId())) {
+            throw new CardException(ErrorCode.CARD_ALREADY_EXISTS);
+        }
         Card card = Card.builder()
                 .userId(userId)
                 .tcgdexId(request.tcgdexId())
@@ -33,7 +37,11 @@ public class CardCommandService {
                 .source(request.source())
                 .status(CardStatus.PENDING)
                 .build();
-        return CardResponse.from(cardRepository.save(card));
+        try {
+            return CardResponse.from(cardRepository.save(card));
+        } catch (DataIntegrityViolationException e) {
+            throw new CardException(ErrorCode.CARD_ALREADY_EXISTS);
+        }
     }
 
     public CardResponse updateCard(Long id, UpdateCardRequest request) {
@@ -59,5 +67,19 @@ public class CardCommandService {
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         cardRepository.delete(card);
+    }
+
+    public CardResponse approveCard(Long id) {
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        card.approve();
+        return CardResponse.from(card);
+    }
+
+    public CardResponse rejectCard(Long id, String rejectReason) {
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        card.reject(rejectReason);
+        return CardResponse.from(card);
     }
 }
