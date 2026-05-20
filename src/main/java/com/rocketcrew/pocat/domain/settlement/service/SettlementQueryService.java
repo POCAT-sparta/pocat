@@ -43,11 +43,11 @@ public class SettlementQueryService {
         return settlements.map(s -> {
             Order order = orderMap.get(s.getOrderId());
             if (order == null) {
-                throw new OrderException(ErrorCode.ORDER_NOT_FOUND);
+                throw new SettlementException(ErrorCode.ORDER_NOT_FOUND);
             }
             Card card = cardMap.get(order.getCardId());
             if (card == null) {
-                throw new CardException(ErrorCode.CARD_NOT_FOUND);
+                throw new SettlementException(ErrorCode.CARD_NOT_FOUND);
             }
             return SettlementResponse.from(s, order, card);
         });
@@ -58,10 +58,10 @@ public class SettlementQueryService {
                 .orElseThrow(() -> new SettlementException(ErrorCode.SETTLEMENT_NOT_FOUND));
 
         Order order = orderRepository.findById(settlement.getOrderId())
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+                .orElseThrow(() -> new SettlementException(ErrorCode.ORDER_NOT_FOUND));
 
         Card card = cardRepository.findById(order.getCardId())
-                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+                .orElseThrow(() -> new SettlementException(ErrorCode.CARD_NOT_FOUND));
 
         return SettlementResponse.from(settlement, order, card);
     }
