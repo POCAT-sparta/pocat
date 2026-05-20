@@ -12,4 +12,13 @@ public class PortOneClient {
         // Authorization: PortOne API 시크릿 키
         throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
     }
+
+    public PortOnePaymentResponse attemptBillingKeyPayment(
+            String paymentUid,
+            String billingKey,
+            Long amount
+    ) {
+        // TODO: POST https://api.portone.io/v2/payments/{paymentUid}/billing-key
+        throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+    }
 }

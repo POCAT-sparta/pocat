@@ -14,9 +14,12 @@ import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
+import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.exception.domain.UserException;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ public class PaymentCommandService {
     private final ObjectMapper objectMapper;
     private final PaymentFailureService paymentFailureService;
     private final SettlementCommandService settlementCommandService;
+    private final UserRepository userRepository;
     private final PortOneClient portOneClient;
 
     /**
@@ -190,6 +194,48 @@ public class PaymentCommandService {
 //        }
     }
 
+    public PaymentResponse attemptBillingKeyPayment(Long orderId) {
+        Order order = findOrder(orderId);
+
+        if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) {
+            return paymentRepository.findByOrderId(order.getId())
+                    .map(PaymentResponse::from)
+                    .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+        }
+
+        User user = findUser(order.getBuyerId());
+        String billingKey = user.getBillingKey();
+
+        if (billingKey == null || billingKey.isEmpty()) {
+            throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
+        }
+
+        Payment payment = paymentRepository.findByOrderIdAndStatus(order.getId(), PaymentStatus.PENDING)
+                .orElseGet(() -> paymentRepository.save(Payment.builder()
+                        .orderId(orderId)
+                        .paymentUid(TsidGenerator.generatePaymentUid())
+                        .amount(order.getFinalPrice())
+                        .paymentType(PaymentType.BILLING_KEY)
+                        .status(PaymentStatus.PENDING)
+                        .build())
+                );
+
+        PortOnePaymentResponse response = portOneClient.attemptBillingKeyPayment(
+                payment.getPaymentUid(), billingKey, payment.getAmount()
+        );
+
+        if (!"PAID".equals(response.status())) {
+            paymentFailureService.markFailed(payment.getId());
+            return PaymentResponse.from(payment);
+        }
+
+        payment.complete(response.paymentMethod(), response.paidAt());
+        order.completePayment();
+        settlementCommandService.createSettlement(order.getOrderUid());
+
+        return PaymentResponse.from(payment);
+    }
+
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
 
     private Payment findPaymentByUid(String paymentUid) {
@@ -205,6 +251,11 @@ public class PaymentCommandService {
     private Order findOrder(Long orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
     }
 
     private void validateBuyer(Order order, Long requesterId) {
