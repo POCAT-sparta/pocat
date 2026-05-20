@@ -13,6 +13,8 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long>, S
 
     boolean existsByOrderId(Long orderId);
 
+    Optional<Settlement> findByOrderId(Long orderId);
+
     Page<Settlement> findBySellerId(Long sellerId, Pageable pageable);
 
     Optional<Settlement> findBySettlementUidAndSellerId(String settlementUid, Long sellerId);

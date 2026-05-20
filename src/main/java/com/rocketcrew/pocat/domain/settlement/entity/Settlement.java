@@ -48,4 +48,8 @@ public class Settlement extends BaseEntity {
         this.status = SettlementStatus.COMPLETED;
         this.settledAt = LocalDateTime.now();
     }
+
+    public void refund() {
+        this.status = SettlementStatus.REFUNDED;
+    }
 }

@@ -72,4 +72,11 @@ public class Order extends BaseEntity {
         }
         this.status = OrderStatus.PAYMENT_FAILED;
     }
+
+    public void refund() {
+        this.status = OrderStatus.REFUNDED;
+        if (this.deliveryStatus != null) {
+            this.deliveryStatus = DeliveryStatus.CANCELLED;
+        }
+    }
 }
