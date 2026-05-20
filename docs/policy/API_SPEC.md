@@ -763,13 +763,14 @@ Authorization: Bearer {accessToken}
 | `sort`   | String | N | 정렬 기준 (endedAt,asc / createdAt,desc) |
 
 **Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+
 ```json
 {
   "status": "SUCCESS",
   "data": {
     "content": [
       {
-        "id": 42,
+        "auctionId": 42,
         "title": "PSA 10 피카츄 1세대 경매",
         "cardId": 1,
         "cardName": "피카츄",
@@ -810,6 +811,7 @@ Authorization: Bearer {accessToken}
 | `size` | int | N | 페이지 크기 (default: 20) |
 
 **Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+
 ```json
 {
   "status": "SUCCESS",
@@ -940,7 +942,7 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "id": 1,
+    "auctionId": 1,
     "title": "수정된 경매 제목",
     "description": "수정된 설명",
     "startingPrice": 150000,
