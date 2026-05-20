@@ -31,23 +31,23 @@ public class Card extends BaseEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "series", length = 100)
+    @Column(name = "series", length = 100, nullable = false)
     private String series;
 
-    @Column(name = "set_id", length = 50)
+    @Column(name = "set_id", length = 50, nullable = false)
     private String setId;
 
-    @Column(name = "set_name", length = 100)
+    @Column(name = "set_name", length = 100, nullable = false)
     private String setName;
 
-    @Column(name = "card_number", length = 20)
+    @Column(name = "card_number", length = 20, nullable = false)
     private String cardNumber;
 
-    @Column(name = "rarity", length = 50)
+    @Column(name = "rarity", length = 50, nullable = false)
     private String rarity;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", length = 20)
+    @Column(name = "category", length = 20, nullable = false)
     private CardCategory category;
 
     @Enumerated(EnumType.STRING)
@@ -90,16 +90,16 @@ public class Card extends BaseEntity {
     public void update(String tcgdexId, String name, String series, String setId, String setName,
                        String cardNumber, String rarity, CardCategory category, CardGrade grade,
                        String imageUrl, CardSource source) {
-        this.tcgdexId = tcgdexId;
-        this.name = name;
-        this.series = series;
-        this.setId = setId;
-        this.setName = setName;
-        this.cardNumber = cardNumber;
-        this.rarity = rarity;
-        this.category = category;
-        this.grade = grade;
-        this.imageUrl = imageUrl;
-        this.source = source;
+        if (tcgdexId != null) this.tcgdexId = tcgdexId;
+        if (name != null && !name.isBlank()) this.name = name;
+        if (series != null && !series.isBlank()) this.series = series;
+        if (setId != null && !setId.isBlank()) this.setId = setId;
+        if (setName != null && !setName.isBlank()) this.setName = setName;
+        if (cardNumber != null && !cardNumber.isBlank()) this.cardNumber = cardNumber;
+        if (rarity != null && !rarity.isBlank()) this.rarity = rarity;
+        if (category != null) this.category = category;
+        if (grade != null) this.grade = grade;
+        if (imageUrl != null) this.imageUrl = imageUrl;
+        if (source != null) this.source = source;
     }
 }
