@@ -1,6 +1,8 @@
 package com.rocketcrew.pocat.domain.payment.entity;
 
 import com.rocketcrew.pocat.global.entity.BaseEntity;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -42,14 +44,13 @@ public class Payment extends BaseEntity {
 
     public void complete(String paymentMethod, LocalDateTime paidAt) {
         if (paymentMethod == null || paymentMethod.isBlank()) {
-            throw new IllegalArgumentException("결제 수단은 필수입니다.");
+            throw new PaymentException(ErrorCode.PAYMENT_METHOD_REQUIRED);
         }
         if (paidAt == null) {
-            throw new IllegalArgumentException("결제 완료 시각은 필수입니다.");
+            throw new PaymentException(ErrorCode.PAYMENT_PAID_AT_REQUIRED);
         }
         if (this.status != PaymentStatus.PENDING) {
-            throw new IllegalStateException(
-                    "결제 완료는 PENDING 상태에서만 가능합니다. 현재 상태: " + this.status);
+            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_COMPLETE);
         }
         this.status = PaymentStatus.COMPLETED;
         this.paymentMethod = paymentMethod;
@@ -59,16 +60,14 @@ public class Payment extends BaseEntity {
     // FAILED → FAILED 멱등 전이 허용: Webhook 재전송·이벤트 리플레이 시 불필요한 예외 방지
     public void fail() {
         if (this.status != PaymentStatus.PENDING && this.status != PaymentStatus.FAILED) {
-            throw new IllegalStateException(
-                    "결제 실패는 PENDING 또는 FAILED 상태에서만 가능합니다. 현재 상태: " + this.status);
+            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_FAIL);
         }
         this.status = PaymentStatus.FAILED;
     }
 
     public void refund() {
         if (this.status != PaymentStatus.COMPLETED) {
-            throw new IllegalStateException(
-                    "환불은 COMPLETED 상태에서만 가능합니다. 현재 상태: " + this.status);
+            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_REFUND);
         }
         this.status = PaymentStatus.REFUNDED;
     }
