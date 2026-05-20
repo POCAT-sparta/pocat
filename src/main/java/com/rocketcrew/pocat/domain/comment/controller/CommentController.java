@@ -9,6 +9,7 @@ import com.rocketcrew.pocat.domain.comment.service.CommentQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,16 +29,16 @@ public class CommentController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<CommentTreeResponse>>> getCommentsByPost(
-            @RequestParam Long postId,
+            @RequestParam Long freePostId,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<CommentTreeResponse> page = commentQueryService.getCommentsByPost(postId, pageable);
+        Page<CommentTreeResponse> page = commentQueryService.getCommentsByPost(freePostId, pageable);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<CommentResponse>> createComment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody CreateCommentRequest request) {
+            @Valid @RequestBody CreateCommentRequest request) {
         CommentResponse response = commentCommandService.createComment(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
