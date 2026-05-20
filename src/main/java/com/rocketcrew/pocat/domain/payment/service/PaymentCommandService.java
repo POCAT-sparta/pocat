@@ -86,12 +86,9 @@ public class PaymentCommandService {
         Payment payment = findPaymentByUid(paymentUid);
         Order order = findOrder(payment.getOrderId());
 
-        // 멱등성: 이미 최종 처리된 경우 현재 상태 그대로 반환
-        if (isFinalized(payment.getStatus())) {
-            return PaymentResponse.from(payment);
-        }
-
         validateBuyer(order, buyerId);
+
+        if (isFinalized(payment.getStatus())) return PaymentResponse.from(payment);
 
         PortOnePaymentResponse portOneClientPayment = portOneClient.getPayment(paymentUid);
 
