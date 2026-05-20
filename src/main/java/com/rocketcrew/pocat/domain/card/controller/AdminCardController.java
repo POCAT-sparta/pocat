@@ -52,7 +52,7 @@ public class AdminCardController {
     @PatchMapping("/{cardId}")
     public ResponseEntity<ApiResponseDto<CardResponse>> updateCard(
             @PathVariable Long cardId,
-            @RequestBody UpdateCardRequest request) {
+            @Valid @RequestBody UpdateCardRequest request) {
         CardResponse response = cardCommandService.updateCard(cardId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }

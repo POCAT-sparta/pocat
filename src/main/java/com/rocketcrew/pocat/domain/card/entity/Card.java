@@ -96,7 +96,7 @@ public class Card extends BaseEntity {
         if (setId != null && !setId.isBlank()) this.setId = setId;
         if (setName != null && !setName.isBlank()) this.setName = setName;
         if (cardNumber != null && !cardNumber.isBlank()) this.cardNumber = cardNumber;
-        if (rarity != null) this.rarity = rarity;
+        if (rarity != null && !rarity.isBlank()) this.rarity = rarity;
         if (category != null) this.category = category;
         if (grade != null) this.grade = grade;
         if (imageUrl != null) this.imageUrl = imageUrl;
