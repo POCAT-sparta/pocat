@@ -55,6 +55,7 @@ public enum ErrorCode {
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.FORBIDDEN, "Webhook 서명 검증에 실패했습니다."),
     WEBHOOK_EMPTY_BODY(HttpStatus.BAD_REQUEST, "Webhook 요청 본문이 비어 있습니다. 인프라 설정을 확인하세요."),
     PORTONE_NOT_INTEGRATED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 연동이 완료되지 않았습니다."),
+    PAYMENT_STATUS_NOT_PAID(HttpStatus.BAD_REQUEST, "PortOne 결제 상태가 PAID가 아닙니다."),
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),
