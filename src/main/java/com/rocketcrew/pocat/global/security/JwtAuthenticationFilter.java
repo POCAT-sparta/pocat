@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.security;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,17 +26,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
 
-        if (StringUtils.hasText(token) && jwtUtil.validateToken(token) && !isBlacklisted(token)) {
-            Long userId = jwtUtil.getUserId(token);
-            String role = jwtUtil.getRole(token);
-            if (userId == null || role == null) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
+        if (StringUtils.hasText(token)) {
+            // 토큰을 1회만 파싱 — validateToken + getUserId + getRole 의 3중 파싱 제거
+            Claims claims = jwtUtil.parseClaimsOrNull(token);
+            if (claims != null && !isBlacklisted(token)) {
+                Long userId = Long.parseLong(claims.getSubject());
+                String role = claims.get("role", String.class);
+                if (userId == null || role == null) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+                CustomUserDetails userDetails = new CustomUserDetails(userId, role);
+                var auth = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(auth);
             }
-            CustomUserDetails userDetails = new CustomUserDetails(userId, role);
-            var auth = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(auth);
         }
 
         filterChain.doFilter(request, response);
