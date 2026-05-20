@@ -54,7 +54,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
             );
         }
         if (StringUtils.hasText(condition.setName())) {
-            builder.and(card.setName.equalsIgnoreCase(condition.setName()));
+            String normalizedSetName = condition.setName().trim();
+            builder.and(card.setName.equalsIgnoreCase(normalizedSetName));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));
