@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +52,10 @@ public class SettlementCommandService {
                 .status(SettlementStatus.PENDING)
                 .build();
 
-        settlementRepository.save(settlement);
+        try {
+            settlementRepository.save(settlement);
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청 레이스 컨디션 - 다른 스레드가 이미 생성한 것으로 간주
+        }
     }
 }
