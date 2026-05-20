@@ -387,7 +387,7 @@ Authorization: Bearer {accessToken}
 | `grade` | String | N | 등급 필터 (PSA_10, PSA_9, BGS_10 등) |
 | `category` | String | N | 카테고리 필터 (POKEMON, TRAINERS, ENERGY, UNKNOWN) |
 | `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 10) |
+| `size` | int | N | 페이지 크기 (default: 20) |
 | `sort` | String | N | 정렬 기준 (createdAt,desc) |
 
 **Response** `200 OK`
@@ -415,8 +415,8 @@ Authorization: Bearer {accessToken}
       }
     ],
     "totalElements": 500,
-    "totalPages": 50,
-    "size": 10,
+    "totalPages": 25,
+    "size": 20,
     "number": 0
   },
   "message": ""
@@ -539,7 +539,7 @@ Authorization: Bearer {accessToken}
 |---|---|---|---|
 | `status` | String | N | 상태 필터 (PENDING, ACTIVE, REJECTED) |
 | `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 10) |
+| `size` | int | N | 페이지 크기 (default: 20) |
 | `sort` | String | N | 정렬 기준 (createdAt,desc) |
 
 **Response** `200 OK`
@@ -568,7 +568,7 @@ Authorization: Bearer {accessToken}
     ],
     "totalElements": 3,
     "totalPages": 1,
-    "size": 10,
+    "size": 20,
     "number": 0
   },
   "message": ""
@@ -696,7 +696,7 @@ Authorization: Bearer {accessToken}
 |---|---|---|---|
 | `status` | String | N | 상태 필터 (PENDING, ACTIVE, REJECTED) |
 | `page` | int | N | 페이지 번호 (default: 0) |
-| `size` | int | N | 페이지 크기 (default: 10) |
+| `size` | int | N | 페이지 크기 (default: 20) |
 | `sort` | String | N | 정렬 기준 (createdAt,desc) |
 
 **Response** `200 OK`
@@ -724,8 +724,8 @@ Authorization: Bearer {accessToken}
       }
     ],
     "totalElements": 30,
-    "totalPages": 3,
-    "size": 10,
+    "totalPages": 2,
+    "size": 20,
     "number": 0
   },
   "message": ""

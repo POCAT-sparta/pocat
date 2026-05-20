@@ -39,7 +39,7 @@ public class CardController {
             @RequestParam(required = false) String setName,
             @RequestParam(required = false) CardGrade grade,
             @RequestParam(required = false) CardCategory category,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         CardSearchCondition condition = new CardSearchCondition(keyword, setName, grade, category, CardStatus.ACTIVE);
         Page<CardResponse> page = cardQueryService.getCards(condition, pageable);
         List<CardResponse> content = page.getContent();
@@ -72,7 +72,7 @@ public class CardController {
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getMyRequests(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) CardStatus status,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<CardResponse> page = cardQueryService.getMyRequests(userDetails.getUserId(), status, pageable);
         PageResponseDto<CardResponse> pageResponse = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
