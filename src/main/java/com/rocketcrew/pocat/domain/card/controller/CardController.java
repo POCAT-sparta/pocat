@@ -39,6 +39,7 @@ public class CardController {
             @RequestParam(required = false) String setName,
             @RequestParam(required = false) CardGrade grade,
             @RequestParam(required = false) CardCategory category,
+            @RequestParam(required = false) String series,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         CardSearchCondition condition = new CardSearchCondition(keyword, setName, grade, category, CardStatus.ACTIVE);
         Page<CardResponse> page = cardQueryService.getCards(condition, pageable);
