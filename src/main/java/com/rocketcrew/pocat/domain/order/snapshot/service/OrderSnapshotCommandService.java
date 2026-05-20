@@ -54,7 +54,7 @@ public class OrderSnapshotCommandService {
                 .build();
 
         try {
-            orderSnapshotRepository.save(snapshot);
+            orderSnapshotRepository.saveAndFlush(snapshot);
         } catch (DataIntegrityViolationException e) {
             log.debug("스냅샷 동시 생성 감지 - orderUid: {}, 기존 스냅샷으로 처리", orderUid);
         }
