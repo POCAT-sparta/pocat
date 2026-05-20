@@ -26,7 +26,12 @@ public class FreePost extends BaseEntity {
     private String content;
 
     @Column(name = "view_count", nullable = false)
-    private int viewCount;
+    @Builder.Default
+    private int viewCount = 0;
+
+    @Column(name = "comment_count", nullable = false)
+    @Builder.Default
+    private int commentCount = 0;
 
     public void update(String title, String content) {
         this.title = title;

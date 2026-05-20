@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.comment.dto.response.CommentResponse;
 import com.rocketcrew.pocat.domain.comment.entity.Comment;
 import com.rocketcrew.pocat.domain.comment.repository.CommentRepository;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommentCountService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CommentException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
@@ -19,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class CommentCommandService {
 
     private final CommentRepository commentRepository;
-    private final com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository freePostRepository;
+    private final FreePostRepository freePostRepository;
+    private final FreePostCommentCountService freePostCommentCountService;
 
     public CommentResponse createComment(Long userId, CreateCommentRequest request) {
         if (!freePostRepository.existsById(request.freePostId())) {
@@ -41,25 +43,30 @@ public class CommentCommandService {
                 .parentId(request.parentId())
                 .content(request.content())
                 .build();
-        return CommentResponse.from(commentRepository.save(comment));
+        CommentResponse response = CommentResponse.from(commentRepository.save(comment));
+        freePostCommentCountService.increment(request.freePostId());
+        return response;
     }
 
     public CommentResponse updateComment(Long id, Long userId, UpdateCommentRequest request) {
-        Comment comment = commentRepository.findById(id)
-                .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
-        if (!comment.getUserId().equals(userId)) {
-            throw new CommentException(ErrorCode.USER_FORBIDDEN);
-        }
+        Comment comment = findCommentAndVerifyOwner(id, userId);
         comment.update(request.content());
         return CommentResponse.from(comment);
     }
 
     public void deleteComment(Long id, Long userId) {
+        Comment comment = findCommentAndVerifyOwner(id, userId);
+        Long freePostId = comment.getFreePostId();
+        commentRepository.delete(comment);
+        freePostCommentCountService.decrement(freePostId);
+    }
+
+    private Comment findCommentAndVerifyOwner(Long id, Long userId) {
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
         if (!comment.getUserId().equals(userId)) {
             throw new CommentException(ErrorCode.USER_FORBIDDEN);
         }
-        commentRepository.delete(comment);
+        return comment;
     }
 }
