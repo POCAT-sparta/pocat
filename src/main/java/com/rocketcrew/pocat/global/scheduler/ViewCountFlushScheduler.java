@@ -64,6 +64,20 @@ public class ViewCountFlushScheduler {
     }
 
     private void flushBuffer(String processingKey, String bufferKey, RepositoryType type) {
+        // 이전 사이클에서 실패한 항목을 버퍼에 재병합
+        String failedKey = processingKey + ":failed";
+        if (redisTemplate.hasKey(failedKey)) {
+            log.warn("이전 실패 항목 발견, 버퍼에 재병합합니다. key={}", failedKey);
+            Set<ZSetOperations.TypedTuple<String>> failedEntries =
+                    redisTemplate.opsForZSet().rangeWithScores(failedKey, 0, -1);
+            if (failedEntries != null) {
+                for (ZSetOperations.TypedTuple<String> entry : failedEntries) {
+                    redisTemplate.opsForZSet().incrementScore(bufferKey, entry.getValue(), entry.getScore());
+                }
+            }
+            redisTemplate.delete(failedKey);
+        }
+
         if (redisTemplate.hasKey(processingKey)) {
             log.warn("진행이 안된 데이터 발견, DB업데이트를 재 시도합니다. key={}", processingKey);
             flushKey(processingKey, type);
@@ -86,6 +100,8 @@ public class ViewCountFlushScheduler {
             return;
         }
 
+        String failedKey = key + ":failed";
+
         for (ZSetOperations.TypedTuple<String> entry : entries) {
             try {
                 Long postId = Long.parseLong(entry.getValue());
@@ -96,7 +112,9 @@ public class ViewCountFlushScheduler {
                     case FREE_COMMENT -> freePostRepository.updateCommentCount(postId, count);
                 }
             } catch (Exception e) {
-                log.error("flush failed for entry: {}, key={}", entry.getValue(), key, e);
+                log.error("flush failed for entry: {}, key={}, failedKey={}", entry.getValue(), key, failedKey, e);
+                redisTemplate.opsForZSet().incrementScore(failedKey, entry.getValue(), entry.getScore());
+                redisTemplate.expire(failedKey, 24, java.util.concurrent.TimeUnit.HOURS);
             }
         }
 

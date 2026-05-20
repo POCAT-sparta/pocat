@@ -1,72 +1,117 @@
-# Security Audit: FreePost Refactor & Bug Fixes
+# 보안 감사: FreePost 리팩토링 및 버그 수정
 
-**Date:** 2026-05-20
-**Branch:** `feat/domaindev/#59`
-**Auditor:** SECURITY agent
-**Scope:** FreePostRepository, FreePostRankingService, ViewCountFlushScheduler, FreePostCommandService, UserCommandService, CommentCommandService
-
----
-
-## Result: PASS — No HIGH or CRITICAL issues found
+**날짜:** 2026-05-20
+**브랜치:** `feat/domaindev/#59`
+**감사자:** SECURITY 에이전트
+**범위:** FreePostRepository, FreePostRankingService, ViewCountFlushScheduler, FreePostCommandService, UserCommandService, CommentCommandService
 
 ---
 
-## Checklist
-
-### AuthN / AuthZ
-**Status: CLEAR**
-Service-layer ownership checks are present across all modified command services. `findFreePostAndVerifyOwner` and `findCommentAndVerifyOwner` helpers enforce that the requesting user is the resource owner before any mutation proceeds.
+## 결과: 통과 — HIGH 또는 CRITICAL 문제 없음
 
 ---
 
-### Input Validation
-**Status: CLEAR**
-Potential finding (blank `createPost` body) was a false positive. The DTO is annotated with `@NotBlank`, which is enforced at the controller layer before the service is reached. No gap.
+## 체크리스트
+
+### 인증 / 인가
+**상태: 이상 없음**
+수정된 모든 커맨드 서비스에 서비스 계층의 소유권 검사가 존재합니다. `findFreePostAndVerifyOwner` 및 `findCommentAndVerifyOwner` 헬퍼 메서드가 요청한 사용자가 리소스 소유자인지 확인한 후에만 변경 작업이 진행되도록 강제합니다.
 
 ---
 
-### SQL Injection
-**Status: CLEAR**
-All JPQL queries use named `@Param` bindings. No string concatenation in query construction. The new `createdAt >= :since` predicate in `findTopByPopularScore` follows the same safe binding pattern.
+### 입력 유효성 검사
+**상태: 이상 없음**
+잠재적 발견 사항(빈 `createPost` 본문)은 거짓 양성으로 확인되었습니다. DTO에 `@NotBlank` 어노테이션이 적용되어 있으며, 이는 서비스에 도달하기 전 컨트롤러 계층에서 강제됩니다. 취약점 없음.
 
 ---
 
-### Sensitive Data Exposure
-**Status: CLEAR**
-Two false positives investigated:
-- `/users/me` endpoint returns the authenticated user's own data — not a cross-user leak.
-- `billingKey` is already surfaced as a boolean flag (`hasBillingKey`); the raw key value is never serialized to API responses.
+### SQL 인젝션
+**상태: 이상 없음**
+모든 JPQL 쿼리는 명명된 `@Param` 바인딩을 사용합니다. 쿼리 생성 시 문자열 연결은 없습니다. `findTopByPopularScore`의 새로운 `createdAt >= :since` 조건도 동일한 안전한 바인딩 패턴을 따릅니다.
 
 ---
 
-### Distributed Lock / Lease Time
-**Status: CLEAR**
-No distributed locks are used in the changed files. The `@Transactional(REQUIRES_NEW)` isolation in `ViewCountFlushScheduler` uses standard JPA transaction semantics only.
+### 민감 데이터 노출
+**상태: 이상 없음**
+두 가지 거짓 양성 항목 조사:
+- `/users/me` 엔드포인트는 인증된 사용자 본인의 데이터를 반환하며, 다른 사용자 정보 유출이 아닙니다.
+- `billingKey`는 이미 불리언 플래그(`hasBillingKey`)로 노출되며, 원시 키 값은 API 응답에 절대 직렬화되지 않습니다.
 
 ---
 
-### Idempotency Key Collision
-**Status: LOW (residual, pre-existing)**
-A multi-instance rename race exists where two concurrent requests for the same user could generate identical transient keys. This is a pre-existing design issue and was **not introduced by this PR**. No distributed deduplication mechanism is currently in place.
-
-**Risk assessment:** LOW. Concurrent renames for the same user are rare in practice. The impact is a benign duplicate-update rather than data loss.
-**Recommendation:** Track as a follow-up task; a Redis `SET NX` guard or optimistic-lock check on the entity version would mitigate this.
+### 분산 락 / 임대 시간
+**상태: 이상 없음**
+변경된 파일에서 분산 락은 사용되지 않습니다. `ViewCountFlushScheduler`의 `@Transactional(REQUIRES_NEW)` 격리는 표준 JPA 트랜잭션 시맨틱만 사용합니다.
 
 ---
 
-## Summary Table
+### 멱등성 키 충돌
+**상태: LOW (잔존, 기존 문제)**
+동일 사용자에 대한 두 개의 동시 요청이 동일한 임시 키를 생성할 수 있는 다중 인스턴스 이름 변경 경합 조건이 존재합니다. 이는 기존 설계상의 문제이며 **이번 PR에서 도입된 것이 아닙니다**. 현재 분산 중복 제거 메커니즘이 없습니다.
 
-| Area | Status | Notes |
-|------|--------|-------|
-| AuthN / AuthZ | CLEAR | Ownership helpers present in all command services |
-| Input Validation | CLEAR | `@NotBlank` on DTO; false positive dismissed |
-| SQL Injection | CLEAR | All JPQL uses `@Param` bindings |
-| Sensitive Data Exposure | CLEAR | Two false positives dismissed |
-| Distributed Lock Lease | CLEAR | No distributed locks used |
-| Idempotency Key Collision | LOW | Pre-existing race; not introduced by this PR |
+**위험 평가:** LOW. 동일 사용자에 대한 동시 이름 변경은 실제로 드뭅니다. 영향은 데이터 손실이 아닌 양성적 중복 업데이트입니다.
+**권고 사항:** 후속 작업으로 추적하세요. Redis `SET NX` 가드 또는 엔티티 버전에 대한 낙관적 잠금 확인으로 완화할 수 있습니다.
 
 ---
 
-## Verdict
+## 요약 표
 
-**PASS.** No HIGH or CRITICAL security issues were found. The single LOW item is pre-existing and documented for follow-up. This PR does not worsen the security posture of the codebase.
+| 영역 | 상태 | 비고 |
+|------|------|------|
+| 인증 / 인가 | 이상 없음 | 모든 커맨드 서비스에 소유권 헬퍼 존재 |
+| 입력 유효성 검사 | 이상 없음 | DTO에 `@NotBlank` 적용; 거짓 양성 기각 |
+| SQL 인젝션 | 이상 없음 | 모든 JPQL에 `@Param` 바인딩 사용 |
+| 민감 데이터 노출 | 이상 없음 | 두 가지 거짓 양성 기각 |
+| 분산 락 임대 | 이상 없음 | 분산 락 미사용 |
+| 멱등성 키 충돌 | LOW | 기존 경합 조건; 이번 PR에서 도입되지 않음 |
+
+---
+
+## 판정
+
+**통과.** HIGH 또는 CRITICAL 보안 문제는 발견되지 않았습니다. 단일 LOW 항목은 기존 문제이며 후속 조치를 위해 문서화되었습니다. 이번 PR은 코드베이스의 보안 수준을 악화시키지 않습니다.
+
+---
+
+## 추가 보안 감사 — ViewCountFlushScheduler 오류 복구 개선
+
+### 검사 결과
+
+**`failedKey` 명명 충돌 (`":failed:failed"` 체이닝)**
+**상태: 이상 없음**
+`flushKey`는 코드 내에서 항상 `processingKey` 상수로만 호출됩니다. 따라서 `:failed` 접미사가 중첩되어 `":failed:failed"` 형태의 키가 생성되는 상황은 실제로 발생하지 않습니다.
+
+---
+
+**무한 재시도**
+**상태: LOW (잔류 위험, TTL로 완화)**
+실패 항목이 지속적으로 재병합될 경우 이론상 무한 재시도가 발생할 수 있습니다. 24시간 TTL 설정으로 해당 위험이 완화됩니다. LOW 잔류 위험으로 분류합니다.
+
+---
+
+**비원자 merge crash**
+**상태: 이상 없음**
+재병합 도중 크래시가 발생할 경우 `failedKey` 데이터가 부분적으로 소실될 수 있다는 우려가 있습니다. 그러나 이는 원자적 rename 수준의 보장이 필요한 pre-existing 설계 한계이며, 이번 PR에서 새로 도입된 문제가 아닙니다.
+
+---
+
+**라이브 버퍼 `incrementScore`**
+**상태: 이상 없음**
+재시도 시 실패한 delta 값을 라이브 버퍼에 `incrementScore`로 더하는 것은 의도된 동작입니다. 중복 집계나 데이터 변조로 이어지지 않으며, 누락된 조회수를 다음 플러시 사이클에서 반영하기 위한 올바른 복구 경로입니다.
+
+---
+
+### 요약 표
+
+| 항목 | 상태 | 비고 |
+|------|------|------|
+| `failedKey` 명명 충돌 | 이상 없음 | `flushKey`는 `processingKey` 상수로만 호출 — 체이닝 불가 |
+| 무한 재시도 | LOW | 24시간 TTL로 완화됨 |
+| 비원자 merge crash | 이상 없음 | pre-existing 한계; 이번 PR 미도입 |
+| 라이브 버퍼 `incrementScore` | 이상 없음 | 의도된 복구 동작 |
+
+---
+
+### 판정
+
+**PASS.** 신규 HIGH 또는 CRITICAL 보안 문제는 발견되지 않았습니다. LOW 잔류 위험(무한 재시도)은 24시간 TTL로 충분히 완화되며, 나머지 항목은 모두 이상 없음으로 확인되었습니다.

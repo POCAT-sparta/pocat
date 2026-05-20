@@ -90,3 +90,35 @@ SpEL의 `T()` 표현식은 JPQL 내부에서 지원되지 않으므로, 점수 �
 ## 최종 판정
 
 **승인.** 발견된 모든 조치 사항이 해결되었습니다. 코드베이스는 이번 PR 이전보다 더 명확하고 견고한 상태입니다.
+
+---
+
+## 추가 수정 — ViewCountFlushScheduler 오류 복구 개선
+
+### 변경 내용
+
+**1. 실패 항목 누적 저장 (`flushKey` 루프)**
+`flushKey` 루프에서 개별 항목 처리에 실패할 경우, 해당 항목을 `key + ":failed"` ZSet에 `incrementScore`로 누적 저장합니다. 이전에는 실패한 항목이 그대로 유실되었으며, `add()` 방식의 덮어쓰기 문제도 함께 수정되었습니다.
+
+**2. `failedKey` TTL 설정**
+`failedKey`에 24시간 TTL을 설정합니다. DB 영구 장애 상황에서 Redis 메모리가 무한히 누적되는 것을 방지합니다.
+
+**3. 실패 항목 재병합 (`flushBuffer`)**
+`flushBuffer`에서 매 사이클 시작 시 `processingKey + ":failed"` 키의 존재 여부를 확인합니다. 해당 키가 존재하면 버퍼에 `incrementScore`로 재병합한 후 삭제합니다.
+
+---
+
+### 스킵 항목
+
+| 항목 | 스킵 사유 |
+|------|-----------|
+| `delete(key)` 무조건 실행 유지 | `add` 실패 시 key를 삭제하지 않으면 stale-processing 상태에서 다음 사이클에 재시도가 가능합니다. 현재 동작이 더 안전합니다. |
+| `delete(failedKey)` try-finally 처리 | merge 실패 시 `failedKey`를 유지하는 것이 올바른 재시도 동작입니다. try-finally로 무조건 삭제하면 복구 데이터를 잃을 수 있습니다. |
+| Key 체이닝 가능성 (`":failed:failed"`) | `flushKey`는 항상 `processingKey` 상수로만 호출되므로, `:failed` 접미사가 중첩되는 상황은 실제로 발생하지 않습니다. |
+| Score `int` 오버플로우 | 60초 플러시 윈도우 내에서 단일 게시글에 21억 회 조회수가 발생하는 것은 현실적으로 불가능합니다. |
+
+---
+
+### 판정
+
+**APPROVED.** 실패 복구 경로가 명확히 정의되었으며, 스킵 항목 각각의 사유가 타당합니다.
