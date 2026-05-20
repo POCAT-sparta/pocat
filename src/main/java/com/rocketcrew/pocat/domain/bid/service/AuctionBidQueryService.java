@@ -29,10 +29,7 @@ public class AuctionBidQueryService {
     }
 
     public Page<MyBidResponse> getMyBids(Long userId, BidStatus status, Pageable pageable) {
-        if (status == null) {
-            return auctionBidRepository.findMyBids(userId, pageable);
-        }
-        return auctionBidRepository.findMyBidsByStatus(userId, status, pageable);
+        return auctionBidRepository.findMyBids(userId, status, pageable);
     }
 
     private void validateActiveAuction(Long auctionId) {
