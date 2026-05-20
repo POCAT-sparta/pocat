@@ -11,6 +11,7 @@ import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
+import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,8 +26,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Transactional
 public class OrderSnapshotCommandService {
-
-    private static final long PLATFORM_FEE_RATE = 5L;
 
     private final OrderSnapshotRepository orderSnapshotRepository;
     private final OrderRepository orderRepository;
@@ -47,7 +46,7 @@ public class OrderSnapshotCommandService {
         OrderSnapshot snapshot = OrderSnapshot.builder()
                 .orderUid(order.getOrderUid())
                 .finalPrice(order.getFinalPrice())
-                .feeRate(PLATFORM_FEE_RATE)
+                .feeRate(PlatformFeePolicy.RATE)
                 .fee(settlement.getPlatformFee())
                 .sellerAmount(settlement.getSellerAmount())
                 .snapshotJson(buildSnapshotJson(order))
