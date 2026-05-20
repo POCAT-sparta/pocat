@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.service.CardCommandService;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -58,6 +59,12 @@ public class CardController {
         CardResponse response = cardCommandService.createCard(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
+    }
+    @GetMapping("/{cardId}/average-price")
+    public ResponseEntity<ApiResponseDto<CardAveragePriceResponse>> getAveragePrice(
+            @PathVariable Long cardId) {
+        CardAveragePriceResponse response = cardQueryService.getAveragePrice(cardId);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/my-requests")
