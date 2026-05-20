@@ -65,6 +65,7 @@ public class CardController {
             @PathVariable Long cardId) {
         CardAveragePriceResponse response = cardQueryService.getAveragePrice(cardId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
 
     @GetMapping("/my-requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getMyRequests(
