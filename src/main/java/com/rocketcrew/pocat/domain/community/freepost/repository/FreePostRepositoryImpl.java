@@ -5,6 +5,8 @@ import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.entity.QFreePost;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -57,7 +59,7 @@ public class FreePostRepositoryImpl implements FreePostRepositoryCustom {
             return switch (order.getProperty()) {
                 case "viewCount" -> desc ? freePost.viewCount.desc() : freePost.viewCount.asc();
                 case "createdAt" -> desc ? freePost.createdAt.desc() : freePost.createdAt.asc();
-                default -> throw new IllegalArgumentException("지원하지 않는 정렬 필드입니다: " + order.getProperty());
+                default -> throw new FreePostException(ErrorCode.INVALID_INPUT);
             };
         }
         return freePost.createdAt.desc();

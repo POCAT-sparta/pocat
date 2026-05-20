@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.user.service;
 
+import com.rocketcrew.pocat.domain.user.dto.response.AdminUserResponse;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -24,8 +25,8 @@ public class UserQueryService {
         return UserResponse.from(user);
     }
 
-    public Page<UserResponse> getAllUsers(String keyword, Boolean isBidBlocked, Pageable pageable) {
+    public Page<AdminUserResponse> getAllUsers(String keyword, Boolean isBidBlocked, Pageable pageable) {
         return userRepository.searchUsers(keyword, isBidBlocked, pageable)
-                .map(UserResponse::from);
+                .map(AdminUserResponse::from);
     }
 }
