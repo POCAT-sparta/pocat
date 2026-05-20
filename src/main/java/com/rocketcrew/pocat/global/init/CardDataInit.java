@@ -8,6 +8,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,20 +35,30 @@ public class CardDataInit implements ApplicationRunner {
     // 더미 데이터이므로 테스트용 다양한 등급 순환 할당
     private static final CardGrade[] GRADES = CardGrade.values();
 
+    private static final String ADMIN_EMAIL = "admin@test.com";
+    private static final String ADMIN_PASSWORD = "test1234";
+    private static final String ADMIN_NICKNAME = "admin";
+
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
         Long userId = userRepository.findFirstByOrderByIdAsc()
                 .map(user -> user.getId())
-                .orElse(null);
-
-        if (userId == null) {
-            log.warn("[CardDataInit] 유저가 없어 카드 초기화를 건너뜁니다.");
-            return;
-        }
+                .orElseGet(() -> {
+                    User admin = User.builder()
+                            .email(ADMIN_EMAIL)
+                            .password(passwordEncoder.encode(ADMIN_PASSWORD))
+                            .nickname(ADMIN_NICKNAME)
+                            .userRole(UserRole.ADMIN)
+                            .build();
+                    User saved = userRepository.save(admin);
+                    log.info("[CardDataInit] 어드민 유저 생성 완료 (email: {})", ADMIN_EMAIL);
+                    return saved.getId();
+                });
 
         try {
             RestTemplate restTemplate = createRestTemplate();
