@@ -11,6 +11,8 @@ import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.QAuction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -159,7 +161,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
             case "startingPrice" -> auction.startingPrice;
             case "createdAt" -> auction.createdAt;
             case "id" -> auction.id;
-            default -> auction.createdAt;
+            default -> throw new AuctionException(ErrorCode.INVALID_INPUT);
         };
         return new OrderSpecifier<>(direction, target);
     }

@@ -698,6 +698,7 @@ Authorization: Bearer {accessToken}
 
 - **GET** `/api/v1/auctions`
 - **권한**: `PUBLIC`
+- **참고**: 이 엔드포인트는 `ACTIVE` 상태의 경매만 반환합니다.
 
 **Query Parameters**
 

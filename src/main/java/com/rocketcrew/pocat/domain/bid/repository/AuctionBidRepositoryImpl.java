@@ -10,6 +10,8 @@ import com.rocketcrew.pocat.domain.bid.dto.response.MyBidResponse;
 import com.rocketcrew.pocat.domain.bid.entity.QAuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.user.entity.QUser;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.BidException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -71,7 +73,7 @@ public class AuctionBidRepositoryImpl implements AuctionBidRepositoryCustom {
                 .from(bid)
                 .join(user).on(user.id.eq(bid.userId))
                 .where(bid.auctionId.eq(auctionId))
-                .orderBy(bid.bidPrice.desc(), bid.createdAt.desc(), bid.id.desc())
+                .orderBy(bidHistoryOrderSpecifiers(pageable.getSort(), bid))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -112,7 +114,36 @@ public class AuctionBidRepositoryImpl implements AuctionBidRepositoryCustom {
                 case "bidPrice" -> desc ? bid.bidPrice.desc() : bid.bidPrice.asc();
                 case "status" -> desc ? bid.status.desc() : bid.status.asc();
                 case "id", "bidId" -> desc ? bid.id.desc() : bid.id.asc();
-                default -> desc ? bid.createdAt.desc() : bid.createdAt.asc();
+                case "createdAt" -> desc ? bid.createdAt.desc() : bid.createdAt.asc();
+                default -> throw new BidException(ErrorCode.INVALID_INPUT);
+            };
+            orders.add(orderSpecifier);
+        }
+
+        if (!hasIdSort(sort)) {
+            orders.add(bid.id.desc());
+        }
+
+        return orders.toArray(OrderSpecifier[]::new);
+    }
+
+    private OrderSpecifier<?>[] bidHistoryOrderSpecifiers(Sort sort, QAuctionBid bid) {
+        if (sort.isUnsorted()) {
+            return new OrderSpecifier<?>[] {
+                    bid.bidPrice.desc(),
+                    bid.createdAt.desc(),
+                    bid.id.desc()
+            };
+        }
+
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        for (Sort.Order order : sort) {
+            boolean desc = order.isDescending();
+            OrderSpecifier<?> orderSpecifier = switch (order.getProperty()) {
+                case "bidPrice" -> desc ? bid.bidPrice.desc() : bid.bidPrice.asc();
+                case "createdAt" -> desc ? bid.createdAt.desc() : bid.createdAt.asc();
+                case "id", "bidId" -> desc ? bid.id.desc() : bid.id.asc();
+                default -> throw new BidException(ErrorCode.INVALID_INPUT);
             };
             orders.add(orderSpecifier);
         }
