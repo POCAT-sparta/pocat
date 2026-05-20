@@ -11,6 +11,7 @@ public interface ChatRepository extends JpaRepository<Chat, Long>, ChatRepositor
 
     boolean existsByPostIdAndGuestId(Long postId, Long guestId);
 
-    @Query("SELECT c FROM Chat c WHERE c.id = :chatId AND (c.ownerId = :userId OR c.guestId = :userId)")
+    @Query("SELECT c FROM Chat c WHERE c.id = :chatId AND " +
+            "((c.ownerId = :userId AND c.ownerLeft = false) OR (c.guestId = :userId AND c.guestLeft = false))")
     Optional<Chat> findByIdAndParticipant(@Param("chatId") Long chatId, @Param("userId") Long userId);
 }
