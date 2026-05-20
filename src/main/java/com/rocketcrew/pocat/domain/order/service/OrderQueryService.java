@@ -3,13 +3,17 @@ package com.rocketcrew.pocat.domain.order.service;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
+import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +33,7 @@ public class OrderQueryService {
 
     private final OrderRepository orderRepository;
     private final CardRepository cardRepository;
+    private final UserRepository userRepository;
 
     public Page<OrderResponse> getMyOrders(Long buyerId, OrderStatus status, Pageable pageable) {
         Page<Order> orders = (status != null)
@@ -48,15 +53,19 @@ public class OrderQueryService {
         });
     }
 
-    public OrderResponse getOneOrder(Long userId, String orderUid) {
+    public OrderDetailResponse getOneOrder(Long userId, String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
         if (!order.getBuyerId().equals(userId)) {
             throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
         }
+        User buyer = userRepository.findById(order.getBuyerId())
+                .orElseThrow(() -> new OrderException(ErrorCode.USER_NOT_FOUND));
+        User seller = userRepository.findById(order.getSellerId())
+                .orElseThrow(() -> new OrderException(ErrorCode.USER_NOT_FOUND));
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
-        return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
+        return OrderDetailResponse.of(order, buyer, seller, card);
     }
 
     public CardAveragePriceResponse getAveragePriceByCard(Long cardId) {

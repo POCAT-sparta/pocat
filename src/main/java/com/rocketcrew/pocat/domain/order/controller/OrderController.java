@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.order.controller;
 
 import com.rocketcrew.pocat.domain.order.dto.request.CancelOrderRequest;
+import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
@@ -38,7 +39,7 @@ public class OrderController {
     }
 
     @GetMapping("/{orderUid}")
-    public ResponseEntity<ApiResponseDto<OrderResponse>> getOneOrder(
+    public ResponseEntity<ApiResponseDto<OrderDetailResponse>> getOneOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String orderUid
     ) {
