@@ -35,9 +35,9 @@ public class TradePost extends BaseEntity {
     private int viewCount;
 
     public void update(String title, String content, Long price, String thumbnail) {
-        if (title != null) this.title = title;
-        if (content != null) this.content = content;
+        if (title != null && title.isBlank()) this.title = title;
+        if (content != null && content.isBlank()) this.content = content;
         if (price != null) this.price = price;
-        if (thumbnail != null) this.thumbnail = thumbnail;
+        if (thumbnail != null && thumbnail.isBlank()) this.thumbnail = thumbnail;
     }
 }
