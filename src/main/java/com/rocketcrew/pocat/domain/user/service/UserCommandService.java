@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.user.service;
 
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
+import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
@@ -22,7 +23,10 @@ public class UserCommandService {
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
-        user.updateProfile(request.nickname(), request.phone(), request.address());
+        String nickname = request.nickname() != null ? request.nickname() : user.getNickname();
+        String phone = request.phone() != null ? request.phone() : user.getPhone();
+        String address = request.address() != null ? request.address() : user.getAddress();
+        user.updateProfile(nickname, phone, address);
         return UserResponse.from(user);
     }
 
@@ -33,9 +37,6 @@ public class UserCommandService {
     }
 
     public void registerBillingKey(Long userId, RegisterBillingKeyRequest request) {
-        if (request.billingKey() == null || request.billingKey().isBlank()) {
-            throw new UserException(ErrorCode.INVALID_CONTENT);
-        }
         int updated = userRepository.updateBillingKeyIfNull(userId, request.billingKey());
         if (updated == 0) {
             if (!userRepository.existsById(userId)) {
@@ -52,5 +53,14 @@ public class UserCommandService {
             throw new UserException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
         user.deleteBillingKey();
+    }
+
+    public void updateBillingKey(Long userId, UpdateBillingKeyRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        if (user.getBillingKey() == null) {
+            throw new UserException(ErrorCode.BILLING_KEY_NOT_FOUND);
+        }
+        user.registerBillingKey(request.billingKey());
     }
 }

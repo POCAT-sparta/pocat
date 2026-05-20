@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +31,9 @@ public class FreePostController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getPosts(
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<FreePostResponse> page = freePostQueryService.getPosts(pageable);
+        Page<FreePostResponse> page = freePostQueryService.getPosts(keyword, pageable);
         List<FreePostResponse> content = page.getContent();
         PageResponseDto<FreePostResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
@@ -57,7 +59,7 @@ public class FreePostController {
     @PostMapping
     public ResponseEntity<ApiResponseDto<FreePostResponse>> createPost(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody CreateFreePostRequest request) {
+            @Valid @RequestBody CreateFreePostRequest request) {
         FreePostResponse response = freePostCommandService.createPost(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

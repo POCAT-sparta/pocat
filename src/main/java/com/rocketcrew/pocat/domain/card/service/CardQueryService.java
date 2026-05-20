@@ -1,7 +1,9 @@
 package com.rocketcrew.pocat.domain.card.service;
 
+import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.Card;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
@@ -13,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -21,8 +25,8 @@ public class CardQueryService {
     private final CardRepository cardRepository;
     private final OrderQueryService orderQueryService;
 
-    public Page<CardResponse> getCards(Pageable pageable) {
-        return cardRepository.findAll(pageable)
+    public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
+        return cardRepository.searchCards(condition, pageable)
                 .map(CardResponse::from);
     }
 
@@ -34,5 +38,31 @@ public class CardQueryService {
 
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
         return orderQueryService.getAveragePriceByCard(cardId);
+    public void validateRegistrableForAuction(Long cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
+        }
+    public List<Long> searchCardIds(CardSearchCondition condition) {
+        return cardRepository.searchCardIds(condition);
+    }
+
+    public Page<CardResponse> getMyRequests(Long userId, CardStatus status, Pageable pageable) {
+        if (status != null) {
+            return cardRepository.findByUserIdAndStatus(userId, status, pageable)
+                    .map(CardResponse::from);
+        }
+        return cardRepository.findByUserId(userId, pageable)
+                .map(CardResponse::from);
+    }
+
+    public Page<CardResponse> getRequests(CardStatus status, Pageable pageable) {
+        if (status != null) {
+            return cardRepository.findByStatus(status, pageable)
+                    .map(CardResponse::from);
+        }
+        return cardRepository.findAll(pageable)
+                .map(CardResponse::from);
     }
 }

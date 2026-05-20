@@ -24,8 +24,8 @@ public class UserQueryService {
         return UserResponse.from(user);
     }
 
-    public Page<UserResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+    public Page<UserResponse> getAllUsers(String keyword, Boolean isBidBlocked, Pageable pageable) {
+        return userRepository.searchUsers(keyword, isBidBlocked, pageable)
                 .map(UserResponse::from);
     }
 }

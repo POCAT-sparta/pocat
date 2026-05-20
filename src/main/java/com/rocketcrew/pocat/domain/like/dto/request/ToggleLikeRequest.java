@@ -1,9 +1,8 @@
 package com.rocketcrew.pocat.domain.like.dto.request;
 
-public record ToggleLikeRequest(Long auctionId) {
-    public ToggleLikeRequest {
-        if (auctionId == null) {
-            throw new IllegalArgumentException("auctionId must not be null");
-        }
-    }
+import jakarta.validation.constraints.NotNull;
+
+public record ToggleLikeRequest(
+        @NotNull(message = "경매 ID는 필수입니다.") Long auctionId
+) {
 }

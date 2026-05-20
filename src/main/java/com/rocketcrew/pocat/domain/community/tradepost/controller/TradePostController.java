@@ -68,7 +68,7 @@ public class TradePostController {
     public ResponseEntity<ApiResponseDto<UpdateTradePostResponse>> updatePost(
             @PathVariable Long tradePostId,
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @RequestBody UpdateTradePostRequest request) {
+            @RequestBody @Valid UpdateTradePostRequest request) {
         UpdateTradePostResponse response = tradePostCommandService.updatePost(tradePostId, customUserDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
@@ -77,7 +77,7 @@ public class TradePostController {
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long tradePostId) {
-        tradePostCommandService.deletePost(tradePostId, customUserDetails.getUserId());
+        tradePostCommandService.deletePost(tradePostId, customUserDetails.getUserId(), customUserDetails.getRole());
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ApiResponseDto.successWithNoContent());
     }

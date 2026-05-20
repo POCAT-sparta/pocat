@@ -21,3 +21,6 @@ jwt:
   secret: pocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkey
   access-token-expiration: 3600000
   refresh-token-expiration: 86400000
+
+view:
+  ip-secret: test-ip-secret-key

@@ -1,12 +1,16 @@
 package com.rocketcrew.pocat.domain.community.freepost.service;
 
+import com.rocketcrew.pocat.domain.comment.repository.CommentRepository;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.CreateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
+import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
+import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,21 +21,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class FreePostCommandService {
 
     private final FreePostRepository freePostRepository;
+    private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
-        if (request.title() == null || request.title().isBlank()) {
-            throw new FreePostException(ErrorCode.INVALID_CONTENT);
-        }
-        if (request.content() == null || request.content().isBlank()) {
-            throw new FreePostException(ErrorCode.INVALID_CONTENT);
-        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
         FreePost freePost = FreePost.builder()
                 .userId(userId)
                 .title(request.title())
                 .content(request.content())
                 .viewCount(0)
                 .build();
-        return FreePostResponse.from(freePostRepository.save(freePost));
+        FreePost saved = freePostRepository.save(freePost);
+        return FreePostResponse.of(saved, user.getNickname(), 0);
     }
 
     public FreePostResponse updatePost(Long postId, Long userId, UpdateFreePostRequest request) {
@@ -52,7 +55,11 @@ public class FreePostCommandService {
             }
             freePost.updateContent(request.content());
         }
-        return FreePostResponse.from(freePost);
+        User user = userRepository.findById(freePost.getUserId())
+                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+        String nickname = user.getNickname();
+        int commentCount = commentRepository.countByFreePostId(freePost.getId());
+        return FreePostResponse.of(freePost, nickname, commentCount);
     }
 
     public void deletePost(Long postId, Long userId) {
