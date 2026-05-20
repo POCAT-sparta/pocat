@@ -25,6 +25,7 @@ public enum ErrorCode {
     CARD_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 카드입니다."),
 
     // Auction
+    AUCTION_NOT_ACTIVE(HttpStatus.CONFLICT, "ACTIVE 상태의 경매만 가능합니다."),
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "경매를 찾을 수 없습니다."),
     AUCTION_NOT_PENDING(HttpStatus.CONFLICT,"경매가 PENDING 상태가 아닙니다."),
     AUCTION_PRICE_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않은 경매 가격입니다."),

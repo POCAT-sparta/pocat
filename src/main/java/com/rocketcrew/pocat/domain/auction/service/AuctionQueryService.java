@@ -1,8 +1,13 @@
 package com.rocketcrew.pocat.domain.auction.service;
 
+import com.rocketcrew.pocat.domain.auction.dto.request.AuctionSearchCondition;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
+import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +23,25 @@ public class AuctionQueryService {
 
     private final AuctionRepository auctionRepository;
 
-    public Page<AuctionResponse> getAuctions(Pageable pageable) {
-        return auctionRepository.findAll(pageable)
-                .map(AuctionResponse::from);
+    public Page<SearchAuctionResponse> getAuctions(
+            String keyword,
+            String series,
+            String setName,
+            CardGrade grade,
+            CardCategory category,
+            AuctionStatus status,
+            Pageable pageable
+    ) {
+        AuctionStatus targetStatus = status == null ? AuctionStatus.PENDING : status;
+        AuctionSearchCondition condition = new AuctionSearchCondition(
+                keyword, series, setName, grade, category, targetStatus);
+        return auctionRepository.searchAuctions(condition, pageable);
     }
 
-    // Todo : 경매 상세 조회 response dto에 경매 필드에 없는 카드 상세 정보 추가 필요.
+    public Page<SearchAuctionResponse> getMyAuctions(Long sellerId, AuctionStatus status, Pageable pageable) {
+        return auctionRepository.searchMyAuctions(sellerId, status, pageable);
+    }
+
     public AuctionResponse getAuction(Long id) {
         Auction auction = auctionRepository.findById(id)
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));

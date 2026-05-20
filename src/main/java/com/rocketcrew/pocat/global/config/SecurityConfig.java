@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/auctions/me",
+                                "/api/v1/bids/me",
                                 "/api/v1/posts/free/me",
                                 "/api/v1/likes/me").authenticated()
                         .requestMatchers(HttpMethod.GET,
