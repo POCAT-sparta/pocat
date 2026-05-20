@@ -22,8 +22,16 @@ public class TradePostQueryService {
     private final UserQueryService userQueryService;
     private final ViewCountService viewCountService;
 
-    public Page<TradePostListResponse> getPosts(Pageable pageable) {
-        return tradePostRepository.findAll(pageable)
+    public Page<TradePostListResponse> getPostsByUserId(Long userId, Pageable pageable) {
+        return tradePostRepository.findByUserId(userId, pageable)
+                .map(post -> {
+                    String nickname = userQueryService.getUserById(post.getUserId()).nickname();
+                    return TradePostListResponse.from(post, nickname);
+                });
+    }
+
+    public Page<TradePostListResponse> getPosts(String keyword, Long minPrice, Long maxPrice, Pageable pageable) {
+        return tradePostRepository.searchPosts(keyword, minPrice, maxPrice, pageable)
                 .map(post -> {
                     String nickname = userQueryService.getUserById(post.getUserId()).nickname();
                     return TradePostListResponse.from(post, nickname);

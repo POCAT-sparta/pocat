@@ -35,10 +35,13 @@ public class TradePostController {
     private final TradePostQueryService tradePostQueryService;
     private final TradePostCommandService tradePostCommandService;
 
-    @GetMapping //TODO keyword 등 Query Parameters 추가
+    @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostListResponse>>> getPosts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long minPrice,
+            @RequestParam(required = false) Long maxPrice,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<TradePostListResponse> page = tradePostQueryService.getPosts(pageable);
+        Page<TradePostListResponse> page = tradePostQueryService.getPosts(keyword, minPrice, maxPrice, pageable);
         List<TradePostListResponse> content = page.getContent();
         PageResponseDto<TradePostListResponse> pageResponse = PageResponseDto.of(page, content);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
