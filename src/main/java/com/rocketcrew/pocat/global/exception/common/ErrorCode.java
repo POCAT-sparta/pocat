@@ -66,6 +66,7 @@ public enum ErrorCode {
     // Settlement
     SETTLEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "정산을 찾을 수 없습니다."),
     SETTLEMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 정산이 완료된 건입니다."),
+    SETTLEMENT_CANNOT_COMPLETE(HttpStatus.CONFLICT, "PENDING 상태의 정산만 완료 처리할 수 있습니다."),
 
     // FreePost
     FREE_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "자유 게시글을 찾을 수 없습니다."),

@@ -20,9 +20,6 @@ public class AdminSettlementCommandService {
     public SettlementCompleteResponse completeSettlement(String settlementUid) {
         Settlement settlement = settlementRepository.findWithLockBySettlementUid(settlementUid)
                 .orElseThrow(() -> new SettlementException(ErrorCode.SETTLEMENT_NOT_FOUND));
-        if (settlement.getStatus() == SettlementStatus.COMPLETED) {
-            throw new SettlementException(ErrorCode.SETTLEMENT_ALREADY_COMPLETED);
-        }
         settlement.complete();
         return SettlementCompleteResponse.from(settlement);
     }
