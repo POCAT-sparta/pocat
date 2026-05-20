@@ -1,67 +1,72 @@
 package com.rocketcrew.pocat.domain.chat.controller;
 
 import com.rocketcrew.pocat.domain.chat.dto.request.CreateChatRequest;
-import com.rocketcrew.pocat.domain.chat.dto.request.SendMessageRequest;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatMessageResponse;
 import com.rocketcrew.pocat.domain.chat.dto.response.ChatResponse;
-import com.rocketcrew.pocat.domain.chat.service.ChatService;
+import com.rocketcrew.pocat.domain.chat.dto.response.ChatRoomListResponse;
+import com.rocketcrew.pocat.domain.chat.service.ChatCommandService;
+import com.rocketcrew.pocat.domain.chat.service.ChatQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/chats")
 public class ChatController {
 
-    private final ChatService chatService;
+    private final ChatCommandService chatCommandService;
+    private final ChatQueryService chatQueryService;
 
     @PostMapping
     public ResponseEntity<ApiResponseDto<ChatResponse>> createChat(
-            @RequestParam Long ownerId,
-            @RequestBody CreateChatRequest request) {
-        ChatResponse response = chatService.createChat(ownerId, request);
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody CreateChatRequest request) {
+        ChatResponse response = chatCommandService.createChat(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @GetMapping
-    public ResponseEntity<ApiResponseDto<PageResponseDto<ChatResponse>>> getMyChats(
-            @RequestParam Long userId,
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<ChatResponse> page = chatService.getMyChats(userId, pageable);
-        PageResponseDto<ChatResponse> response = PageResponseDto.of(page, page.getContent());
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
-    }
-
-    @GetMapping("/{chatId}")
-    public ResponseEntity<ApiResponseDto<ChatResponse>> getChat(@PathVariable Long chatId) {
-        ChatResponse response = chatService.getChat(chatId);
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponseDto<List<ChatRoomListResponse>>> getMyChats(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<ChatRoomListResponse> response = chatQueryService.getMyChats(userDetails.getUserId());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     @GetMapping("/{chatId}/messages")
     public ResponseEntity<ApiResponseDto<PageResponseDto<ChatMessageResponse>>> getMessages(
             @PathVariable Long chatId,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Page<ChatMessageResponse> page = chatService.getMessages(chatId, pageable);
-        PageResponseDto<ChatMessageResponse> response = PageResponseDto.of(page, page.getContent());
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 30) Pageable pageable) {
+        Page<ChatMessageResponse> page = chatQueryService.getMessages(chatId, userDetails.getUserId(), pageable);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
-    @PostMapping("/{chatId}/messages")
-    public ResponseEntity<ApiResponseDto<ChatMessageResponse>> sendMessage(
+    @PatchMapping("/{chatId}/read")
+    public ResponseEntity<ApiResponseDto<Void>> markAsRead(
             @PathVariable Long chatId,
-            @RequestParam Long senderId,
-            @RequestBody SendMessageRequest request) {
-        ChatMessageResponse response = chatService.sendMessage(chatId, senderId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponseDto.success(HttpStatus.CREATED, response));
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        chatCommandService.markAsRead(chatId, userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
+    }
+
+    @DeleteMapping("/{chatId}")
+    public ResponseEntity<ApiResponseDto<Void>> leaveChat(
+            @PathVariable Long chatId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        chatCommandService.leaveChat(chatId, userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }

@@ -11,7 +11,9 @@ import org.hibernate.annotations.SQLDelete;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "chats")
+@Table(name = "chats", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"post_id", "guest_id"})
+})
 @SQLDelete(sql = "UPDATE chats SET deleted_at = NOW() WHERE id = ?")
 public class Chat extends BaseEntity {
 
@@ -28,7 +30,23 @@ public class Chat extends BaseEntity {
     @Column(name="status", nullable = false, length = 20)
     private ChatStatus status;
 
-    public void updateStatus(ChatStatus status) {
-        this.status = status;
+    @Column(name="owner_left", nullable = false)
+    @Builder.Default
+    private boolean ownerLeft = false;
+
+    @Column(name="guest_left", nullable = false)
+    @Builder.Default
+    private boolean guestLeft = false;
+
+    public void markOwnerLeft() {
+        this.ownerLeft = true;
+    }
+
+    public void markGuestLeft() {
+        this.guestLeft = true;
+    }
+
+    public boolean isBothLeft() {
+        return this.ownerLeft && this.guestLeft;
     }
 }

@@ -1,11 +1,17 @@
 package com.rocketcrew.pocat.domain.chat.repository;
 
 import com.rocketcrew.pocat.domain.chat.entity.Chat;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface ChatRepository extends JpaRepository<Chat, Long> {
+import java.util.Optional;
 
-    Page<Chat> findByOwnerIdOrGuestId(Long ownerId, Long guestId, Pageable pageable);
+public interface ChatRepository extends JpaRepository<Chat, Long>, ChatRepositoryCustom {
+
+    boolean existsByPostIdAndGuestId(Long postId, Long guestId);
+
+    @Query("SELECT c FROM Chat c WHERE c.id = :chatId AND " +
+            "((c.ownerId = :userId AND c.ownerLeft = false) OR (c.guestId = :userId AND c.guestLeft = false))")
+    Optional<Chat> findByIdAndParticipant(@Param("chatId") Long chatId, @Param("userId") Long userId);
 }
