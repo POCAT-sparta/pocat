@@ -10,11 +10,14 @@ import org.hibernate.annotations.SQLDelete;
 @Builder
 @AllArgsConstructor
 @Entity
-@Table(name = "order_snapshots")
+@Table(
+        name = "order_snapshots",
+        uniqueConstraints = @UniqueConstraint(name = "uk_order_snapshots_order_uid", columnNames = "order_uid")
+)
 @SQLDelete(sql = "UPDATE order_snapshots SET deleted_at = NOW() WHERE id = ?")
 public class OrderSnapshot extends BaseEntity {
 
-    @Column(name = "order_uid", nullable = false, length = 50, unique = true)
+    @Column(name = "order_uid", nullable = false, length = 50)
     private String orderUid;
 
     @Column(name = "final_price", nullable = false)
