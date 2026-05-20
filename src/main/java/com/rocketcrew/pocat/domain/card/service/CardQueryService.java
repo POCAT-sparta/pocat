@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 
 @Service
@@ -25,6 +26,9 @@ public class CardQueryService {
     private final OrderQueryService orderQueryService;
 
     public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
+        if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() < 2) {
+            throw new CardException(ErrorCode.INVALID_INPUT);
+        }
         return cardRepository.searchCards(condition, pageable)
                 .map(CardResponse::from);
     }
