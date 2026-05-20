@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.Optional;
 
 @Component
 public class JwtUtil {
@@ -65,9 +66,23 @@ public class JwtUtil {
         }
     }
 
+    public Optional<TokenPayload> extractPayload(String token) {
+        try {
+            Claims claims = getClaims(token);
+            return Optional.of(new TokenPayload(
+                    Long.parseLong(claims.getSubject()),
+                    claims.get("role", String.class)
+            ));
+        } catch (JwtException | IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
     public long getRefreshTokenExpiration() {
         return refreshTokenExpiration;
     }
+
+    public record TokenPayload(Long userId, String role) {}
 
     private Claims getClaims(String token) {
         return Jwts.parser()

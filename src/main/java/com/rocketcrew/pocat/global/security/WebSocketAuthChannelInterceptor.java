@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.global.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -24,14 +25,15 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             String token = resolveToken(accessor);
-            if (StringUtils.hasText(token) && jwtUtil.validateToken(token)) {
-                Long userId = jwtUtil.getUserId(token);
-                String role = jwtUtil.getRole(token);
-                CustomUserDetails userDetails = new CustomUserDetails(userId, role);
-                Authentication auth = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                accessor.setUser(auth);
+            if (!StringUtils.hasText(token)) {
+                throw new MessageDeliveryException("Missing JWT token");
             }
+            JwtUtil.TokenPayload payload = jwtUtil.extractPayload(token)
+                    .orElseThrow(() -> new MessageDeliveryException("Invalid JWT token"));
+            CustomUserDetails userDetails = new CustomUserDetails(payload.userId(), payload.role());
+            Authentication auth = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
+            accessor.setUser(auth);
         }
         return message;
     }
