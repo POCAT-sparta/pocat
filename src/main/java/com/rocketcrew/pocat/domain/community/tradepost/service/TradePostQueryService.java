@@ -13,6 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -22,12 +25,25 @@ public class TradePostQueryService {
     private final UserQueryService userQueryService;
     private final ViewCountService viewCountService;
 
-    public Page<TradePostListResponse> getPosts(Pageable pageable) {
-        return tradePostRepository.findAll(pageable)
-                .map(post -> {
-                    String nickname = userQueryService.getUserById(post.getUserId()).nickname();
-                    return TradePostListResponse.from(post, nickname);
-                });
+    public Page<TradePostListResponse> getPostsByUserId(Long userId, Pageable pageable) {
+        String nickname = userQueryService.getUserById(userId).nickname();
+        return tradePostRepository.findByUserId(userId, pageable)
+                .map(post -> TradePostListResponse.from(post, nickname));
+    }
+
+    public Page<TradePostListResponse> getPosts(String keyword, Long minPrice, Long maxPrice, Pageable pageable) {
+        Page<TradePost> postPage = tradePostRepository.searchPosts(keyword, minPrice, maxPrice, pageable);
+        List<Long> userIds = postPage.getContent().stream()
+                .map(TradePost::getUserId)
+                .distinct()
+                .toList();
+
+        Map<Long, String> nicknameByUserId = userQueryService.getNicknamesByUserIds(userIds);
+
+        return postPage.map(post -> TradePostListResponse.from(
+                post,
+                nicknameByUserId.get(post.getUserId())
+        ));
     }
 
     public TradePostResponse getPost(Long id, String clientIp, Long requesterId) {
