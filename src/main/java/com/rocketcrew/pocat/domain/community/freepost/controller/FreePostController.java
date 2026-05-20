@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePost
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommandService;
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostQueryService;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostRankingService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -30,6 +31,7 @@ public class FreePostController {
 
     private final FreePostQueryService freePostQueryService;
     private final FreePostCommandService freePostCommandService;
+    private final FreePostRankingService freePostRankingService;
 
     @GetMapping
     public ResponseEntity<ApiResponseDto<PageResponseDto<FreePostResponse>>> getPosts(
@@ -59,6 +61,13 @@ public class FreePostController {
         String clientIp = HttpRequestUtils.resolveClientIp(request);
         Long requesterId = userDetails != null ? userDetails.getUserId() : null;
         FreePostResponse response = freePostQueryService.getPost(freePostId, clientIp, requesterId);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
+    @GetMapping("/popular")
+    public ResponseEntity<ApiResponseDto<List<FreePostResponse>>> getPopularPosts(
+            @RequestParam(defaultValue = "20") int size) {
+        List<FreePostResponse> response = freePostRankingService.getPopular(size);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 

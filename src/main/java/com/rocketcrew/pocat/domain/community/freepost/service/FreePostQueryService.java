@@ -1,6 +1,5 @@
 package com.rocketcrew.pocat.domain.community.freepost.service;
 
-import com.rocketcrew.pocat.domain.comment.repository.CommentRepository;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
@@ -25,7 +24,6 @@ public class FreePostQueryService {
 
     private final FreePostRepository freePostRepository;
     private final UserRepository userRepository;
-    private final CommentRepository commentRepository;
     private final FreePostViewCountService viewCountService;
 
     public Page<FreePostResponse> getPosts(String keyword, Pageable pageable) {
@@ -40,13 +38,10 @@ public class FreePostQueryService {
                 .stream()
                 .collect(Collectors.toMap(User::getId, User::getNickname));
 
-        List<Long> postIds = posts.getContent().stream().map(FreePost::getId).toList();
-        Map<Long, Integer> commentCountMap = buildCommentCountMap(postIds);
-
         return posts.map(post -> FreePostResponse.of(
                 post,
                 nicknameMap.getOrDefault(post.getUserId(), ""),
-                commentCountMap.getOrDefault(post.getId(), 0)
+                post.getCommentCount()
         ));
     }
 
@@ -62,9 +57,7 @@ public class FreePostQueryService {
                 .map(User::getNickname)
                 .orElse("");
 
-        int commentCount = commentRepository.countByFreePostId(postId);
-
-        return FreePostResponse.of(freePost, nickname, commentCount);
+        return FreePostResponse.of(freePost, nickname, freePost.getCommentCount());
     }
 
     public Page<FreePostResponse> getMyPosts(Long userId, Pageable pageable) {
@@ -74,25 +67,10 @@ public class FreePostQueryService {
                 .map(User::getNickname)
                 .orElse("");
 
-        List<Long> postIds = posts.getContent().stream().map(FreePost::getId).toList();
-        Map<Long, Integer> commentCountMap = buildCommentCountMap(postIds);
-
         return posts.map(post -> FreePostResponse.of(
                 post,
                 nickname,
-                commentCountMap.getOrDefault(post.getId(), 0)
+                post.getCommentCount()
         ));
-    }
-
-    private Map<Long, Integer> buildCommentCountMap(List<Long> postIds) {
-        if (postIds.isEmpty()) {
-            return Map.of();
-        }
-        return commentRepository.findCommentCountsByFreePostIds(postIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> ((Long) row[1]).intValue()
-                ));
     }
 }

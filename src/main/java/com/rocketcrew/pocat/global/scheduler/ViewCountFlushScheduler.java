@@ -25,18 +25,27 @@ public class ViewCountFlushScheduler {
     private static final String TRADE_PROCESSING_KEY = "view:buffer:processing";
     private static final String FREE_BUFFER_KEY = "view:free:buffer";
     private static final String FREE_PROCESSING_KEY = "view:free:buffer:processing";
+    private static final String FREE_COMMENT_BUFFER_KEY = "comment:free:buffer";
+    private static final String FREE_COMMENT_PROCESSING_KEY = "comment:free:buffer:processing";
+
+    private enum RepositoryType {
+        TRADE_VIEW,
+        FREE_VIEW,
+        FREE_COMMENT
+    }
 
     @Transactional
     @Scheduled(fixedDelay = 60_000)
     public void flush() {
-        flushBuffer(TRADE_PROCESSING_KEY, TRADE_BUFFER_KEY, false);
-        flushBuffer(FREE_PROCESSING_KEY, FREE_BUFFER_KEY, true);
+        flushBuffer(TRADE_PROCESSING_KEY, TRADE_BUFFER_KEY, RepositoryType.TRADE_VIEW);
+        flushBuffer(FREE_PROCESSING_KEY, FREE_BUFFER_KEY, RepositoryType.FREE_VIEW);
+        flushBuffer(FREE_COMMENT_PROCESSING_KEY, FREE_COMMENT_BUFFER_KEY, RepositoryType.FREE_COMMENT);
     }
 
-    private void flushBuffer(String processingKey, String bufferKey, boolean isFreePost) {
+    private void flushBuffer(String processingKey, String bufferKey, RepositoryType type) {
         if (redisTemplate.hasKey(processingKey)) {
             log.warn("진행이 안된 데이터 발견, DB업데이트를 재 시도합니다. key={}", processingKey);
-            flushKey(processingKey, isFreePost);
+            flushKey(processingKey, type);
         }
 
         if (!redisTemplate.hasKey(bufferKey)) {
@@ -44,10 +53,10 @@ public class ViewCountFlushScheduler {
         }
 
         redisTemplate.rename(bufferKey, processingKey);
-        flushKey(processingKey, isFreePost);
+        flushKey(processingKey, type);
     }
 
-    private void flushKey(String key, boolean isFreePost) {
+    private void flushKey(String key, RepositoryType type) {
         Set<ZSetOperations.TypedTuple<String>> entries =
                 redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
 
@@ -60,13 +69,13 @@ public class ViewCountFlushScheduler {
             try {
                 Long postId = Long.parseLong(entry.getValue());
                 int count = entry.getScore().intValue();
-                if (isFreePost) {
-                    freePostRepository.increaseViewCount(postId, count);
-                } else {
-                    tradePostRepository.increaseViewCount(postId, count);
+                switch (type) {
+                    case FREE_VIEW -> freePostRepository.increaseViewCount(postId, count);
+                    case TRADE_VIEW -> tradePostRepository.increaseViewCount(postId, count);
+                    case FREE_COMMENT -> freePostRepository.updateCommentCount(postId, count);
                 }
             } catch (Exception e) {
-                log.error("view count flush failed for entry: {}, key={}", entry.getValue(), key, e);
+                log.error("flush failed for entry: {}, key={}", entry.getValue(), key, e);
             }
         }
 

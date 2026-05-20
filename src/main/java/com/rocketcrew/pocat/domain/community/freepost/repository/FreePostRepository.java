@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface FreePostRepository extends JpaRepository<FreePost, Long>, FreePostRepositoryCustom {
 
     Page<FreePost> findByUserId(Long userId, Pageable pageable);
@@ -15,4 +17,11 @@ public interface FreePostRepository extends JpaRepository<FreePost, Long>, FreeP
     @Modifying
     @Query("UPDATE FreePost f SET f.viewCount = f.viewCount + :count WHERE f.id = :postId")
     void increaseViewCount(@Param("postId") Long postId, @Param("count") int count);
+
+    @Modifying
+    @Query("UPDATE FreePost f SET f.commentCount = GREATEST(0, f.commentCount + :delta) WHERE f.id = :postId")
+    void updateCommentCount(@Param("postId") Long postId, @Param("delta") int delta);
+
+    @Query("SELECT f FROM FreePost f ORDER BY (f.viewCount + f.commentCount * 3) DESC")
+    List<FreePost> findTopByPopularScore(Pageable pageable);
 }
