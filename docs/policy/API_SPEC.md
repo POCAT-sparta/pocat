@@ -2477,7 +2477,7 @@ X-PortOne-Signature: {서명값}
 - **DELETE** `/api/v1/chats/{chatId}`
 - **권한**: `USER` (채팅 참여자)
 
-**Response** `204 No Content`
+**Response** `200 No Content`
 
 ---
 

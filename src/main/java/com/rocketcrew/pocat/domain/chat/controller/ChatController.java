@@ -67,7 +67,6 @@ public class ChatController {
             @PathVariable Long chatId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         chatCommandService.leaveChat(chatId, userDetails.getUserId());
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }
