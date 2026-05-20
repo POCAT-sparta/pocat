@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.UUID;
+import com.rocketcrew.pocat.global.util.TsidGenerator;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +44,7 @@ public class SettlementCommandService {
         long sellerAmount = totalPrice - platformFee;
 
         Settlement settlement = Settlement.builder()
-                .settlementUid(UUID.randomUUID().toString())
+                .settlementUid(TsidGenerator.generateSettlementUid())
                 .orderId(order.getId())
                 .sellerId(order.getSellerId())
                 .totalPrice(totalPrice)
