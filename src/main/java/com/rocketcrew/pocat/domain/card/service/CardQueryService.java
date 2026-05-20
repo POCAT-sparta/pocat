@@ -46,7 +46,7 @@ public class CardQueryService {
             throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
         }
     }
-    
+
     public List<Long> searchCardIds(CardSearchCondition condition) {
         return cardRepository.searchCardIds(condition);
     }
