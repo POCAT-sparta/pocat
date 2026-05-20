@@ -57,6 +57,21 @@ public class Auction extends BaseEntity {
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
     private String cancelReason;
 
+    public void update(String title, String description, Long startingPrice, Long buyoutPrice) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+        if (startingPrice != null) {
+            this.startingPrice = startingPrice;
+        }
+        if (buyoutPrice != null) {
+            this.buyoutPrice = buyoutPrice;
+        }
+    }
+
     public void cancel(String cancelReason) {
         this.status = AuctionStatus.CANCELLED;
         this.cancelReason = cancelReason;

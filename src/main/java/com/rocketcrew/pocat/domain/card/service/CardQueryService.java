@@ -33,6 +33,12 @@ public class CardQueryService {
         return CardResponse.from(card);
     }
 
+    public void validateRegistrableForAuction(Long cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
+        }
     public List<Long> searchCardIds(CardSearchCondition condition) {
         return cardRepository.searchCardIds(condition);
     }
