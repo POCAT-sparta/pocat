@@ -71,10 +71,4 @@ public class FreePostCommandService {
         freePostRepository.delete(freePost);
     }
 
-    public void incrementViewCount(Long postId) {
-        int updated = freePostRepository.incrementViewCount(postId);
-        if (updated == 0) {
-            throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
-        }
-    }
 }

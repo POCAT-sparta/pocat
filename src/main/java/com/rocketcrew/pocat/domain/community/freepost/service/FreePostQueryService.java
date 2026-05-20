@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +26,7 @@ public class FreePostQueryService {
     private final FreePostRepository freePostRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final FreePostViewCountService viewCountService;
 
     public Page<FreePostResponse> getPosts(String keyword, Pageable pageable) {
         Page<FreePost> posts = freePostRepository.searchPosts(keyword, pageable);
@@ -50,9 +50,13 @@ public class FreePostQueryService {
         ));
     }
 
-    public FreePostResponse getPost(Long postId) {
+    public FreePostResponse getPost(Long postId, String clientIp, Long requesterId) {
         FreePost freePost = freePostRepository.findById(postId)
                 .orElseThrow(() -> new FreePostException(ErrorCode.FREE_POST_NOT_FOUND));
+
+        if (!freePost.getUserId().equals(requesterId)) {
+            viewCountService.increaseViewCount(postId, clientIp);
+        }
 
         String nickname = userRepository.findById(freePost.getUserId())
                 .map(User::getNickname)

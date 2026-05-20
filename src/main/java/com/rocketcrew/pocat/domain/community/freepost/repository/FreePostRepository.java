@@ -12,7 +12,7 @@ public interface FreePostRepository extends JpaRepository<FreePost, Long>, FreeP
 
     Page<FreePost> findByUserId(Long userId, Pageable pageable);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update FreePost f set f.viewCount = f.viewCount + 1 where f.id = :postId")
-    int incrementViewCount(@Param("postId") Long postId);
+    @Modifying
+    @Query("UPDATE FreePost f SET f.viewCount = f.viewCount + :count WHERE f.id = :postId")
+    void increaseViewCount(@Param("postId") Long postId, @Param("count") int count);
 }

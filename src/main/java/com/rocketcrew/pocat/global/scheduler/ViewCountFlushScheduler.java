@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.scheduler;
 
+import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
 import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,27 +19,35 @@ public class ViewCountFlushScheduler {
 
     private final StringRedisTemplate redisTemplate;
     private final TradePostRepository tradePostRepository;
+    private final FreePostRepository freePostRepository;
 
-    private static final String BUFFER_KEY = "view:buffer";
-    private static final String PROCESSING_KEY = "view:buffer:processing";
+    private static final String TRADE_BUFFER_KEY = "view:buffer";
+    private static final String TRADE_PROCESSING_KEY = "view:buffer:processing";
+    private static final String FREE_BUFFER_KEY = "view:free:buffer";
+    private static final String FREE_PROCESSING_KEY = "view:free:buffer:processing";
 
     @Transactional
     @Scheduled(fixedDelay = 60_000)
     public void flush() {
-        if (redisTemplate.hasKey(PROCESSING_KEY)) {
-            log.warn("진행이 안된 데이터 발견, DB업데이트를 재 시도합니다.");
-            flushKey(PROCESSING_KEY);
+        flushBuffer(TRADE_PROCESSING_KEY, TRADE_BUFFER_KEY, false);
+        flushBuffer(FREE_PROCESSING_KEY, FREE_BUFFER_KEY, true);
+    }
+
+    private void flushBuffer(String processingKey, String bufferKey, boolean isFreePost) {
+        if (redisTemplate.hasKey(processingKey)) {
+            log.warn("진행이 안된 데이터 발견, DB업데이트를 재 시도합니다. key={}", processingKey);
+            flushKey(processingKey, isFreePost);
         }
 
-        if (!redisTemplate.hasKey(BUFFER_KEY)) {
+        if (!redisTemplate.hasKey(bufferKey)) {
             return;
         }
 
-        redisTemplate.rename(BUFFER_KEY, PROCESSING_KEY);
-        flushKey(PROCESSING_KEY);
+        redisTemplate.rename(bufferKey, processingKey);
+        flushKey(processingKey, isFreePost);
     }
 
-    private void flushKey(String key) {
+    private void flushKey(String key, boolean isFreePost) {
         Set<ZSetOperations.TypedTuple<String>> entries =
                 redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
 
@@ -49,11 +58,15 @@ public class ViewCountFlushScheduler {
 
         for (ZSetOperations.TypedTuple<String> entry : entries) {
             try {
-                Long tradePostId = Long.parseLong(entry.getValue());
+                Long postId = Long.parseLong(entry.getValue());
                 int count = entry.getScore().intValue();
-                tradePostRepository.increaseViewCount(tradePostId, count);
+                if (isFreePost) {
+                    freePostRepository.increaseViewCount(postId, count);
+                } else {
+                    tradePostRepository.increaseViewCount(postId, count);
+                }
             } catch (Exception e) {
-                log.error("view count flush failed for entry: {}", entry.getValue(), e);
+                log.error("view count flush failed for entry: {}, key={}", entry.getValue(), key, e);
             }
         }
 
