@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/notifications")
+@RequestMapping("/api")
 public class NotificationController {
 
     private final NotificationService notificationService;
 
-    @GetMapping
+    @GetMapping("/v1/notifications")
     public ResponseEntity<ApiResponseDto<PageResponseDto<NotificationResponse>>> getNotifications(
             @RequestParam Long userId,
             @PageableDefault(size = 10) Pageable pageable) {
@@ -28,7 +28,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/{notificationId}/read")
+    @PutMapping("/v1/notifications/{notificationId}/read")
     public ResponseEntity<ApiResponseDto<NotificationResponse>> markAsRead(@PathVariable Long notificationId) {
         NotificationResponse response = notificationService.markAsRead(notificationId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));

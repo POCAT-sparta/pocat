@@ -23,13 +23,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/chats")
+@RequestMapping("/api")
 public class ChatController {
 
     private final ChatCommandService chatCommandService;
     private final ChatQueryService chatQueryService;
 
-    @PostMapping
+    @PostMapping("/v1/chats")
     public ResponseEntity<ApiResponseDto<ChatResponse>> createChat(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateChatRequest request) {
@@ -38,14 +38,14 @@ public class ChatController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/v1/chats/me")
     public ResponseEntity<ApiResponseDto<List<ChatRoomListResponse>>> getMyChats(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         List<ChatRoomListResponse> response = chatQueryService.getMyChats(userDetails.getUserId());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @GetMapping("/{chatId}/messages")
+    @GetMapping("/v1/chats/{chatId}/messages")
     public ResponseEntity<ApiResponseDto<PageResponseDto<ChatMessageResponse>>> getMessages(
             @PathVariable Long chatId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -54,7 +54,7 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
-    @PatchMapping("/{chatId}/read")
+    @PatchMapping("/v1/chats/{chatId}/read")
     public ResponseEntity<ApiResponseDto<Void>> markAsRead(
             @PathVariable Long chatId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -62,7 +62,7 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 
-    @DeleteMapping("/{chatId}")
+    @DeleteMapping("/v1/chats/{chatId}")
     public ResponseEntity<ApiResponseDto<Void>> leaveChat(
             @PathVariable Long chatId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

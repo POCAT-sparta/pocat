@@ -22,13 +22,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/orders")
+@RequestMapping("/api")
 public class OrderController {
 
     private final OrderQueryService orderQueryService;
     private final OrderCommandService orderCommandService;
 
-    @GetMapping("/me")
+    @GetMapping("/v1/orders/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<OrderResponse>>> getMyOrders(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) OrderStatus status,
@@ -38,7 +38,7 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
-    @GetMapping("/{orderUid}")
+    @GetMapping("/v1/orders/{orderUid}")
     public ResponseEntity<ApiResponseDto<OrderDetailResponse>> getOneOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String orderUid
@@ -46,7 +46,7 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, orderQueryService.getOneOrder(userDetails.getUserId(), orderUid)));
     }
 
-    @PatchMapping("/{orderUid}/cancel")
+    @PatchMapping("/v1/orders/{orderUid}/cancel")
     public ResponseEntity<ApiResponseDto<OrderResponse>> cancelOrder(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String orderUid,

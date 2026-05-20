@@ -29,13 +29,13 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/posts/trade")
+@RequestMapping("/api")
 public class TradePostController {
 
     private final TradePostQueryService tradePostQueryService;
     private final TradePostCommandService tradePostCommandService;
 
-    @GetMapping
+    @GetMapping("/v1/posts/trade")
     public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostListResponse>>> getPosts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long minPrice,
@@ -47,7 +47,7 @@ public class TradePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/v1/posts/trade/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<TradePostListResponse>>> getPosts(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -58,7 +58,7 @@ public class TradePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, pageResponse));
     }
 
-    @GetMapping("/{tradePostId}")
+    @GetMapping("/v1/posts/trade/{tradePostId}")
     public ResponseEntity<ApiResponseDto<TradePostResponse>> getPost(
             @PathVariable Long tradePostId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -69,7 +69,7 @@ public class TradePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PostMapping
+    @PostMapping("/v1/posts/trade")
     public ResponseEntity<ApiResponseDto<CreateTradePost>> createPost(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestBody @Valid CreateTradePostRequest request) {
@@ -78,7 +78,7 @@ public class TradePostController {
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
 
-    @PatchMapping("/{tradePostId}")
+    @PatchMapping("/v1/posts/trade/{tradePostId}")
     public ResponseEntity<ApiResponseDto<UpdateTradePostResponse>> updatePost(
             @PathVariable Long tradePostId,
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
@@ -87,7 +87,7 @@ public class TradePostController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @DeleteMapping("/{tradePostId}")
+    @DeleteMapping("/v1/posts/trade/{tradePostId}")
     public ResponseEntity<ApiResponseDto<Void>> deletePost(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long tradePostId) {
