@@ -159,12 +159,12 @@ public class CardDataInit implements ApplicationRunner {
     }
 
     private CardCategory parseCategory(String category) {
-        if (category == null || category.isBlank()) return null;
+        if (category == null || category.isBlank()) return CardCategory.UNKNOWN;
         return switch (category.toUpperCase()) {
             case "POKEMON" -> CardCategory.POKEMON;
             case "TRAINER", "TRAINERS" -> CardCategory.TRAINERS;
             case "ENERGY" -> CardCategory.ENERGY;
-            default -> null;
+            default -> CardCategory.UNKNOWN;
         };
     }
 }
