@@ -31,38 +31,38 @@ public class Card extends BaseEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "series", length = 100)
+    @Column(name = "series", length = 100, nullable = false)
     private String series;
 
-    @Column(name = "set_id", length = 50)
+    @Column(name = "set_id", length = 50, nullable = false)
     private String setId;
 
-    @Column(name = "set_name", length = 100)
+    @Column(name = "set_name", length = 100, nullable = false)
     private String setName;
 
-    @Column(name = "card_number", length = 20)
+    @Column(name = "card_number", length = 20, nullable = false)
     private String cardNumber;
 
-    @Column(name = "rarity", length = 50)
+    @Column(name = "rarity", length = 50, nullable = false)
     private String rarity;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", length = 20)
+    @Column(name = "category", length = 20, nullable = false)
     private CardCategory category;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "grade", nullable = false, length = 20)
+    @Column(name = "grade", nullable = false, length = 20, nullable = false)
     private CardGrade grade;
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source", nullable = false, length = 20)
+    @Column(name = "source", nullable = false, length = 20, nullable = false)
     private CardSource source;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 20, nullable = false)
     private CardStatus status;
 
     @Column(name = "reject_reason", columnDefinition = "TEXT")

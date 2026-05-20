@@ -9,12 +9,12 @@ import jakarta.validation.constraints.NotNull;
 public record UpdateCardRequest(
         String tcgdexId,
         @NotBlank String name,
-        String series,
-        String setId,
-        String setName,
-        String cardNumber,
-        String rarity,
-        CardCategory category,
+        @NotBlank String series,
+        @NotBlank String setId,
+        @NotBlank String setName,
+        @NotBlank String cardNumber,
+        @NotBlank String rarity,
+        @NotBlank CardCategory category,
         @NotNull CardGrade grade,
         String imageUrl,
         @NotNull CardSource source
