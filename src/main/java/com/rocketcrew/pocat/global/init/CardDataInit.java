@@ -67,7 +67,11 @@ public class CardDataInit implements ApplicationRunner {
             String setResponse = restTemplate.getForObject(TCGDEX_SET_URL, String.class);
             JsonNode setRoot = objectMapper.readTree(setResponse);
 
-            String setId = setRoot.path("id").asText("swsh3");
+            String setId = setRoot.path("id").asText("");
+            if (setId.isBlank()) {
+                log.error("[CardDataInit] TCGdex 응답에 세트 ID가 없어 초기화를 중단합니다.");
+                return;
+            }
             String seriesName = setRoot.path("serie").path("name").asText("Sword & Shield");
             String setName = setRoot.path("name").asText("Darkness Ablaze");
             JsonNode cardNodes = setRoot.path("cards");

@@ -44,10 +44,12 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
     public List<Long> searchCardIds(CardSearchCondition condition) {
         QCard card = QCard.card;
 
+        // OOM 방지: 조건 없이 전체 조회 시 수만 건 메모리 적재 가능 → 상한 고정
         return queryFactory
                 .select(card.id)
                 .from(card)
                 .where(buildCondition(condition))
+                .limit(1_000)
                 .fetch();
     }
 
@@ -55,8 +57,9 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         QCard card = QCard.card;
         BooleanBuilder builder = new BooleanBuilder();
 
-        if (StringUtils.hasText(condition.keyword())) {
-            String kw = condition.keyword();
+        // LIKE '%keyword%' 는 풀 스캔을 유발하므로 2자 미만 키워드는 무시
+        if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() >= 2) {
+            String kw = condition.keyword().trim();
             builder.and(
                 card.name.containsIgnoreCase(kw)
                     .or(card.series.containsIgnoreCase(kw))

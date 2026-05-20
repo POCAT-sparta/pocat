@@ -45,9 +45,15 @@ public class CardSyncService {
         log.info("[CardSync] 주간 전체 동기화 시작");
 
         // 스케줄러 실행 시 HTTP 컨텍스트가 없으므로 DB에서 첫 번째 유저 ID 사용
+        // 사용자가 없으면 FK 오류 또는 잘못된 소유자 저장을 막기 위해 동기화 중단
         Long adminUserId = userRepository.findFirstByOrderByIdAsc()
                 .map(user -> user.getId())
-                .orElse(1L);
+                .orElse(null);
+
+        if (adminUserId == null) {
+            log.error("[CardSync] 등록된 사용자가 없어 동기화를 중단합니다. 최소 1명의 사용자가 필요합니다.");
+            return;
+        }
 
         RestTemplate restTemplate = createRestTemplate();
         int totalSynced = 0;
