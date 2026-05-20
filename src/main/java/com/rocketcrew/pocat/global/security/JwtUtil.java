@@ -88,7 +88,11 @@ public class JwtUtil {
         try {
             return Long.parseLong(getClaims(token).getSubject());
         } catch (ExpiredJwtException e) {
-            return Long.parseLong(e.getClaims().getSubject());
+            try {
+                return Long.parseLong(e.getClaims().getSubject());
+            } catch (NumberFormatException ex) {
+                return null;
+            }
         } catch (JwtException | IllegalArgumentException e) {
             return null;
         }

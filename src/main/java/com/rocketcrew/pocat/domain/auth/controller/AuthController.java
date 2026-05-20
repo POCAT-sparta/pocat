@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,11 +44,14 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponseDto<Void>> logout(
-            @RequestHeader("Authorization") String authorization) {
-        if (!authorization.startsWith("Bearer ")) {
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (!StringUtils.hasText(authorization) || !authorization.startsWith("Bearer ")) {
             throw new AuthException(ErrorCode.INVALID_ACCESS_TOKEN);
         }
         String token = authorization.substring(7);
+        if (!StringUtils.hasText(token)) {
+            throw new AuthException(ErrorCode.INVALID_ACCESS_TOKEN);
+        }
         authService.logout(token);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }

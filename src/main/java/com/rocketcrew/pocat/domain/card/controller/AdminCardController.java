@@ -60,7 +60,6 @@ public class AdminCardController {
     @DeleteMapping("/{cardId}")
     public ResponseEntity<ApiResponseDto<Void>> deleteCard(@PathVariable Long cardId) {
         cardCommandService.deleteCard(cardId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }

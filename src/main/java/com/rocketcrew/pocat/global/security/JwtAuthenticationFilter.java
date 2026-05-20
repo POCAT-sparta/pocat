@@ -30,9 +30,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 토큰을 1회만 파싱 — validateToken + getUserId + getRole 의 3중 파싱 제거
             Claims claims = jwtUtil.parseClaimsOrNull(token);
             if (claims != null && !isBlacklisted(token)) {
-                Long userId = Long.parseLong(claims.getSubject());
+                Long userId;
+                try {
+                    userId = Long.parseLong(claims.getSubject());
+                } catch (NumberFormatException e) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
                 String role = claims.get("role", String.class);
-                if (userId == null || role == null) {
+                if (role == null) {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                     return;
                 }
