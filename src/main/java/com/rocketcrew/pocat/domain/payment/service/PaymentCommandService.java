@@ -14,6 +14,7 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.payment.repository.WebhookEventRepository;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -43,6 +44,7 @@ public class PaymentCommandService {
     private final UserRepository userRepository;
     private final PortOneClient portOneClient;
     private final PortOneSignatureVerifier portOneSignatureVerifier;
+    private final WebhookEventRepository webhookEventRepository;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -134,9 +136,9 @@ public class PaymentCommandService {
             throw new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY);
         }
 
-         if (signature != null && !portOneSignatureVerifier.verify(signature, rawBody)) {
-             throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
-         }
+        if (signature != null && !portOneSignatureVerifier.verify(signature, rawBody)) {
+            throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
+        }
 
         // ── 아래는 서명 검증 완료 후 활성화 ────────────────────────────────────
         WebhookRequest request;

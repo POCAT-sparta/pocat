@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POCAT 결제 테스트</title>
+    <script src="portone-sdk.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 20px; }
+        .section { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+        h2 { margin-top: 0; color: #333; }
+        label { font-size: 13px; color: #555; display: block; margin-bottom: 4px; }
+        input { width: 100%; padding: 8px; margin-bottom: 12px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        button { background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #4338ca; }
+        pre { background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px; white-space: pre-wrap; }
+        hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+        .step { font-weight: bold; color: #4f46e5; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <h1>POCAT 결제 테스트</h1>
+
+    <!-- 공통 설정 -->
+    <div class="section">
+        <h2>공통 설정</h2>
+        <label>PortOne Store ID (포트원 콘솔 → 결제 연동 → 상단 "상점 아이디")</label>
+        <input type="text" id="storeId" placeholder="store-b3436568-70ad-419b-b6aa-3e93f55ea4b5">
+        <label>Access Token (로그인 응답의 accessToken)</label>
+        <input type="text" id="accessToken" placeholder="eyJhbGciOiJIUzI1NiJ9...">
+    </div>
+
+    <!-- 자동결제: 빌링키 발급 + 등록 -->
+    <div class="section">
+        <h2>자동결제 — 빌링키 발급 및 등록</h2>
+        <div class="step">Step 1. PortOne 결제창에서 카드 등록 → 빌링키 발급</div>
+        <button onclick="issueBillingKey()">빌링키 발급 (카드 등록 창 열기)</button>
+        <pre id="billingResult">-</pre>
+
+        <hr>
+        <div class="step">Step 2. 발급된 빌링키를 서버에 등록</div>
+        <label>빌링키 (위에서 자동 채워짐, 또는 직접 입력)</label>
+        <input type="text" id="billingKey" placeholder="billing-key-xxxxxxxx">
+        <button onclick="registerBillingKey()">서버에 빌링키 등록</button>
+        <pre id="registerResult">-</pre>
+    </div>
+
+    <!-- 직접결제 -->
+    <div class="section">
+        <h2>직접결제 — 결제창 띄우고 확정</h2>
+        <div class="step">Step 1. DB에 넣은 주문 ID 입력 후 결제</div>
+        <label>Order ID (DB에서 확인한 orders.id)</label>
+        <input type="number" id="orderId" placeholder="1">
+        <label>결제 금액 (orders.final_price와 일치해야 함)</label>
+        <input type="number" id="payAmount" value="1000">
+        <button onclick="createAndPay()">직접결제 시작</button>
+        <pre id="directResult">-</pre>
+    </div>
+
+    <script>
+        const SERVER = '';
+        const DIRECT_CHANNEL_KEY = 'channel-key-1b6a6c53-b37c-49d5-97e4-bc06ae01a348';
+        const AUTO_CHANNEL_KEY   = 'channel-key-41aab662-f783-43b4-ab9d-7b59d9ab1fff';
+
+        function getToken() {
+            return document.getElementById('accessToken').value.trim();
+        }
+        function getStoreId() {
+            return document.getElementById('storeId').value.trim();
+        }
+
+        /* ── 자동결제: 빌링키 발급 ── */
+        async function issueBillingKey() {
+            const storeId = getStoreId();
+            if (!storeId) { alert('Store ID를 입력하세요'); return; }
+
+            const result = document.getElementById('billingResult');
+            result.textContent = '결제창 열기 중...';
+
+            try {
+                const response = await PortOne.requestIssueBillingKey({
+                    storeId,
+                    channelKey: AUTO_CHANNEL_KEY,
+                    billingKeyMethod: 'CARD',
+                    issueId: 'issue-' + Date.now(),
+                    issueName: 'POCAT 자동결제 카드 등록',
+                    customer: {
+                        customerId: 'test-user',
+                        fullName: '테스터',
+                        email: 'test@test.com',
+                        phoneNumber: '01012345678'
+                    }
+                });
+
+                result.textContent = JSON.stringify(response, null, 2);
+
+                if (response.billingKey) {
+                    document.getElementById('billingKey').value = response.billingKey;
+                    result.textContent += '\n\n✅ 빌링키가 아래 입력란에 자동으로 채워졌습니다. Step 2를 진행하세요.';
+                }
+            } catch (e) {
+                result.textContent = '오류: ' + e.message;
+            }
+        }
+
+        /* ── 자동결제: 빌링키 서버 등록 ── */
+        async function registerBillingKey() {
+            const token = getToken();
+            const billingKey = document.getElementById('billingKey').value.trim();
+            const result = document.getElementById('registerResult');
+
+            if (!token || !billingKey) { alert('Access Token과 빌링키를 입력하세요'); return; }
+
+            const res = await fetch(`${SERVER}/api/v1/users/me/billing-key`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ billingKey })
+            });
+            const data = await res.json();
+            result.textContent = JSON.stringify(data, null, 2);
+        }
+
+        /* ── 직접결제: 결제 레코드 생성 → PortOne 결제창 → 확정 ── */
+        async function createAndPay() {
+            const token   = getToken();
+            const storeId = getStoreId();
+            const orderId = parseInt(document.getElementById('orderId').value);
+            const amount  = parseInt(document.getElementById('payAmount').value);
+            const result  = document.getElementById('directResult');
+
+            if (!token || !storeId || !orderId) { alert('Store ID, Access Token, Order ID를 모두 입력하세요'); return; }
+
+            result.textContent = '1. 서버에 결제 레코드 생성 중...';
+
+            // Step 1: 서버에서 paymentUid 발급
+            const createRes = await fetch(`${SERVER}/api/v1/payments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({ orderId })
+            });
+            const createData = await createRes.json();
+            result.textContent = '1. 결제 레코드 생성:\n' + JSON.stringify(createData, null, 2);
+
+            const paymentUid = createData.data?.paymentUid;
+            if (!paymentUid) {
+                result.textContent += '\n\n❌ paymentUid를 받지 못했습니다.';
+                return;
+            }
+
+            result.textContent += '\n\n2. PortOne 결제창 열기 중...';
+
+            // Step 2: PortOne 결제창
+            let payResponse;
+            try {
+                payResponse = await PortOne.requestPayment({
+                    storeId,
+                    channelKey: DIRECT_CHANNEL_KEY,
+                    paymentId: paymentUid,
+                    orderName: 'POCAT 경매 낙찰',
+                    totalAmount: amount,
+                    currency: 'KRW',
+                    payMethod: 'CARD',
+                    customer: {
+                        fullName: '테스터',
+                        email: 'test@test.com',
+                        phoneNumber: '01012345678'
+                    }
+                });
+            } catch (e) {
+                result.textContent += '\n\n❌ 결제창 오류: ' + e.message;
+                return;
+            }
+
+            result.textContent += '\n\n2. PortOne 결제 결과:\n' + JSON.stringify(payResponse, null, 2);
+
+            if (payResponse.code) {
+                result.textContent += '\n\n❌ 결제 실패 (code: ' + payResponse.code + ')';
+                return;
+            }
+
+            result.textContent += '\n\n3. 서버에 결제 확정 요청 중...';
+
+            // Step 3: 서버 결제 확정
+            const confirmRes = await fetch(`${SERVER}/api/v1/payments/${paymentUid}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            const confirmData = await confirmRes.json();
+            result.textContent += '\n\n3. 결제 확정:\n' + JSON.stringify(confirmData, null, 2);
+
+            if (confirmRes.ok) {
+                result.textContent += '\n\n✅ 직접결제 완료!';
+            }
+        }
+    </script>
+</body>
+</html>
