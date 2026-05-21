@@ -1,7 +1,7 @@
 package com.rocketcrew.pocat.domain.bid.service;
 
 import com.rocketcrew.pocat.domain.bid.dto.request.CreateBidRequest;
-import com.rocketcrew.pocat.domain.bid.dto.response.AuctionBidResponse;
+import com.rocketcrew.pocat.domain.bid.dto.response.CreateAuctionBidResponse;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
@@ -16,13 +16,14 @@ public class AuctionBidCommandService {
 
     private final AuctionBidRepository auctionBidRepository;
 
-    public AuctionBidResponse createBid(Long userId, CreateBidRequest request) {
+    public CreateAuctionBidResponse createBid(Long userId, Long auctionId, CreateBidRequest request) {
+        // Todo :  입찰가 검증, 직전 최고 입찰자 알림,
         AuctionBid auctionBid = AuctionBid.builder()
                 .userId(userId)
-                .auctionId(request.auctionId())
+                .auctionId(auctionId)
                 .bidPrice(request.bidPrice())
                 .status(BidStatus.ACTIVE)
                 .build();
-        return AuctionBidResponse.from(auctionBidRepository.save(auctionBid));
+        return CreateAuctionBidResponse.from(auctionBidRepository.save(auctionBid));
     }
 }
