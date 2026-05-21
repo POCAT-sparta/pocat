@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.notification.entity;
 
+import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -16,23 +17,35 @@ import org.hibernate.annotations.SQLRestriction;
 @SQLRestriction("deleted_at IS NULL")
 public class Notification extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
+    @Column(name = "type", nullable = false, length = 50)
     private NotificationType type;
 
-    @Column(nullable = false)
-    private String title;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "message", nullable = false)
     private String message;
 
-    @Column(nullable = false)
+    @Column(name = "is_read", nullable = false)
     private boolean isRead;
 
-    public void markAsRead() {
+    // 관련 데이터 (auctionId, orderUid 등 JSON으로 저장)
+    @Column(name = "related_data")
+    private String relatedData;
+
+    public void read() {
         this.isRead = true;
+    }
+
+    public static Notification create(Long userId, NotificationType type,
+                                      String message, String relatedData) {
+        return Notification.builder()
+                .userId(userId)
+                .type(type)
+                .message(message)
+                .isRead(false)
+                .relatedData(relatedData)
+                .build();
     }
 }

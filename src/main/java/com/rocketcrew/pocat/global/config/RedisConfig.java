@@ -3,12 +3,15 @@ package com.rocketcrew.pocat.global.config;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
+import com.rocketcrew.pocat.domain.notification.service.NotificationRedisSubscriber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -41,4 +44,15 @@ public class RedisConfig {
         template.setValueSerializer(new StringRedisSerializer());
         return template;
     }
+
+    @Bean
+    public RedisMessageListenerContainer redisMessageListenerContainer(
+            RedisConnectionFactory connectionFactory,
+            NotificationRedisSubscriber subscriber) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.addMessageListener(subscriber, new PatternTopic("notification:*"));
+        return container;
+    }
+
 }

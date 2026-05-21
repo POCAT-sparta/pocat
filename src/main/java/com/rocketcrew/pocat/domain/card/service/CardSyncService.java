@@ -27,6 +27,8 @@ public class CardSyncService {
     private static final String TCGDEX_SET_URL  = "https://api.tcgdex.net/v2/en/sets/";
     private static final String TCGDEX_CARD_URL = "https://api.tcgdex.net/v2/en/cards/";
 
+    //TODO : Spring Batch 적용
+
     // TCGdex는 등급 정보를 제공하지 않으므로 순환 할당 (더미 데이터 성격)
     private static final CardGrade[] GRADES = CardGrade.values();
 

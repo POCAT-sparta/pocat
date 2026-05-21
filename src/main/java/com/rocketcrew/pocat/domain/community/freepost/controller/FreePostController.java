@@ -97,7 +97,6 @@ public class FreePostController {
             @PathVariable Long freePostId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         freePostCommandService.deletePost(freePostId, userDetails.getUserId());
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }
