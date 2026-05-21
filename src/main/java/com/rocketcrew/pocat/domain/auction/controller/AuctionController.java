@@ -12,6 +12,8 @@ import com.rocketcrew.pocat.domain.auction.dto.response.InspectAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.ranking.dto.response.PopularAuctionResponse;
+import com.rocketcrew.pocat.domain.auction.ranking.service.AuctionRankingService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionCommandService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionQueryService;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
@@ -20,6 +22,7 @@ import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +47,15 @@ public class AuctionController {
 
     private final AuctionQueryService auctionQueryService;
     private final AuctionCommandService auctionCommandService;
+    private final AuctionRankingService auctionRankingService;
+
+    // 인기 경매 조회
+    @GetMapping("/v1/auctions/popular")
+    public ResponseEntity<ApiResponseDto<List<PopularAuctionResponse>>> getPopularAuctions(
+            @RequestParam(defaultValue = "10") int size) {
+        List<PopularAuctionResponse> response = auctionRankingService.getPopular(size);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
 
     // 경매 목록 조회(유저)
     @GetMapping("/v1/auctions")
