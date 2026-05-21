@@ -18,6 +18,7 @@ services:
       MANAGEMENT_ENDPOINT_PROMETHEUS_ACCESS: unrestricted
       MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED: "true"
       SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: local
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
@@ -45,6 +46,7 @@ services:
       - "127.0.0.1:3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d  # TCGdex 초기 데이터 (최초 1회 자동 실행)
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s

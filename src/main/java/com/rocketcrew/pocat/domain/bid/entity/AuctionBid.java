@@ -29,4 +29,8 @@ public class AuctionBid extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private BidStatus status;
+
+    public void markOutbid() {
+        this.status = BidStatus.OUTBID;
+    }
 }

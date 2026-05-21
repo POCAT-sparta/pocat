@@ -6,22 +6,40 @@ import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.like.service.LikeQueryService;
+import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import com.rocketcrew.pocat.global.exception.domain.CardException;
+import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuctionQueryService {
 
+    private static final Set<AuctionStatus> PUBLIC_DETAIL_STATUSES = Set.of(
+            AuctionStatus.ACTIVE,
+            AuctionStatus.ENDED,
+            AuctionStatus.NO_BIDDER
+    );
+
     private final AuctionRepository auctionRepository;
+    private final CardQueryService cardQueryService;
+    private final UserQueryService userQueryService;
+    private final LikeQueryService likeQueryService;
 
     public Page<SearchAuctionResponse> getAuctions(
             String keyword,
@@ -42,9 +60,53 @@ public class AuctionQueryService {
         return auctionRepository.searchMyAuctions(sellerId, status, pageable);
     }
 
-    public AuctionResponse getAuction(Long id) {
-        Auction auction = auctionRepository.findById(id)
+    public AuctionResponse getAuction(Long id, Long userId) {
+        Auction auction = findAuctionEntityOrThrow(id);
+        if (!canViewAuctionDetail(auction, userId)) {
+            throw new AuctionException(ErrorCode.AUCTION_NOT_FOUND);
+        }
+        Card card = getAuctionCard(auction.getCardId());
+        User seller = getAuctionSeller(auction.getSellerId());
+        User highestBidder = auction.getHighestBidderId() == null
+                ? null
+                : getAuctionHighestBidder(auction.getHighestBidderId());
+        long likeCount = likeQueryService.countByAuctionId(auction.getId());
+        boolean isLiked = userId != null && likeQueryService.existsByUserIdAndAuctionId(userId, auction.getId());
+
+        return AuctionResponse.of(auction, seller, card, highestBidder, likeCount, isLiked);
+    }
+
+    private boolean canViewAuctionDetail(Auction auction, Long userId) {
+        return PUBLIC_DETAIL_STATUSES.contains(auction.getStatus())
+                || auction.getSellerId().equals(userId);
+    }
+
+    public Auction findAuctionEntityOrThrow(Long id) {
+        return auctionRepository.findById(id)
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
-        return AuctionResponse.from(auction);
+    }
+
+    private Card getAuctionCard(Long cardId) {
+        try {
+            return cardQueryService.getCardEntity(cardId);
+        } catch (CardException e) {
+            throw new AuctionException(ErrorCode.AUCTION_CARD_NOT_FOUND);
+        }
+    }
+
+    private User getAuctionSeller(Long sellerId) {
+        try {
+            return userQueryService.getUserEntity(sellerId);
+        } catch (UserException e) {
+            throw new AuctionException(ErrorCode.AUCTION_SELLER_NOT_FOUND);
+        }
+    }
+
+    private User getAuctionHighestBidder(Long highestBidderId) {
+        try {
+            return userQueryService.getUserEntity(highestBidderId);
+        } catch (UserException e) {
+            throw new AuctionException(ErrorCode.AUCTION_HIGHEST_BIDDER_NOT_FOUND);
+        }
     }
 }
