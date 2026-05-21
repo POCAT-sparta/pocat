@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.service.CardCommandService;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.card.service.CardSyncService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AdminCardController {
 
     private final CardQueryService cardQueryService;
     private final CardCommandService cardCommandService;
+    private final CardSyncService cardSyncService;
 
     @GetMapping("/v1/admin/cards/requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getRequests(
@@ -60,6 +62,17 @@ public class AdminCardController {
     @DeleteMapping("/v1/admin/cards/{cardId}")
     public ResponseEntity<ApiResponseDto<Void>> deleteCard(@PathVariable Long cardId) {
         cardCommandService.deleteCard(cardId);
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
+    }
+
+    /**
+     * TCGdex 전체 카드 수동 동기화 (로컬 초기 데이터 세팅 및 긴급 동기화용)
+     * syncAll()은 @Async라 즉시 응답 반환, 백그라운드에서 동기화 진행
+     * 완료 여부는 서버 로그에서 "[CardSync] 주간 전체 동기화 완료" 메시지로 확인
+     */
+    @PostMapping("/v1/admin/cards/sync")
+    public ResponseEntity<ApiResponseDto<Void>> syncCards() {
+        cardSyncService.syncAll();
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }
