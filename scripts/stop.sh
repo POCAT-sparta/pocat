@@ -7,17 +7,17 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLEAN_FLAG=""
+DOWN_ARGS=()
 
 for arg in "$@"; do
   case $arg in
-    --clean) CLEAN_FLAG="-v" ;;
+    --clean) DOWN_ARGS+=(-v) ;;
   esac
 done
 
 cd "$PROJECT_ROOT"
 
-if [ -n "$CLEAN_FLAG" ]; then
+if [[ " ${DOWN_ARGS[*]} " == *" -v "* ]]; then
   echo "================================================================"
   echo "[경고] 볼륨 삭제 모드: DB, Redis, Kafka 데이터가 모두 삭제됩니다."
   echo "================================================================"
@@ -26,7 +26,8 @@ if [ -n "$CLEAN_FLAG" ]; then
 fi
 
 echo "=== Docker Compose 종료 ==="
-docker compose --profile kafka down $CLEAN_FLAG
+# --profile kafka 는 의도적: Kafka 프로파일 포함 기동 여부와 무관하게 항상 전체 종료
+docker compose --profile kafka down "${DOWN_ARGS[@]}"
 
 echo ""
 echo "=== 종료 완료 — 컨테이너 상태 ==="

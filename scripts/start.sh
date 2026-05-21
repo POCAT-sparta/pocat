@@ -7,11 +7,11 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KAFKA_PROFILE=""
+COMPOSE_ARGS=()
 
 for arg in "$@"; do
   case $arg in
-    --kafka) KAFKA_PROFILE="--profile kafka" ;;
+    --kafka) COMPOSE_ARGS+=(--profile kafka) ;;
   esac
 done
 
@@ -31,7 +31,7 @@ cd "$PROJECT_ROOT"
 
 echo "=== [2/3] Docker Compose 기동 ==="
 cd "$PROJECT_ROOT"
-docker compose $KAFKA_PROFILE up -d
+docker compose "${COMPOSE_ARGS[@]}" up -d
 
 echo "=== [3/3] 백엔드 기동 대기 ==="
 HEALTHY=false
@@ -56,7 +56,7 @@ echo "=== 기동 완료 ==="
 echo "  백엔드:      http://localhost:8080"
 echo "  Prometheus:  http://localhost:9090"
 echo "  Grafana:     http://localhost:3000  (admin / admin)"
-if [ -n "$KAFKA_PROFILE" ]; then
+if [[ ${#COMPOSE_ARGS[@]} -gt 0 ]]; then
   echo "  Kafka UI:    http://localhost:8085"
 fi
 echo ""
