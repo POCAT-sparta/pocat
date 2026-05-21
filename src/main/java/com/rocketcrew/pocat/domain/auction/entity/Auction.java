@@ -90,10 +90,12 @@ public class Auction extends BaseEntity {
         this.reason = reason;
     }
 
-    public void approve(Long inspectedBy, LocalDateTime inspectedAt) {
-        this.status = AuctionStatus.APPROVED;
+    public void approve(Long inspectedBy, LocalDateTime inspectedAt, LocalDateTime startedAt, LocalDateTime endedAt) {
+        this.status = AuctionStatus.ACTIVE;
         this.inspectedBy = inspectedBy;
         this.inspectedAt = inspectedAt;
+        this.startedAt = startedAt;
+        this.endedAt = endedAt;
         this.reason = null;
     }
 

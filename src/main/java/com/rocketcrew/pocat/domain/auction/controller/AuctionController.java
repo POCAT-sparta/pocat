@@ -134,7 +134,7 @@ public class AuctionController {
         InspectAuctionResponse response = auctionCommandService.inspectAuction(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
-
+    // 경매 취소
     @PatchMapping("/v1/admin/auctions/{auctionId}/cancel")
     public ResponseEntity<ApiResponseDto<AdminCancelAuctionResponse>> adminCancelAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,

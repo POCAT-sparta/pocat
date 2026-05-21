@@ -164,11 +164,10 @@ GitHub PR
 플랫폼으로 실물 카드 배송
   ↓
 관리자 검수 (Inspection)
-  ├─ PASSED → Auction status: APPROVED → 검수 완료 정보(inspectedAt / inspectedBy) 저장
+  ├─ PASSED → Auction status: ACTIVE → 검수 완료 정보(inspectedAt / inspectedBy) 저장
+  │          └─ startedAt: 다음날 19:00, endedAt: 3일 후 19:00
   └─ FAILED → Auction status: REJECTED → reason 저장 → 카드 반송 → Notification 발송
 ```
-
-검수 통과 후 즉시 ACTIVE로 전환하지 않고 `APPROVED` 상태로 보관한 뒤, 매일 19시에 스케줄러가 `APPROVED -> ACTIVE` 전환과 `startedAt`, `endedAt` 설정을 수행한다.
 
 ---
 
@@ -382,7 +381,7 @@ likes ───────────────── auctions (auction_id)
 
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
-| `status` | VARCHAR(30) | PENDING / INSPECTING / APPROVED / REJECTED / ACTIVE / ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING |
+| `status` | VARCHAR(30) | PENDING / INSPECTING / REJECTED / ACTIVE / ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING |
 | `buyout_price` | BIGINT | 즉시구매가 (선택값, null 가능) |
 | `highest_price` | BIGINT | 현재 최고 입찰가 (실시간 갱신) |
 | `highest_bidder_id` | BIGINT | 현재 최고 입찰자 FK |

@@ -32,6 +32,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -120,7 +121,12 @@ public class AuctionCommandService {
 
         if (request.result() == AuctionInspectionResult.PASSED) {
             validateAuctionDataForInspection(auction);
-            auction.approve(adminId, LocalDateTime.now());
+            LocalDateTime startedAt = LocalDateTime.now()
+                    .toLocalDate()
+                    .plusDays(1)
+                    .atTime(LocalTime.of(19, 0));
+            LocalDateTime endedAt = startedAt.plusDays(3);
+            auction.approve(adminId, LocalDateTime.now(), startedAt, endedAt);
             return InspectAuctionResponse.from(auction);
         }
 
