@@ -23,6 +23,11 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final int MAX_FAIL_COUNT = 5;
+    private static final long LOCK_DURATION_MINUTES = 5;
+    private static final String FAIL_KEY_PREFIX = "login:fail:";
+    private static final String LOCK_KEY_PREFIX = "login:lock:";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -48,14 +53,45 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        String email = request.email();
+
+        // 잠금 확인 — 5회 실패 후 5분 잠금
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(LOCK_KEY_PREFIX + email))) {
+            throw new AuthException(ErrorCode.LOGIN_LOCKED);
+        }
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            handleLoginFailure(email);
             throw new AuthException(ErrorCode.USER_INFO_MISMATCH);
         }
 
+        // 로그인 성공 시 실패 카운터 초기화
+        redisTemplate.delete(FAIL_KEY_PREFIX + email);
         return issueTokens(user);
+    }
+
+    /**
+     * 로그인 실패 횟수를 Redis에 누적하고 MAX_FAIL_COUNT 도달 시 계정을 잠근다.
+     * - 첫 실패 시 TTL(5분)을 설정해 5분 단위로 카운터가 리셋된다.
+     * - MAX_FAIL_COUNT 도달 시 fail 키를 삭제하고 lock 키를 별도 저장한다.
+     */
+    private void handleLoginFailure(String email) {
+        String failKey = FAIL_KEY_PREFIX + email;
+        Long count = redisTemplate.opsForValue().increment(failKey);
+
+        if (count != null && count == 1) {
+            // 첫 실패: TTL 시작 (5분 내 5회 초과 시 잠금)
+            redisTemplate.expire(failKey, LOCK_DURATION_MINUTES, TimeUnit.MINUTES);
+        }
+
+        if (count != null && count >= MAX_FAIL_COUNT) {
+            redisTemplate.delete(failKey);
+            redisTemplate.opsForValue()
+                    .set(LOCK_KEY_PREFIX + email, "locked", LOCK_DURATION_MINUTES, TimeUnit.MINUTES);
+        }
     }
 
     public TokenResponse reissue(ReissueRequest request) {

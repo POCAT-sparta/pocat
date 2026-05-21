@@ -383,7 +383,9 @@ Authorization: Bearer {accessToken}
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
-| `keyword` | String | N | 카드명 / 시리즈명 / 세트명 검색 |
+| `keyword` | String | N | 카드명 / 시리즈명 / 세트명 통합 검색 (2자 이상) |
+| `series` | String | N | 시리즈명 필터 |
+| `setName` | String | N | 확장팩명 필터 |
 | `grade` | String | N | 등급 필터 (PSA_10, PSA_9, BGS_10 등) |
 | `category` | String | N | 카테고리 필터 (POKEMON, TRAINERS, ENERGY, UNKNOWN) |
 | `page` | int | N | 페이지 번호 (default: 0) |
@@ -673,11 +675,49 @@ Authorization: Bearer {accessToken}
 - **DELETE** `/api/v1/admin/cards/{cardId}`
 - **권한**: `ADMIN`
 
-**Response** `204 No Content`
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
-### 3.9 TCGdex 자동 동기화 (스케줄러)
+### 3.9 카드 평균 거래가 조회
+
+- **GET** `/api/v1/cards/{cardId}/average-price`
+- **권한**: `PUBLIC`
+- **설명**: 해당 카드의 최근 체결된 주문 기준 평균 거래가를 조회한다.
+
+**Path Variables**
+
+| 변수 | 타입 | 설명 |
+|---|---|---|
+| `cardId` | Long | 카드 ID |
+
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": {
+    "cardId": 1,
+    "averagePrice": 250000,
+    "transactionCount": 5,
+    "periodStart": "2026-04-21T00:00:00",
+    "periodEnd": "2026-05-21T00:00:00"
+  },
+  "message": ""
+}
+```
+
+---
+
+### 3.10 TCGdex 자동 동기화 (스케줄러)
 
 - **스케줄**: 매주 일요일 00:00 자동 실행
 - **권한**: 시스템 내부 실행 (API 엔드포인트 없음)
@@ -693,7 +733,7 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 3.10 등록 요청 전체 목록 (관리자)
+### 3.11 등록 요청 전체 목록 (관리자)
 
 - **GET** `/api/v1/admin/cards/requests`
 - **권한**: `ADMIN`
