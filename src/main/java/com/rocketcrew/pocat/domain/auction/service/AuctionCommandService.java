@@ -22,6 +22,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -48,6 +49,7 @@ public class AuctionCommandService {
     private final AuctionBidRepository auctionBidRepository;
     private final CardQueryService cardQueryService;
     private final UserQueryService userQueryService;
+    private final EntityManager entityManager;
     private final RedissonClient redissonClient;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
@@ -99,6 +101,7 @@ public class AuctionCommandService {
         }
         releaseLockAfterTransaction(lock);
 
+        entityManager.detach(auction);
         Auction latestAuction = auctionRepository.findById(id)
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
         validateCancellable(latestAuction);
@@ -117,15 +120,26 @@ public class AuctionCommandService {
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
         validateInspectable(auction);
 
+        RLock lock = redissonClient.getLock(AUCTION_LOCK_KEY_PREFIX + id);
+        if (!acquireLock(lock)) {
+            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
+        }
+        releaseLockAfterTransaction(lock);
+
+        entityManager.detach(auction);
+        Auction latestAuction = auctionRepository.findById(id)
+                .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
+        validateInspectable(latestAuction);
+
         if (request.result() == AuctionInspectionResult.PASSED) {
-            validateAuctionDataForInspection(auction);
-            auction.approve(adminId, LocalDateTime.now());
-            return InspectAuctionResponse.from(auction);
+            validateAuctionDataForInspection(latestAuction);
+            latestAuction.approve(adminId, LocalDateTime.now());
+            return InspectAuctionResponse.from(latestAuction);
         }
 
         validateRejectReason(request.reason());
-        auction.reject(adminId, LocalDateTime.now(), request.reason().trim());
-        return InspectAuctionResponse.from(auction);
+        latestAuction.reject(adminId, LocalDateTime.now(), request.reason().trim());
+        return InspectAuctionResponse.from(latestAuction);
     }
 
     private void validateSeller(Auction auction, Long sellerId) {
