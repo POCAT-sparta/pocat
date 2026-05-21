@@ -1276,6 +1276,7 @@ Authorization: Bearer {accessToken}
 
 - **PATCH** `/api/v1/admin/auctions/{auctionId}/cancel`
 - **권한**: `ADMIN`
+- **설명**: 취소 사유를 `reason`에 저장하고, 현재 최고입찰이 있으면 해당 입찰 상태를 `CANCELLED`로 변경한다. 이후 최고입찰자 알림은 Kafka로 발행한다.
 
 **Request Body**
 
@@ -1292,7 +1293,8 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "auctionId": 1,
-    "status": "CANCELLED"
+    "status": "CANCELLED",
+    "reason": "규정 위반"
   },
   "message": ""
 }
