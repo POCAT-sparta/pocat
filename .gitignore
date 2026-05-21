@@ -39,6 +39,13 @@ out/
 ### Environment ###
 .env
 
+### Test artifacts ###
+payment-test.html
+portone-sdk.js
+src/main/resources/static/browser-sdk.js
+src/main/resources/static/portone-sdk.js
+src/main/resources/static/payment-test.html
+
 ### Claude Code ###
 .claude/
 
