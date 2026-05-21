@@ -90,18 +90,22 @@ public class Auction extends BaseEntity {
         this.reason = reason;
     }
 
-    public void approve(Long inspectedBy, LocalDateTime inspectedAt, LocalDateTime startedAt, LocalDateTime endedAt) {
-        this.status = AuctionStatus.ACTIVE;
+    public void approve(Long inspectedBy, LocalDateTime inspectedAt) {
+        this.status = AuctionStatus.APPROVED;
         this.inspectedBy = inspectedBy;
         this.inspectedAt = inspectedAt;
-        this.startedAt = startedAt;
-        this.endedAt = endedAt;
+        this.startedAt = null;
+        this.endedAt = null;
         this.reason = null;
     }
 
-    public void reject(String reason) {
+    public void reject(Long inspectedBy, LocalDateTime inspectedAt, String reason) {
         this.status = AuctionStatus.REJECTED;
+        this.inspectedBy = inspectedBy;
+        this.inspectedAt = inspectedAt;
         this.reason = reason;
+        this.startedAt = null;
+        this.endedAt = null;
     }
 
     public void updateHighestBid(Long highestPrice, Long highestBidderId) {

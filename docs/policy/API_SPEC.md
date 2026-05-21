@@ -1261,12 +1261,10 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "auctionId": 1,
-    "status": "ACTIVE",
+    "status": "APPROVED",
     "reason": null,
     "inspectedAt": "2026-05-21T19:00:00",
-    "inspectedBy": 1,
-    "startedAt": "2026-05-22T19:00:00",
-    "endedAt": "2026-05-25T19:00:00"
+    "inspectedBy": 1
   },
   "message": ""
 }
