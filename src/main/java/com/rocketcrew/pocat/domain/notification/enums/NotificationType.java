@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.notification.entity;
+package com.rocketcrew.pocat.domain.notification.enums;
 
 public enum NotificationType {
     BID_OUTBID,
