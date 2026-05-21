@@ -58,7 +58,6 @@ public class CommentController {
             @PathVariable Long commentId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         commentCommandService.deleteComment(commentId, userDetails.getUserId());
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }

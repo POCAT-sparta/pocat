@@ -92,7 +92,6 @@ public class TradePostController {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long tradePostId) {
         tradePostCommandService.deletePost(tradePostId, customUserDetails.getUserId(), customUserDetails.getRole());
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }
