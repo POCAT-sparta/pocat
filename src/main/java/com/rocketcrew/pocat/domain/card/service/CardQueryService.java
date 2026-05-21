@@ -1,6 +1,5 @@
 package com.rocketcrew.pocat.domain.card.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
@@ -21,6 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -47,14 +50,14 @@ public class CardQueryService {
         }
 
         String cacheKey = buildSearchCacheKey(condition, pageable);
-        String cached = redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            try {
+        try {
+            String cached = redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
                 CardSearchCacheDto dto = objectMapper.readValue(cached, CardSearchCacheDto.class);
                 return new PageImpl<>(dto.content(), pageable, dto.totalElements());
-            } catch (Exception e) {
-                log.warn("[CardCache] 검색 캐시 역직렬화 실패, DB 조회로 폴백: {}", e.getMessage());
             }
+        } catch (Exception e) {
+            log.warn("[CardCache] 검색 캐시 조회/역직렬화 실패, DB 조회로 폴백: {}", e.getMessage());
         }
 
         Page<CardResponse> page = cardRepository.searchCards(condition, pageable)
@@ -82,13 +85,13 @@ public class CardQueryService {
 
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
         String cacheKey = AVG_PRICE_CACHE_PREFIX + cardId;
-        String cached = redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            try {
+        try {
+            String cached = redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
                 return objectMapper.readValue(cached, CardAveragePriceResponse.class);
-            } catch (Exception e) {
-                log.warn("[CardCache] 평균가 캐시 역직렬화 실패, DB 조회로 폴백: {}", e.getMessage());
             }
+        } catch (Exception e) {
+            log.warn("[CardCache] 평균가 캐시 조회/역직렬화 실패, DB 조회로 폴백: {}", e.getMessage());
         }
 
         CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(cardId);
@@ -106,19 +109,29 @@ public class CardQueryService {
     }
 
     /**
-     * 카드 검색 조건 + 페이지 정보를 조합해 Redis 캐시 키를 생성한다.
+     * 카드 검색 조건 + 페이지 정보를 SHA-256 해시로 변환해 Redis 캐시 키를 생성한다.
+     * 단순 문자열 결합 시 값에 구분자(:)가 포함될 경우 키 충돌이 발생할 수 있어
+     * 해시 방식으로 안정화한다.
      */
     private String buildSearchCacheKey(CardSearchCondition condition, Pageable pageable) {
-        return SEARCH_CACHE_PREFIX +
-                Objects.toString(condition.keyword(), "") + ":" +
-                Objects.toString(condition.series(), "") + ":" +
-                Objects.toString(condition.setName(), "") + ":" +
-                Objects.toString(condition.grade(), "") + ":" +
-                Objects.toString(condition.category(), "") + ":" +
-                Objects.toString(condition.status(), "") + ":" +
-                pageable.getPageNumber() + ":" +
-                pageable.getPageSize() + ":" +
+        String raw = Objects.toString(condition.keyword(), "") + "|" +
+                Objects.toString(condition.series(), "") + "|" +
+                Objects.toString(condition.setName(), "") + "|" +
+                Objects.toString(condition.grade(), "") + "|" +
+                Objects.toString(condition.category(), "") + "|" +
+                Objects.toString(condition.status(), "") + "|" +
+                pageable.getPageNumber() + "|" +
+                pageable.getPageSize() + "|" +
                 pageable.getSort();
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
+            return SEARCH_CACHE_PREFIX + HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256은 Java 표준 보장 — 사실상 도달 불가 분기
+            log.warn("[CardCache] SHA-256 해시 실패, raw 키 사용: {}", e.getMessage());
+            return SEARCH_CACHE_PREFIX + raw;
+        }
     }
 
     /**

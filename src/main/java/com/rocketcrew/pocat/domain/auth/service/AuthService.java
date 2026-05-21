@@ -13,10 +13,12 @@ import com.rocketcrew.pocat.global.exception.domain.AuthException;
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -24,9 +26,30 @@ import java.util.concurrent.TimeUnit;
 public class AuthService {
 
     private static final int MAX_FAIL_COUNT = 5;
-    private static final long LOCK_DURATION_MINUTES = 5;
+    private static final long LOCK_DURATION_SECONDS = 300; // 5분
     private static final String FAIL_KEY_PREFIX = "login:fail:";
     private static final String LOCK_KEY_PREFIX = "login:lock:";
+
+    /**
+     * Lua 스크립트: INCR + 첫 실패 TTL 설정 + 임계치 도달 시 잠금 전환을 원자적으로 처리.
+     * 반환값: 1 = 잠금 전환됨, 0 = 아직 임계치 미달
+     */
+    private static final DefaultRedisScript<Long> LOGIN_FAIL_SCRIPT = new DefaultRedisScript<>("""
+            local failKey  = KEYS[1]
+            local lockKey  = KEYS[2]
+            local max      = tonumber(ARGV[1])
+            local ttl      = tonumber(ARGV[2])
+            local count    = redis.call('INCR', failKey)
+            if count == 1 then
+                redis.call('EXPIRE', failKey, ttl)
+            end
+            if count >= max then
+                redis.call('DEL', failKey)
+                redis.call('SET', lockKey, 'locked', 'EX', ttl)
+                return 1
+            end
+            return 0
+            """, Long.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -55,16 +78,17 @@ public class AuthService {
     public TokenResponse login(LoginRequest request) {
         String email = request.email();
 
-        // 잠금 확인 — 5회 실패 후 5분 잠금
+        // 잠금 확인 — 5회 실패 후 5분 잠금 (존재하지 않는 이메일도 동일하게 적용)
         if (Boolean.TRUE.equals(redisTemplate.hasKey(LOCK_KEY_PREFIX + email))) {
             throw new AuthException(ErrorCode.LOGIN_LOCKED);
         }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
+        User user = userRepository.findByEmail(email).orElse(null);
 
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        // 이메일 미존재 또는 비밀번호 불일치 모두 실패 카운트에 포함
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
             handleLoginFailure(email);
+            // 이메일 존재 여부를 노출하지 않도록 동일한 에러 반환
             throw new AuthException(ErrorCode.USER_INFO_MISMATCH);
         }
 
@@ -74,24 +98,18 @@ public class AuthService {
     }
 
     /**
-     * 로그인 실패 횟수를 Redis에 누적하고 MAX_FAIL_COUNT 도달 시 계정을 잠근다.
-     * - 첫 실패 시 TTL(5분)을 설정해 5분 단위로 카운터가 리셋된다.
-     * - MAX_FAIL_COUNT 도달 시 fail 키를 삭제하고 lock 키를 별도 저장한다.
+     * Lua 스크립트로 INCR + TTL + 잠금 전환을 원자적으로 처리한다.
+     * - 존재하지 않는 이메일 시도도 동일하게 카운트
+     * - 첫 실패 시 TTL 자동 설정으로 5분 슬라이딩 윈도우 보장
+     * - MAX_FAIL_COUNT 도달 시 fail 키 삭제 후 lock 키 생성 (원자적)
      */
     private void handleLoginFailure(String email) {
-        String failKey = FAIL_KEY_PREFIX + email;
-        Long count = redisTemplate.opsForValue().increment(failKey);
-
-        if (count != null && count == 1) {
-            // 첫 실패: TTL 시작 (5분 내 5회 초과 시 잠금)
-            redisTemplate.expire(failKey, LOCK_DURATION_MINUTES, TimeUnit.MINUTES);
-        }
-
-        if (count != null && count >= MAX_FAIL_COUNT) {
-            redisTemplate.delete(failKey);
-            redisTemplate.opsForValue()
-                    .set(LOCK_KEY_PREFIX + email, "locked", LOCK_DURATION_MINUTES, TimeUnit.MINUTES);
-        }
+        redisTemplate.execute(
+                LOGIN_FAIL_SCRIPT,
+                List.of(FAIL_KEY_PREFIX + email, LOCK_KEY_PREFIX + email),
+                String.valueOf(MAX_FAIL_COUNT),
+                String.valueOf(LOCK_DURATION_SECONDS)
+        );
     }
 
     public TokenResponse reissue(ReissueRequest request) {

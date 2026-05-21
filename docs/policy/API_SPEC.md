@@ -53,9 +53,8 @@
 
 | 상태 코드 | 의미 |
 |---|---|
-| `200 OK` | 조회·수정 성공 |
+| `200 OK` | 조회·수정·삭제 성공 (ApiResponseDto 래핑) |
 | `201 Created` | 생성 성공 |
-| `204 No Content` | 삭제 성공 |
 | `400 Bad Request` | 요청 값 검증 실패 |
 | `401 Unauthorized` | 미인증 요청 |
 | `403 Forbidden` | 권한 없음 |
