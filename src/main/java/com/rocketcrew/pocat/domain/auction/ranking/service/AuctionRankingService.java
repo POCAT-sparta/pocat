@@ -88,7 +88,8 @@ public class AuctionRankingService {
         try {
             List<Auction> activeAuctions = auctionRepository.findAllByStatus(AuctionStatus.ACTIVE);
             if (activeAuctions.isEmpty()) {
-                log.debug("No active auctions — skipping ranking refresh");
+                redisTemplate.delete(RANKING_KEY);
+                log.debug("No active auctions — cleared stale ranking");
                 return;
             }
 
@@ -112,7 +113,8 @@ public class AuctionRankingService {
             }
 
             if (added == 0) {
-                log.debug("No auctions with score > 0 — keeping existing ranking");
+                redisTemplate.delete(RANKING_KEY);
+                log.debug("No auctions with score > 0 — cleared stale ranking");
                 return;
             }
 
