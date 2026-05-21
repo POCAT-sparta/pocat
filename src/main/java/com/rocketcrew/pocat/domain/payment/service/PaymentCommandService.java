@@ -134,9 +134,9 @@ public class PaymentCommandService {
             throw new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY);
         }
 
-         if (signature != null && !portOneSignatureVerifier.verify(signature, rawBody)) {
-             throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
-         }
+        if (signature == null || !portOneSignatureVerifier.verify(signature, rawBody)) {
+            throw new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID);
+        }
 
         // ── 아래는 서명 검증 완료 후 활성화 ────────────────────────────────────
         WebhookRequest request;

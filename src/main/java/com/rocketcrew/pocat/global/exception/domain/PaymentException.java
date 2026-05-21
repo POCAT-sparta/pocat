@@ -8,4 +8,8 @@ public class PaymentException extends ServiceException {
     public PaymentException(ErrorCode errorCode) {
         super(errorCode);
     }
+
+    public PaymentException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode, cause);
+    }
 }

@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.RestClientException;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -26,8 +26,9 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOneRawResponse.class);
             return toResponse(raw);
-        } catch (RestClientResponseException e) {
-            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+        } catch (RestClientException e) {
+            log.error("PortOne 결제 조회 실패 - paymentUid: {}", paymentUid, e);
+            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, e);
         }
     }
 
@@ -50,8 +51,9 @@ public class PortOneClient {
                     .retrieve()
                     .body(PortOneRawResponse.class);
             return toResponse(raw);
-        } catch (RestClientResponseException e) {
-            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+        } catch (RestClientException e) {
+            log.error("PortOne 빌링키 결제 실패 - paymentUid: {}", paymentUid, e);
+            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, e);
         }
     }
 
