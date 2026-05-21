@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/notifications")
+@RequestMapping("/api")
 public class NotificationController {
 
     private final NotificationQueryService notificationQueryService;
@@ -30,7 +30,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/{notificationId}/read")
+    @PutMapping("/notifications/{notificationId}/read")
     public ResponseEntity<ApiResponseDto<NotificationResponse>> read(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long notificationId
@@ -40,7 +40,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/read")
+    @PutMapping("/notifications/read")
     public ResponseEntity<ApiResponseDto<Void>> readAll(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -48,7 +48,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 
-    @DeleteMapping("/{notificationId}")
+    @DeleteMapping("/notifications/{notificationId}")
     public ResponseEntity<ApiResponseDto<Void>> delete(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long notificationId
