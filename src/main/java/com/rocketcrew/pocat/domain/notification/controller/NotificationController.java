@@ -20,7 +20,7 @@ public class NotificationController {
     private final NotificationQueryService notificationQueryService;
     private final NotificationCommandService notificationCommandService;
 
-    @GetMapping
+    @GetMapping("/notifications")
     public ResponseEntity<ApiResponseDto<NotificationListResponse>> getNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Long cursor
@@ -57,7 +57,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 
-    @DeleteMapping
+    @DeleteMapping("/notifications")
     public ResponseEntity<ApiResponseDto<Void>> deleteAll(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
