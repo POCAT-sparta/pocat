@@ -5,6 +5,8 @@ import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.security.core.Authentication;
@@ -58,7 +60,18 @@ public class NotificationWebSocketEventListener {
             }
 
             NotificationListResponse pending = notificationQueryService.getNotifications(pathUserId, null);
-            messagingTemplate.convertAndSend(destination, pending);
+
+            // 구독한 세션에만 전송 — convertAndSend는 동일 destination의 모든 구독자에게 브로드캐스트되므로
+            // 세션 ID를 헤더에 지정해 해당 세션에만 초기 목록을 전달
+            SimpMessageHeaderAccessor replyHeaders = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
+            replyHeaders.setSessionId(accessor.getSessionId());
+            replyHeaders.setLeaveMutable(true);
+            messagingTemplate.convertAndSendToUser(
+                    accessor.getSessionId(),
+                    destination,
+                    pending,
+                    replyHeaders.getMessageHeaders()
+            );
         } catch (NumberFormatException e) {
             log.warn("알림 구독 경로에서 userId 파싱 실패: destination={}", destination);
         }

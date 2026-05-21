@@ -14,15 +14,17 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     Page<Notification> findByUserId(Long userId, Pageable pageable);
 
-    // 커서 없을 때 (처음 조회)
-    List<Notification> findTop20ByUserIdAndIsReadFalseOrderByCreatedAtDesc(Long userId);
+    // 커서 없을 때 (처음 조회) — pageSize+1 조회로 hasNext 정확하게 판단
+    List<Notification> findTop21ByUserIdAndIsReadFalseOrderByIdDesc(Long userId);
 
-    // 커서 있을 때 (다음 페이지)
-    List<Notification> findTop20ByUserIdAndIsReadFalseAndIdLessThanOrderByCreatedAtDesc(
+    // 커서 있을 때 (다음 페이지) — 정렬 키(id)와 커서 키(id)를 동일하게 유지
+    List<Notification> findTop21ByUserIdAndIsReadFalseAndIdLessThanOrderByIdDesc(
             Long userId, Long cursor);
 
-    // 읽음 처리용
-    List<Notification> findByUserIdAndIsReadFalse(Long userId);
+    // 전체 읽음 처리용 벌크 업데이트
+    @Modifying
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.userId = :userId AND n.isRead = false AND n.deletedAt IS NULL")
+    void markAllReadByUserId(@Param("userId") Long userId);
 
     // 전체 소프트 삭제용 — @SQLDelete를 우회하는 벌크 DELETE 대신 직접 UPDATE
     @Modifying

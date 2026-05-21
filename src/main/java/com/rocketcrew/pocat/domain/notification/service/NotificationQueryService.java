@@ -19,13 +19,14 @@ public class NotificationQueryService {
 
     public NotificationListResponse getNotifications(Long userId, Long cursor) {
         List<Notification> notifications = (cursor == null)
-                ? notificationRepository.findTop20ByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
-                : notificationRepository.findTop20ByUserIdAndIsReadFalseAndIdLessThanOrderByCreatedAtDesc(userId, cursor);
+                ? notificationRepository.findTop21ByUserIdAndIsReadFalseOrderByIdDesc(userId)
+                : notificationRepository.findTop21ByUserIdAndIsReadFalseAndIdLessThanOrderByIdDesc(userId, cursor);
 
-        boolean hasNext = notifications.size() == 20;
-        Long nextCursor = hasNext ? notifications.get(notifications.size() - 1).getId() : null;
+        boolean hasNext = notifications.size() == 21;
+        List<Notification> page = hasNext ? notifications.subList(0, 20) : notifications;
+        Long nextCursor = hasNext ? page.get(page.size() - 1).getId() : null;
 
-        List<NotificationResponse> content = notifications.stream()
+        List<NotificationResponse> content = page.stream()
                 .map(NotificationResponse::from)
                 .toList();
 

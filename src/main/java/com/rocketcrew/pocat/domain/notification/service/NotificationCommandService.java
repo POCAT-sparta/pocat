@@ -14,8 +14,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -55,8 +53,7 @@ public class NotificationCommandService {
 
     // 전체 읽음 처리 (미읽음만)
     public void readAll(Long userId) {
-        List<Notification> unread = notificationRepository.findByUserIdAndIsReadFalse(userId);
-        unread.forEach(Notification::read);
+        notificationRepository.markAllReadByUserId(userId);
     }
 
     // 개별 삭제
