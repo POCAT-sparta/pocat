@@ -35,7 +35,7 @@ public enum ErrorCode {
     AUCTION_CARD_NOT_ACTIVE(HttpStatus.CONFLICT, "ACTIVE 상태의 카드만 경매에 등록할 수 있습니다."),
     AUCTION_SELLER_NOT_FOUND(HttpStatus.NOT_FOUND, "경매 판매자를 찾을 수 없습니다."),
     AUCTION_HIGHEST_BIDDER_NOT_FOUND(HttpStatus.NOT_FOUND, "경매 최고 입찰자를 찾을 수 없습니다."),
-    AUCTION_NOT_INSPECTING(HttpStatus.CONFLICT, "INSPECTING 상태의 경매만 검수할 수 있습니다."),
+    AUCTION_NOT_INSPECTING(HttpStatus.CONFLICT, "PENDING 또는 INSPECTING 상태의 경매만 검수할 수 있습니다."),
     AUCTION_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "사유를 입력해주세요."),
 
     // Bid

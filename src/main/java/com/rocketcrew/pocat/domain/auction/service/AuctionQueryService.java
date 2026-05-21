@@ -50,9 +50,8 @@ public class AuctionQueryService {
             AuctionStatus status,
             Pageable pageable
     ) {
-        AuctionStatus targetStatus = status == null ? AuctionStatus.PENDING : status;
         AuctionSearchCondition condition = new AuctionSearchCondition(
-                keyword, series, setName, grade, category, targetStatus);
+                keyword, series, setName, grade, category, status);
         return auctionRepository.searchAuctions(condition, pageable);
     }
 

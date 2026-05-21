@@ -75,7 +75,7 @@ public class AuctionCommandService {
     public InspectAuctionResponse inspectAuction(Long adminId, Long id, InspectAuctionRequest request) {
         Auction auction = auctionRepository.findById(id)
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
-        validateInspecting(auction);
+        validateInspectable(auction);
 
         if (request.result() == AuctionInspectionResult.PASSED) {
             validateAuctionDataForInspection(auction);
@@ -100,8 +100,10 @@ public class AuctionCommandService {
         }
     }
 
-    private void validateInspecting(Auction auction) {
-        if (auction.getStatus() != AuctionStatus.INSPECTING) {
+
+    private void validateInspectable(Auction auction) {
+        if (auction.getStatus() != AuctionStatus.PENDING
+                && auction.getStatus() != AuctionStatus.INSPECTING) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_INSPECTING);
         }
     }

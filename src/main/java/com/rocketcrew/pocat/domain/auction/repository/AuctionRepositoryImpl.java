@@ -11,6 +11,7 @@ import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.QAuction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
+import com.rocketcrew.pocat.domain.user.entity.QUser;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import lombok.RequiredArgsConstructor;
@@ -49,9 +50,12 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
     }
 
     private Page<SearchAuctionResponse> fetchPage(Pageable pageable, QAuction auction, QCard card, BooleanBuilder where) {
+        QUser seller = QUser.user;
         List<SearchAuctionResponse> content = queryFactory
                 .select(Projections.constructor(SearchAuctionResponse.class,
                         auction.id,
+                        auction.sellerId,
+                        seller.nickname,
                         auction.title,
                         card.id,
                         card.name,
@@ -66,6 +70,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.createdAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .orderBy(orderSpecifiers(pageable, auction))
                 .offset(pageable.getOffset())
@@ -76,6 +81,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .select(auction.count())
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .fetchOne();
 

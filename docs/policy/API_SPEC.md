@@ -814,6 +814,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 1,
+        "sellerId": 2,
+        "sellerNickname": "카드마스터",
         "title": "PSA 10 리자몽 경매",
         "cardId": 1,
         "cardName": "리자몽",
@@ -851,7 +853,7 @@ Authorization: Bearer {accessToken}
 | `series` | String | N | 카드 시리즈 필터                         |
 | `setName` | String | N | 카드 확장팩 이름 필터                      |
 | `grade`  | String | N | 카드 등급 필터                          |
-| `status` | String | N | 경매 상태 필터 (default: PENDING)        |
+| `status` | String | N | 경매 상태 필터 (미입력 시 전체 조회)        |
 | `page`   | int | N | 페이지 번호 (default: 0)               |
 | `size`   | int | N | 페이지 크기 (default: 20)              |
 | `sort`   | String | N | 정렬 기준 (default: createdAt,desc then id,desc) |
@@ -865,6 +867,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 42,
+        "sellerId": 2,
+        "sellerNickname": "카드마스터",
         "title": "PSA 10 피카츄 1세대 경매",
         "cardId": 1,
         "cardName": "피카츄",
@@ -913,6 +917,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 42,
+        "sellerId": 2,
+        "sellerNickname": "카드마스터",
         "title": "PSA 10 피카츄 1세대 경매",
         "cardId": 1,
         "cardName": "피카츄",
@@ -1237,6 +1243,7 @@ Authorization: Bearer {accessToken}
 
 - **PATCH** `/api/v1/admin/auctions/{auctionId}/inspect`
 - **권한**: `ADMIN`
+- **설명**: `PENDING` 또는 `INSPECTING` 상태의 경매를 검수할 수 있다.
 
 **Request Body**
 

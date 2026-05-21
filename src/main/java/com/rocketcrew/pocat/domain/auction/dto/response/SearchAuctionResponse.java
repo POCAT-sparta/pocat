@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 public record SearchAuctionResponse(
         Long auctionId,
+        Long sellerId,
+        String sellerNickname,
         String title,
         Long cardId,
         String cardName,
