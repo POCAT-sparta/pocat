@@ -4,7 +4,7 @@
 # 사용법: ./scripts/stop.sh          컨테이너 종료 (볼륨 유지)
 #         ./scripts/stop.sh --clean  컨테이너 + 볼륨 삭제 (데이터 초기화)
 # ================================================================
-set -e
+set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLEAN_FLAG=""
