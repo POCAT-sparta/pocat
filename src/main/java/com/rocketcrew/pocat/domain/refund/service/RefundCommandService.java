@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.refund.dto.request.CreateRefundRequest;
 import com.rocketcrew.pocat.domain.refund.dto.request.RejectRefundRequest;
@@ -68,7 +69,7 @@ public class RefundCommandService {
         }
 
         // 환불 금액 = 결제 금액 전액 (서버에서 자동 확정)
-        Payment payment = paymentRepository.findByOrderId(request.orderId())
+        Payment payment = paymentRepository.findByOrderIdAndStatus(request.orderId(), PaymentStatus.COMPLETED)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
 
         Refund refund = Refund.builder()
