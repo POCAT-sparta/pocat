@@ -9,6 +9,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.math.RoundingMode;
 import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -56,7 +58,9 @@ public class SettlementCommandService {
         try {
             settlementRepository.save(settlement);
         } catch (DataIntegrityViolationException e) {
-            // 동시 요청 레이스 컨디션 - 다른 스레드가 이미 생성한 것으로 간주
+            // orderId 또는 settlementUid 중복: 동시 요청 레이스 컨디션으로 다른 스레드가 먼저 생성
+            // settlementUid 충돌(TSID 생성 오류)인 경우는 재시도 없이 로그만 남김
+            log.warn("정산 생성 중복 예외 (무시) orderId={} msg={}", order.getId(), e.getMessage());
         }
     }
 }

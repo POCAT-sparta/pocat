@@ -34,7 +34,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:*", "https://*.ngrok-free.dev", "https://*.ngrok-free.app", "null"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -57,7 +57,6 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/*.html", "/*.js").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
@@ -72,9 +71,7 @@ public class SecurityConfig {
                                 "/api/v1/posts/trade/**",
                                 "/api/v1/comments/**").permitAll()
                         // PortOne 서버가 직접 호출하는 Webhook — JWT 인증 없음
-                        // 단, 서명 검증(X-PortOne-Signature) TODO 기간에는 서비스 레이어에서
-                        // PORTONE_NOT_INTEGRATED 예외로 상태 변경 경로 전체를 차단한다.
-                        // 서명 검증 구현 완료 후 서비스 레이어 fail-closed 블록을 제거할 것.
+                        // X-PortOne-Signature HMAC-SHA256 서명 검증은 PortOneSignatureVerifier에서 완전 구현됨
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

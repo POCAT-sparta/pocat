@@ -66,7 +66,10 @@ public enum ErrorCode {
     PAYMENT_CANNOT_REFUND(HttpStatus.CONFLICT, "환불 처리가 불가능한 결제 상태입니다."),
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.FORBIDDEN, "Webhook 서명 검증에 실패했습니다."),
     WEBHOOK_EMPTY_BODY(HttpStatus.BAD_REQUEST, "Webhook 요청 본문이 비어 있습니다. 인프라 설정을 확인하세요."),
+    WEBHOOK_PARSE_FAILED(HttpStatus.BAD_REQUEST, "Webhook 요청 본문 파싱에 실패했습니다."),
+    WEBHOOK_INVALID_PAYLOAD(HttpStatus.BAD_REQUEST, "Webhook 필수 필드(status·amount)가 누락되었습니다."),
     PORTONE_NOT_INTEGRATED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 연동이 완료되지 않았습니다."),
+    PORTONE_CANCEL_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 취소(환불) 요청에 실패했습니다."),
     PAYMENT_STATUS_NOT_PAID(HttpStatus.BAD_REQUEST, "PortOne 결제 상태가 PAID가 아닙니다."),
 
     // Refund
@@ -75,11 +78,13 @@ public enum ErrorCode {
     REFUND_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일 주문에 이미 진행 중이거나 완료된 환불이 존재합니다."),
     REFUND_BUYER_MISMATCH(HttpStatus.FORBIDDEN, "환불 요청자와 주문 구매자가 일치하지 않습니다."),
     REFUND_NOT_REQUESTED(HttpStatus.CONFLICT, "REQUESTED 상태의 환불만 처리할 수 있습니다."),
+    REFUND_PORTONE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 환불 요청에 실패했습니다. 자동 재시도가 예약되었습니다."),
 
     // Settlement
     SETTLEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "정산을 찾을 수 없습니다."),
     SETTLEMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 정산이 완료된 건입니다."),
     SETTLEMENT_CANNOT_COMPLETE(HttpStatus.CONFLICT, "PENDING 상태의 정산만 완료 처리할 수 있습니다."),
+    SETTLEMENT_CANNOT_REFUND(HttpStatus.CONFLICT, "환불 처리가 불가능한 정산 상태입니다."),
 
     // FreePost
     FREE_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "자유 게시글을 찾을 수 없습니다."),
