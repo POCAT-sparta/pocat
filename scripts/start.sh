@@ -31,15 +31,25 @@ cd "$PROJECT_ROOT"
 
 echo "=== [2/3] Docker Compose 기동 ==="
 cd "$PROJECT_ROOT"
-docker compose $KAFKA_PROFILE up -d --build
+docker compose $KAFKA_PROFILE up -d
 
 echo "=== [3/3] 백엔드 기동 대기 ==="
+HEALTHY=false
 for i in $(seq 1 30); do
   STATUS=$(docker inspect --format='{{.State.Health.Status}}' pocat-backend 2>/dev/null || echo "starting")
   echo "  backend 상태: $STATUS ($i/30)"
-  [ "$STATUS" = "healthy" ] && break
+  if [ "$STATUS" = "healthy" ]; then
+    HEALTHY=true
+    break
+  fi
   sleep 3
 done
+
+if [ "$HEALTHY" != "true" ]; then
+  echo "[ERR] 백엔드가 90초 내에 healthy 상태가 되지 않았습니다."
+  echo "      로그 확인: docker compose logs backend"
+  exit 1
+fi
 
 echo ""
 echo "=== 기동 완료 ==="
