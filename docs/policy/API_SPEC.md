@@ -1034,7 +1034,7 @@ Authorization: Bearer {accessToken}
 
 - **POST** `/api/v1/auctions/{auctionId}/bids`
 - **권한**: `USER`
-- **설명**: Redis 분산락 적용. 빌링키 미등록 / 입찰 차단 사용자 입찰 불가. 현재 최고가 초과 금액만 입찰 가능
+- **설명**: Redis 분산락 적용. 빌링키 미등록 / 입찰 차단 사용자 입찰 불가. 현재 최고가 초과 금액만 입찰 가능. 즉시구매가 이상 금액은 즉시구매 API를 호출해야 하며 입찰 API에서는 거절
 
 **Path Variables**
 
@@ -1059,7 +1059,7 @@ Authorization: Bearer {accessToken}
     "bidId": 10,
     "auctionId": 1,
     "bidPrice": 250000,
-    "status": "ACTIVE"
+    "status": "LEADING"
   },
   "message": ""
 }
@@ -1069,7 +1069,7 @@ Authorization: Bearer {accessToken}
 
 | 상태 코드 | 사유                              |
 |-------|---------------------------------|
-| `400` | 입력값이 올바르지 않은 경우                 |
+| `400` | 입력값이 올바르지 않은 경우 / 즉시구매가 이상 금액으로 입찰 API를 호출한 경우 |
 | `403` | 빌링키 미등록 / 본인 경매에 입찰 시도 시 / 입찰 차단 사용자 |
 | `404` | 경매 미존재                          |
 | `409` | 경매 비활성 상태, 락 획득 실패, 최고가보다 낮은 입찰 |
@@ -1086,7 +1086,7 @@ Authorization: Bearer {accessToken}
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---|---|---|---|
-| `status` | String | N | 상태 필터 (ACTIVE, WON, LOST, CANCELLED) |
+| `status` | String | N | 상태 필터 (LEADING, OUTBID, WON, LOST, CANCELLED) |
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
 
@@ -1102,7 +1102,7 @@ Authorization: Bearer {accessToken}
         "auctionId": 1,
         "auctionTitle": "PSA 10 리자몽 경매",
         "bidPrice": 250000,
-        "status": "ACTIVE",
+        "status": "LEADING",
         "createdAt": "2026-05-02T10:00:00"
       }
     ],

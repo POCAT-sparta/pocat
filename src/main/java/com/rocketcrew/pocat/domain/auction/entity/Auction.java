@@ -78,4 +78,9 @@ public class Auction extends BaseEntity {
         this.status = AuctionStatus.CANCELLED;
         this.cancelReason = cancelReason;
     }
+
+    public void updateHighestBid(Long highestPrice, Long highestBidderId) {
+        this.highestPrice = highestPrice;
+        this.highestBidderId = highestBidderId;
+    }
 }

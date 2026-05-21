@@ -10,6 +10,7 @@ import com.rocketcrew.pocat.domain.bid.service.AuctionBidQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,7 +35,7 @@ public class AuctionBidController {
     private final AuctionBidQueryService auctionBidQueryService;
     private final AuctionBidCommandService auctionBidCommandService;
 
-    // Get bid history for an auction.
+    // 경매 입찰 내역 조회
     @GetMapping("/v1/auctions/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<PageResponseDto<AuctionBidHistoryResponse>>> getBidsByAuction(
             @PathVariable Long auctionId,
@@ -44,7 +45,7 @@ public class AuctionBidController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    // Search bids placed by the authenticated user.
+    // 내 입찰 목록(구매자)
     @GetMapping("/v1/bids/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<MyBidResponse>>> getMyBids(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -55,13 +56,13 @@ public class AuctionBidController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    // Place a bid on an auction.
+    // 입찰 생성
     // Todo : 입찰 생성 내부 로직 구현 미완료
     @PostMapping("/v1/auctions/{auctionId}/bids")
     public ResponseEntity<ApiResponseDto<CreateAuctionBidResponse>> createBid(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,
-            @RequestBody CreateBidRequest request) {
+            @Valid @RequestBody CreateBidRequest request) {
         CreateAuctionBidResponse response = auctionBidCommandService.createBid(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
