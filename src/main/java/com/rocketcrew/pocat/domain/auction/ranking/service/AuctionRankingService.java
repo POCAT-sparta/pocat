@@ -137,12 +137,16 @@ public class AuctionRankingService {
         if (activeAuctions.isEmpty()) return Collections.emptyList();
 
         List<Long> ids = activeAuctions.stream().map(Auction::getId).toList();
+        Map<Long, Card> cardMap = loadCards(activeAuctions.stream()
+                .map(Auction::getCardId)
+                .distinct()
+                .toList());
         Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(ids));
         Map<Long, Long> bidCounts = toLongMap(auctionBidRepository.countByAuctionIdIn(ids));
 
         return activeAuctions.stream()
                 .map(a -> {
-                    Card card = cardQueryService.getCardEntity(a.getCardId());
+                    Card card = cardMap.get(a.getCardId());
                     long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     long bidCount = bidCounts.getOrDefault(a.getId(), 0L);
                     double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
@@ -155,9 +159,10 @@ public class AuctionRankingService {
     }
 
     private Map<Long, Card> loadCards(List<Long> cardIds) {
-        return cardIds.stream()
-                .map(cardQueryService::getCardEntity)
-                .collect(Collectors.toMap(Card::getId, card -> card));
+        if (cardIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return cardQueryService.getCardEntities(cardIds);
     }
 
     private Map<Long, Long> toLongMap(List<AuctionCountProjection> projections) {

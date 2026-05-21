@@ -26,7 +26,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -85,6 +88,11 @@ public class CardQueryService {
     public Card getCardEntity(Long id) {
         return cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+    }
+
+    public Map<Long, Card> getCardEntities(List<Long> ids) {
+        return cardRepository.findAllById(ids.stream().distinct().toList()).stream()
+                .collect(Collectors.toMap(Card::getId, Function.identity()));
     }
 
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
