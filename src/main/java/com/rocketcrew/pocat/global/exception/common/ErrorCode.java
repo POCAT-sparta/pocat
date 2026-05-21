@@ -81,6 +81,8 @@ public enum ErrorCode {
 
     // Notification
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
+    NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 알림에 대한 접근 권한이 없습니다."),
+    NOTIFICATION_SERIALIZE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "알림 직렬화에 실패했습니다."),
 
     // Chat
     CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),
