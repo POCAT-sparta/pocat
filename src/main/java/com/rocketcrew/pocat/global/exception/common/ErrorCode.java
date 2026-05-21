@@ -30,9 +30,19 @@ public enum ErrorCode {
     AUCTION_NOT_PENDING(HttpStatus.CONFLICT,"경매가 PENDING 상태가 아닙니다."),
     AUCTION_PRICE_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않은 경매 가격입니다."),
     AUCTION_UPDATE_EMPTY(HttpStatus.BAD_REQUEST, "수정할 필드가 하나 이상 필요합니다."),
+    AUCTION_CARD_NOT_FOUND(HttpStatus.NOT_FOUND, "경매에 연결된 카드를 찾을 수 없습니다."),
+    AUCTION_SELLER_NOT_FOUND(HttpStatus.NOT_FOUND, "경매 판매자를 찾을 수 없습니다."),
+    AUCTION_HIGHEST_BIDDER_NOT_FOUND(HttpStatus.NOT_FOUND, "경매 최고 입찰자를 찾을 수 없습니다."),
 
     // Bid
     BID_NOT_FOUND(HttpStatus.NOT_FOUND, "입찰을 찾을 수 없습니다."),
+    BID_BLOCKED_USER(HttpStatus.FORBIDDEN, "입찰이 차단된 사용자입니다."),
+    BID_SELLER_FORBIDDEN(HttpStatus.FORBIDDEN, "판매자는 본인 경매에 입찰할 수 없습니다."),
+    BID_BILLING_KEY_REQUIRED(HttpStatus.BAD_REQUEST, "입찰 전 결제수단/빌링키 등록이 필요합니다."),
+    BID_LOCK_FAILED(HttpStatus.CONFLICT, "다른 입찰이 처리 중입니다. 잠시 후 다시 시도해주세요."),
+    BID_PRICE_TOO_LOW(HttpStatus.CONFLICT, "입찰가는 최소 입찰가와 현재 최고가보다 높아야 합니다."),
+    BID_BUYOUT_PRICE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "즉시구매가 이상 금액은 즉시구매 API를 호출해야 합니다."),
+    BID_ALREADY_LEADING(HttpStatus.CONFLICT, "이미 현재 최고 입찰자입니다."),
 
     // Order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),

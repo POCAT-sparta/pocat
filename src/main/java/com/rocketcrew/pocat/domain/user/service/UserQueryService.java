@@ -23,9 +23,13 @@ public class UserQueryService {
 
     private final UserRepository userRepository;
 
-    public UserResponse getUserById(Long userId) {
-        User user = userRepository.findById(userId)
+    public User getUserEntity(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public UserResponse getUserById(Long userId) {
+        User user = getUserEntity(userId);
         return UserResponse.from(user);
     }
 

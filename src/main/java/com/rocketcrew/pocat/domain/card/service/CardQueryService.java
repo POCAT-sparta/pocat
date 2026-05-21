@@ -34,20 +34,23 @@ public class CardQueryService {
     }
 
     public CardResponse getCard(Long id) {
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        Card card = getCardEntity(id);
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_FOUND);
         }
         return CardResponse.from(card);
     }
 
+    public Card getCardEntity(Long id) {
+        return cardRepository.findById(id)
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+    }
+
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
         return orderQueryService.getAveragePriceByCard(cardId);
     }
     public Card validateRegistrableForAuction(Long cardId) {
-        Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
+        Card card = getCardEntity(cardId);
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_ACTIVE);
         }
