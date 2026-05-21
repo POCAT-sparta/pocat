@@ -2115,7 +2115,15 @@ X-PortOne-Signature: {서명값}
 - **DELETE** `/api/v1/posts/free/{freePostId}`
 - **권한**: `USER` (본인) / `ADMIN`
 
-**Response** `204 No Content`
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
@@ -2276,7 +2284,15 @@ X-PortOne-Signature: {서명값}
 - **DELETE** `/api/v1/posts/trade/{tradePostId}`
 - **권한**: `USER` (본인) / `ADMIN`
 
-**Response** `204 No Content`
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
@@ -2405,7 +2421,15 @@ X-PortOne-Signature: {서명값}
 - **DELETE** `/api/v1/comments/{commentId}`
 - **권한**: `USER` (본인) / `ADMIN`
 
-**Response** `204 No Content`
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
@@ -2714,7 +2738,15 @@ DISCONNECT ws://{host}/ws/chat
 - **DELETE** `/api/v1/notifications/{notificationId}`
 - **권한**: `USER` (본인)
 
-**Response** `204 No Content`
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
@@ -2723,7 +2755,15 @@ DISCONNECT ws://{host}/ws/chat
 - **DELETE** `/api/v1/notifications`
 - **권한**: `USER`
 
-**Response** `204 No Content`
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": null,
+  "message": ""
+}
+```
 
 ---
 
