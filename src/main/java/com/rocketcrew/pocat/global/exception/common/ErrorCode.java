@@ -32,8 +32,11 @@ public enum ErrorCode {
     AUCTION_PRICE_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않은 경매 가격입니다."),
     AUCTION_UPDATE_EMPTY(HttpStatus.BAD_REQUEST, "수정할 필드가 하나 이상 필요합니다."),
     AUCTION_CARD_NOT_FOUND(HttpStatus.NOT_FOUND, "경매에 연결된 카드를 찾을 수 없습니다."),
+    AUCTION_CARD_NOT_ACTIVE(HttpStatus.CONFLICT, "ACTIVE 상태의 카드만 경매에 등록할 수 있습니다."),
     AUCTION_SELLER_NOT_FOUND(HttpStatus.NOT_FOUND, "경매 판매자를 찾을 수 없습니다."),
     AUCTION_HIGHEST_BIDDER_NOT_FOUND(HttpStatus.NOT_FOUND, "경매 최고 입찰자를 찾을 수 없습니다."),
+    AUCTION_NOT_INSPECTING(HttpStatus.CONFLICT, "INSPECTING 상태의 경매만 검수할 수 있습니다."),
+    AUCTION_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "사유를 입력해주세요."),
 
     // Bid
     BID_NOT_FOUND(HttpStatus.NOT_FOUND, "입찰을 찾을 수 없습니다."),

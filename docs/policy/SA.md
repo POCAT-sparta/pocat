@@ -57,7 +57,7 @@ POCAT은 포켓몬 카드를 테마로 한 온라인 C2C 거래 플랫폼이다.
 | --- | --- |
 | 유저 (User) | 회원가입/로그인, 마이페이지, 빌링키 등록, 계좌 등록, 제재(입찰 차단) 관리 |
 | 카드 카탈로그 | TCGdex API 연동 카드 정보 DB 저장 / 수동 등록, 등급 (PSA_10 / PSA_9) 등 관리 |
-| 경매 (Auction) | 경매 등록 → 검수 → 활성 → 종료 전 과정, 즉시 구매, 입찰 관리 |
+| 경매 (Auction) | 경매 등록 → 검수 → 승인(Approved) → 스케줄러 활성화 → 종료 전 과정, 즉시 구매, 입찰 관리 |
 | 주문 (Order) | AUCTION 주문 관리 |
 | 결제 (Payment) | PortOne V2 빌링키 자동결제 중심, 경매 낙찰 실패 시 1시간 내 직접결제 허용 |
 | 환불 (Refund) | 환불 요청 → 처리 → 상태 추적 (PortOne 부분환불 미포함) |
@@ -164,9 +164,11 @@ GitHub PR
 플랫폼으로 실물 카드 배송
   ↓
 관리자 검수 (Inspection)
-  ├─ PASSED → Auction status: ACTIVE → Notification 발송
-  └─ FAILED → Auction status: REJECTED → 카드 반송 → Notification 발송
+  ├─ PASSED → Auction status: APPROVED → 검수 완료 정보(inspectedAt / inspectedBy) 저장
+  └─ FAILED → Auction status: REJECTED → reason 저장 → 카드 반송 → Notification 발송
 ```
+
+검수 통과 후 즉시 ACTIVE로 전환하지 않고 `APPROVED` 상태로 보관한 뒤, 매일 19시에 스케줄러가 `APPROVED -> ACTIVE` 전환과 `startedAt`, `endedAt` 설정을 수행한다.
 
 ---
 
@@ -380,7 +382,7 @@ likes ───────────────── auctions (auction_id)
 
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
-| `status` | VARCHAR(30) | PENDING / INSPECTING / REJECTED / ACTIVE / ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING |
+| `status` | VARCHAR(30) | PENDING / INSPECTING / APPROVED / REJECTED / ACTIVE / ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING |
 | `buyout_price` | BIGINT | 즉시구매가 (선택값, null 가능) |
 | `highest_price` | BIGINT | 현재 최고 입찰가 (실시간 갱신) |
 | `highest_bidder_id` | BIGINT | 현재 최고 입찰자 FK |

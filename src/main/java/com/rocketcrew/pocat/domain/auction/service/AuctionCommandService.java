@@ -1,20 +1,29 @@
 package com.rocketcrew.pocat.domain.auction.service;
 
 import com.rocketcrew.pocat.domain.auction.dto.request.CreateAuctionRequest;
+import com.rocketcrew.pocat.domain.auction.dto.request.InspectAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.UpdateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.response.CancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CreateAuctionResponse;
+import com.rocketcrew.pocat.domain.auction.dto.response.InspectAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionInspectionResult;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import com.rocketcrew.pocat.global.exception.domain.CardException;
+import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +32,7 @@ public class AuctionCommandService {
 
     private final AuctionRepository auctionRepository;
     private final CardQueryService cardQueryService;
+    private final UserQueryService userQueryService;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
         Card card = cardQueryService.validateRegistrableForAuction(request.cardId());
@@ -62,6 +72,22 @@ public class AuctionCommandService {
         return CancelAuctionResponse.from(auction);
     }
 
+    public InspectAuctionResponse inspectAuction(Long adminId, Long id, InspectAuctionRequest request) {
+        Auction auction = auctionRepository.findById(id)
+                .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
+        validateInspecting(auction);
+
+        if (request.result() == AuctionInspectionResult.PASSED) {
+            validateAuctionDataForInspection(auction);
+            auction.approve(adminId, LocalDateTime.now());
+            return InspectAuctionResponse.from(auction);
+        }
+
+        validateRejectReason(request.reason());
+        auction.reject(request.reason().trim());
+        return InspectAuctionResponse.from(auction);
+    }
+
     private void validateSeller(Auction auction, Long sellerId) {
         if (!auction.getSellerId().equals(sellerId)) {
             throw new AuctionException(ErrorCode.USER_FORBIDDEN);
@@ -71,6 +97,57 @@ public class AuctionCommandService {
     private void validatePending(Auction auction) {
         if (auction.getStatus() != AuctionStatus.PENDING) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_PENDING);
+        }
+    }
+
+    private void validateInspecting(Auction auction) {
+        if (auction.getStatus() != AuctionStatus.INSPECTING) {
+            throw new AuctionException(ErrorCode.AUCTION_NOT_INSPECTING);
+        }
+    }
+
+    private void validateAuctionDataForInspection(Auction auction) {
+        validateSellerExists(auction.getSellerId());
+        validateCardRegistrable(auction.getCardId());
+        validateTitle(auction.getTitle());
+        validateStartingPrice(auction.getStartingPrice());
+        validateBuyoutPrice(auction.getStartingPrice(), auction.getBuyoutPrice());
+    }
+
+    private void validateSellerExists(Long sellerId) {
+        try {
+            userQueryService.getUserEntity(sellerId);
+        } catch (UserException e) {
+            throw new AuctionException(ErrorCode.AUCTION_SELLER_NOT_FOUND);
+        }
+    }
+
+    private void validateCardRegistrable(Long cardId) {
+        try {
+            cardQueryService.validateRegistrableForAuction(cardId);
+        } catch (CardException e) {
+            if (e.getErrorCode() == ErrorCode.CARD_NOT_ACTIVE) {
+                throw new AuctionException(ErrorCode.AUCTION_CARD_NOT_ACTIVE);
+            }
+            throw new AuctionException(ErrorCode.AUCTION_CARD_NOT_FOUND);
+        }
+    }
+
+    private void validateTitle(String title) {
+        if (!StringUtils.hasText(title) || title.length() > 255) {
+            throw new AuctionException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    private void validateStartingPrice(Long startingPrice) {
+        if (startingPrice == null || startingPrice <= 0) {
+            throw new AuctionException(ErrorCode.AUCTION_PRICE_INVALID);
+        }
+    }
+
+    private void validateRejectReason(String reason) {
+        if (!StringUtils.hasText(reason)) {
+            throw new AuctionException(ErrorCode.AUCTION_REASON_REQUIRED);
         }
     }
 

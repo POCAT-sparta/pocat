@@ -56,8 +56,14 @@ public class Auction extends BaseEntity {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
-    @Column(name = "cancel_reason", columnDefinition = "TEXT")
-    private String cancelReason;
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
+
+    @Column(name = "inspected_at")
+    private LocalDateTime inspectedAt;
+
+    @Column(name = "inspected_by")
+    private Long inspectedBy;
 
     public void update(String title, String description, Long startingPrice, Long buyoutPrice) {
         if (title != null) {
@@ -74,9 +80,21 @@ public class Auction extends BaseEntity {
         }
     }
 
-    public void cancel(String cancelReason) {
+    public void cancel(String reason) {
         this.status = AuctionStatus.CANCELLED;
-        this.cancelReason = cancelReason;
+        this.reason = reason;
+    }
+
+    public void approve(Long inspectedBy, LocalDateTime inspectedAt) {
+        this.status = AuctionStatus.APPROVED;
+        this.inspectedBy = inspectedBy;
+        this.inspectedAt = inspectedAt;
+        this.reason = null;
+    }
+
+    public void reject(String reason) {
+        this.status = AuctionStatus.REJECTED;
+        this.reason = reason;
     }
 
     public void updateHighestBid(Long highestPrice, Long highestBidderId) {

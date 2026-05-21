@@ -970,6 +970,9 @@ Authorization: Bearer {accessToken}
     "highestBidderId": 3,
     "highestBidderNickname": "피카헌터",
     "status": "ACTIVE",
+    "reason": null,
+    "inspectedAt": "2026-05-15T09:00:00",
+    "inspectedBy": 1,
     "startedAt": "2026-05-01T00:00:00",
     "endedAt": "2026-05-04T00:00:00",
     "likeCount": 15,
@@ -1240,7 +1243,7 @@ Authorization: Bearer {accessToken}
 ```json
 {
   "result": "PASSED",
-  "rejectReason": null
+  "reason": ""
 }
 ```
 
@@ -1251,7 +1254,10 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "auctionId": 1,
-    "status": "ACTIVE"
+    "status": "APPROVED",
+    "reason": null,
+    "inspectedAt": "2026-05-21T19:00:00",
+    "inspectedBy": 1
   },
   "message": ""
 }

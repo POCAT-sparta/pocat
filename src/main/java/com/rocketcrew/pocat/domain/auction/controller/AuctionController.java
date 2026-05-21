@@ -1,10 +1,12 @@
 package com.rocketcrew.pocat.domain.auction.controller;
 
 import com.rocketcrew.pocat.domain.auction.dto.request.CreateAuctionRequest;
+import com.rocketcrew.pocat.domain.auction.dto.request.InspectAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.UpdateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CreateAuctionResponse;
+import com.rocketcrew.pocat.domain.auction.dto.response.InspectAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
@@ -55,9 +57,8 @@ public class AuctionController {
         PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
-    // Search active auctions.
-    // 경매 목록 조회(유저)
 
+    // 경매 목록 조회(관리자)
     @GetMapping("/v1/admin/auctions")
     public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getAdminAuctions(
             @RequestParam(required = false) String keyword,
@@ -120,6 +121,15 @@ public class AuctionController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId) {
         CancelAuctionResponse response = auctionCommandService.cancelAuction(userDetails.getUserId(), auctionId);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+    // 경매 검수
+    @PatchMapping("/v1/admin/auctions/{auctionId}/inspection")
+    public ResponseEntity<ApiResponseDto<InspectAuctionResponse>> inspectAuction(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long auctionId,
+            @Valid @RequestBody InspectAuctionRequest request) {
+        InspectAuctionResponse response = auctionCommandService.inspectAuction(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 }
