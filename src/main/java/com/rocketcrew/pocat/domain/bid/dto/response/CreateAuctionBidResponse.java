@@ -5,7 +5,7 @@ import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 
 import java.time.LocalDateTime;
 
-public record AuctionBidResponse(
+public record CreateAuctionBidResponse(
         Long id,
         Long userId,
         Long auctionId,
@@ -14,8 +14,8 @@ public record AuctionBidResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static AuctionBidResponse from(AuctionBid auctionBid) {
-        return new AuctionBidResponse(
+    public static CreateAuctionBidResponse from(AuctionBid auctionBid) {
+        return new CreateAuctionBidResponse(
                 auctionBid.getId(),
                 auctionBid.getUserId(),
                 auctionBid.getAuctionId(),
