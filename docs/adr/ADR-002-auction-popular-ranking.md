@@ -77,7 +77,7 @@ POCAT 경매 서비스에서 사용자에게 인기 있는 경매 목록을 빠�
 
 ### 긍정적 영향
 
-- **읽기 성능**: 인기 경매 조회가 Redis ZSet 단순 range 조회로 처리되어 DB 부하 없음
+- **읽기 성능**: 인기 경매 조회가 Redis ZSet 단순 range 조회로 처리되어 정상 운영 시 DB 부하 최소화 (단, Redis 장애 시 DB GROUP BY 폴백 자동 실행)
 - **정확성 보장**: 스케줄러가 DB 기준으로 주기적으로 재계산하므로 Redis/DB 불일치가 자동 복구됨
 - **구현 안전성**: FreePost에서 검증된 패턴(ZSet atomic rename + fallback) 재사용으로 신규 위험 최소화
 - **Fallback 내성**: Redis 장애 시 DB `GROUP BY` 쿼리로 자동 폴백, 서비스 연속성 보장

@@ -37,8 +37,13 @@ public class AuctionRankingService {
     public List<PopularAuctionResponse> getPopular(int size) {
         int clampedSize = Math.min(Math.max(size, 1), properties.getMaxResponseSize());
 
-        Set<ZSetOperations.TypedTuple<String>> entries =
-                redisTemplate.opsForZSet().reverseRangeWithScores(RANKING_KEY, 0, clampedSize - 1);
+        Set<ZSetOperations.TypedTuple<String>> entries;
+        try {
+            entries = redisTemplate.opsForZSet().reverseRangeWithScores(RANKING_KEY, 0, clampedSize - 1);
+        } catch (Exception e) {
+            log.warn("Redis unavailable in getPopular — falling back to DB", e);
+            return fallbackFromDb(clampedSize);
+        }
 
         if (entries == null || entries.isEmpty()) {
             log.info("Auction ranking cache miss — falling back to DB");
