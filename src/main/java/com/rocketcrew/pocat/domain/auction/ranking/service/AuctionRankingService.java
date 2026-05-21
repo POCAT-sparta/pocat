@@ -7,6 +7,8 @@ import com.rocketcrew.pocat.domain.auction.ranking.dto.AuctionCountProjection;
 import com.rocketcrew.pocat.domain.auction.ranking.dto.response.PopularAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
+import com.rocketcrew.pocat.domain.card.entity.Card;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ public class AuctionRankingService {
     private final AuctionRepository auctionRepository;
     private final LikeRepository likeRepository;
     private final AuctionBidRepository auctionBidRepository;
+    private final CardQueryService cardQueryService;
     private final AuctionRankingProperties properties;
 
     static final String RANKING_KEY = "ranking:auction:popular";
@@ -68,6 +71,7 @@ public class AuctionRankingService {
 
         Map<Long, Auction> auctionMap = auctionRepository.findAllById(auctionIds).stream()
                 .collect(Collectors.toMap(Auction::getId, a -> a));
+        Map<Long, Card> cardMap = loadCards(auctionMap.values().stream().map(Auction::getCardId).distinct().toList());
 
         Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(auctionIds));
         Map<Long, Long> bidCounts = toLongMap(auctionBidRepository.countByAuctionIdIn(auctionIds));
@@ -76,10 +80,11 @@ public class AuctionRankingService {
                 .filter(auctionMap::containsKey)
                 .map(id -> {
                     Auction a = auctionMap.get(id);
+                    Card card = cardMap.get(a.getCardId());
                     long likeCount = likeCounts.getOrDefault(id, 0L);
                     long bidCount = bidCounts.getOrDefault(id, 0L);
                     double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
-                    return PopularAuctionResponse.of(a, likeCount, bidCount, score);
+                    return PopularAuctionResponse.of(a, card, likeCount, bidCount, score);
                 })
                 .collect(Collectors.toList());
     }
@@ -137,15 +142,22 @@ public class AuctionRankingService {
 
         return activeAuctions.stream()
                 .map(a -> {
+                    Card card = cardQueryService.getCardEntity(a.getCardId());
                     long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     long bidCount = bidCounts.getOrDefault(a.getId(), 0L);
                     double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
-                    return PopularAuctionResponse.of(a, likeCount, bidCount, score);
+                    return PopularAuctionResponse.of(a, card, likeCount, bidCount, score);
                 })
                 .filter(r -> r.popularityScore() > 0)
                 .sorted(Comparator.comparingDouble(PopularAuctionResponse::popularityScore).reversed())
                 .limit(size)
                 .collect(Collectors.toList());
+    }
+
+    private Map<Long, Card> loadCards(List<Long> cardIds) {
+        return cardIds.stream()
+                .map(cardQueryService::getCardEntity)
+                .collect(Collectors.toMap(Card::getId, card -> card));
     }
 
     private Map<Long, Long> toLongMap(List<AuctionCountProjection> projections) {

@@ -58,7 +58,6 @@ public class AuctionCommandService {
                 .sellerId(sellerId)
                 .title(request.title())
                 .description(request.description())
-                .cardImageUrl(card.getImageUrl())
                 .startingPrice(request.startingPrice())
                 .buyoutPrice(request.buyoutPrice())
                 .status(AuctionStatus.PENDING)

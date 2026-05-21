@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.auction.ranking.dto.response;
 
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.card.entity.Card;
 
 import java.time.LocalDateTime;
 
@@ -17,15 +18,15 @@ public record PopularAuctionResponse(
         LocalDateTime startedAt,
         LocalDateTime endedAt,
         long likeCount,
-        long bidCount,
-        double popularityScore
+    long bidCount,
+    double popularityScore
 ) {
-    public static PopularAuctionResponse of(Auction auction, long likeCount, long bidCount, double score) {
+    public static PopularAuctionResponse of(Auction auction, Card card, long likeCount, long bidCount, double score) {
         return new PopularAuctionResponse(
                 auction.getId(),
                 auction.getTitle(),
                 auction.getCardId(),
-                auction.getCardImageUrl(),
+                card.getImageUrl(),
                 auction.getStartingPrice(),
                 auction.getHighestPrice(),
                 auction.getBuyoutPrice(),

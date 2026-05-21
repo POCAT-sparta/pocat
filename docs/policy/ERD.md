@@ -138,7 +138,6 @@ CREATE TABLE `auctions` (
 `highest_bidder_id`	BIGINT	NULL,
 `title`	VARCHAR(255)	NOT NULL,
 `description`	TEXT	NULL,
-`card_image_url`	VARCHAR(500)	NULL,
 `starting_price`	BIGINT	NOT NULL,
 `buyout_price`	BIGINT	NULL	COMMENT '즉시구매가',
 `highest_price`	BIGINT	NULL	COMMENT '현재 최고 입찰가',

@@ -60,7 +60,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         card.id,
                         card.name,
                         card.grade,
-                        auction.cardImageUrl,
+                        card.imageUrl,
                         auction.startingPrice,
                         auction.highestPrice,
                         auction.buyoutPrice,

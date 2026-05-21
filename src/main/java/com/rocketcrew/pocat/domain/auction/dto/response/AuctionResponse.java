@@ -49,7 +49,7 @@ public record AuctionResponse(
                 auction.getCardId(),
                 card.getName(),
                 card.getGrade(),
-                auction.getCardImageUrl(),
+                card.getImageUrl(),
                 auction.getStartingPrice(),
                 auction.getBuyoutPrice(),
                 auction.getHighestPrice(),

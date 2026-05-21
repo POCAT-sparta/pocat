@@ -34,9 +34,6 @@ public class Auction extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "card_image_url", length = 500)
-    private String cardImageUrl;
-
     @Column(name = "starting_price", nullable = false)
     private Long startingPrice;
 

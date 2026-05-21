@@ -59,7 +59,7 @@ public class LikeQueryService {
                     auction.getTitle(),
                     card != null ? card.getName() : null,
                     card != null ? card.getGrade().name() : null,
-                    auction.getCardImageUrl(),
+                    card != null ? card.getImageUrl() : null,
                     auction.getHighestPrice(),
                     auction.getEndedAt(),
                     auction.getStatus().name(),
