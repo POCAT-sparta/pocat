@@ -18,6 +18,7 @@ services:
       MANAGEMENT_ENDPOINT_PROMETHEUS_ACCESS: unrestricted
       MANAGEMENT_PROMETHEUS_METRICS_EXPORT_ENABLED: "true"
       SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: local
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:

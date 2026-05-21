@@ -56,6 +56,7 @@ public class SecurityConfig {
                         // PORTONE_NOT_INTEGRATED 예외로 상태 변경 경로 전체를 차단한다.
                         // 서명 검증 구현 완료 후 서비스 레이어 fail-closed 블록을 제거할 것.
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
