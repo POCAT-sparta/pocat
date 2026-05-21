@@ -67,4 +67,12 @@ public class LikeQueryService {
             );
         });
     }
+
+    public long countByAuctionId(Long auctionId) {
+        return likeRepository.countByAuctionId(auctionId);
+    }
+
+    public boolean existsByUserIdAndAuctionId(Long userId, Long auctionId) {
+        return likeRepository.existsByUserIdAndAuctionId(userId, auctionId);
+    }
 }

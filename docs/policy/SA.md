@@ -180,13 +180,16 @@ GitHub PR
 Redis 분산락 획득 (key: "auction:{auctionId}")
   ↓
 현재 최고 입찰가(highest_price)보다 높은지 검증
+  ↳ 즉시구매가(buyout_price) 이상이면 입찰 거절 (즉시구매 API 사용)
   ↓
 높으면 → AuctionBid 생성, 최고 입찰자(highest_bidder_id) 갱신
-         이전 최고 입찰자 → status: LOST (BID_OUTBID 알림 발송)
+         이전 최고 입찰자 → status: OUTBID
 낮으면 → 입찰 거절 (예외 처리)
   ↓
 락 해제
 ```
+
+> 기존 최고입찰자 OUTBID 알림은 Kafka 발행 연동 전까지 보류한다.
 
 > 💡 **경매 종료 시 스냅샷 촬영**: 낙찰 확정 시점에 `auction_snapshots` 테이블에 최고 입찰가 등 정보를 기록한다.
 >
@@ -308,7 +311,7 @@ Settlement 생성 → 판매자 정산 테이블 기록
 
 - 입찰 전 빌링키 등록 필수 (미등록 시 입찰 불가)
 - 입찰 전 결제수단 ACTIVE 상태 확인
-- 최고 입찰자 변경 시 이전 최고 입찰자에게 OUTBID 알림 발송
+- 최고 입찰자 변경 시 이전 최고 입찰자 OUTBID 처리 (알림 발송은 Kafka 연동 전까지 보류)
 
 **낙찰 후 처리:**
 
