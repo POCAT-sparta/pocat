@@ -1,8 +1,10 @@
 package com.rocketcrew.pocat.domain.auction.controller;
 
+import com.rocketcrew.pocat.domain.auction.dto.request.AdminCancelAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.CreateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.InspectAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.UpdateAuctionRequest;
+import com.rocketcrew.pocat.domain.auction.dto.response.AdminCancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CreateAuctionResponse;
@@ -130,6 +132,15 @@ public class AuctionController {
             @PathVariable Long auctionId,
             @Valid @RequestBody InspectAuctionRequest request) {
         InspectAuctionResponse response = auctionCommandService.inspectAuction(userDetails.getUserId(), auctionId, request);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
+    @PatchMapping("/v1/admin/auctions/{auctionId}/cancel")
+    public ResponseEntity<ApiResponseDto<AdminCancelAuctionResponse>> adminCancelAuction(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long auctionId,
+            @Valid @RequestBody AdminCancelAuctionRequest request) {
+        AdminCancelAuctionResponse response = auctionCommandService.cancelAuction(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 }

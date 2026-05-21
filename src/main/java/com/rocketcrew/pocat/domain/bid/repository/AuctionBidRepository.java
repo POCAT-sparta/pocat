@@ -13,4 +13,9 @@ public interface AuctionBidRepository extends JpaRepository<AuctionBid, Long>, A
             Long userId,
             BidStatus status
     );
+
+    Optional<AuctionBid> findFirstByAuctionIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+            Long auctionId,
+            BidStatus status
+    );
 }

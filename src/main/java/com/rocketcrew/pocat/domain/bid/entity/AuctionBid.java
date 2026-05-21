@@ -33,4 +33,8 @@ public class AuctionBid extends BaseEntity {
     public void markOutbid() {
         this.status = BidStatus.OUTBID;
     }
+
+    public void cancel() {
+        this.status = BidStatus.CANCELLED;
+    }
 }

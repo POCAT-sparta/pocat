@@ -85,6 +85,11 @@ public class Auction extends BaseEntity {
         this.reason = reason;
     }
 
+    public void cancelByAdmin(String reason) {
+        this.status = AuctionStatus.CANCELLED;
+        this.reason = reason;
+    }
+
     public void approve(Long inspectedBy, LocalDateTime inspectedAt) {
         this.status = AuctionStatus.APPROVED;
         this.inspectedBy = inspectedBy;
