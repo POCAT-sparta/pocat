@@ -1,0 +1,12 @@
+.git
+.idea
+.gradle
+build/tmp
+build/reports
+build/test-results
+*.md
+.env
+docs/
+scripts/
+infra/
+src/test/
