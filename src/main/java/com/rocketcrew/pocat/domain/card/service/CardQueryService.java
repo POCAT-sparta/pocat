@@ -23,6 +23,7 @@ import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
@@ -91,8 +92,24 @@ public class CardQueryService {
     }
 
     public Map<Long, Card> getCardEntities(List<Long> ids) {
-        return cardRepository.findAllById(ids.stream().distinct().toList()).stream()
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Long> distinctIds = ids.stream().distinct().toList();
+        Map<Long, Card> cardMap = cardRepository.findAllById(distinctIds).stream()
                 .collect(Collectors.toMap(Card::getId, Function.identity()));
+
+        List<Long> missingIds = distinctIds.stream()
+                .filter(id -> !cardMap.containsKey(id))
+                .toList();
+
+        if (!missingIds.isEmpty()) {
+            log.warn("Card entities missing for requested ids. missingIds={}", missingIds);
+            throw new CardException(ErrorCode.CARD_NOT_FOUND);
+        }
+
+        return cardMap;
     }
 
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
