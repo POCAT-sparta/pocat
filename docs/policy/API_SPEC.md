@@ -826,7 +826,9 @@ Authorization: Bearer {accessToken}
         "highestPrice": 200000,
         "status": "ACTIVE",
         "startedAt": "2026-05-01T00:00:00",
-        "endedAt": "2026-05-04T00:00:00"
+        "endedAt": "2026-05-04T00:00:00",
+        "createdAt": "2026-05-01T00:00:00",
+        "likeCount": 15
       }
     ],
     "totalElements": 50,
@@ -834,6 +836,49 @@ Authorization: Bearer {accessToken}
     "size": 20,
     "number": 0
   },
+  "message": ""
+}
+```
+
+---
+
+### 4.1.1 인기 경매 목록 조회
+
+- **GET** `/api/v1/auctions/popular`
+- **권한**: `PUBLIC`
+- **참고**: 응답 필드는 사용자용 경매 목록 조회(`SearchAuctionResponse`)와 동일합니다. `popularityScore`는 서버 내부 정렬에만 사용하고 응답에는 포함하지 않습니다.
+
+**Query Parameters**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `size` | int | N | 조회 개수 (default: 10) |
+
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": [
+    {
+      "auctionId": 1,
+      "sellerId": 2,
+      "sellerNickname": "카드마스터",
+      "title": "PSA 10 리자몽 경매",
+      "cardId": 1,
+      "cardName": "리자몽",
+      "grade": "PSA_10",
+      "cardImageUrl": "https://...",
+      "startingPrice": 100000,
+      "highestPrice": 200000,
+      "buyoutPrice": 1000000,
+      "status": "ACTIVE",
+      "startedAt": "2026-05-01T00:00:00",
+      "endedAt": "2026-05-04T00:00:00",
+      "createdAt": "2026-05-01T00:00:00",
+      "likeCount": 15
+    }
+  ],
   "message": ""
 }
 ```
@@ -858,7 +903,7 @@ Authorization: Bearer {accessToken}
 | `size`   | int | N | 페이지 크기 (default: 20)              |
 | `sort`   | String | N | 정렬 기준 (default: createdAt,desc then id,desc) |
 
-**Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+**Response** `200 OK` (관리자 목록은 별도 응답 DTO를 사용하며 `createdAt`은 포함하지 않습니다.)
 
 ```json
 {
@@ -880,7 +925,7 @@ Authorization: Bearer {accessToken}
         "status": "ACTIVE",
         "startedAt": "2026-05-15T12:00:00",
         "endedAt": "2026-05-18T12:00:00",
-        "createdAt": "2026-05-15T11:00:00"
+        "likeCount": 7
       }
     ],
     "totalElements": 1,
@@ -908,7 +953,7 @@ Authorization: Bearer {accessToken}
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
 
-**Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+**Response** `200 OK` (4.1 응답 구조 동일)
 
 ```json
 {
@@ -930,7 +975,8 @@ Authorization: Bearer {accessToken}
         "status": "ACTIVE",
         "startedAt": "2026-05-15T12:00:00",
         "endedAt": "2026-05-18T12:00:00",
-        "createdAt": "2026-05-15T11:00:00"
+        "createdAt": "2026-05-15T11:00:00",
+        "likeCount": 7
       }
     ],
     "totalElements": 1,
@@ -961,7 +1007,7 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "id": 1,
+    "auctionId": 1,
     "sellerId": 2,
     "sellerNickname": "카드마스터",
     "title": "PSA 10 리자몽 경매",
@@ -981,6 +1027,7 @@ Authorization: Bearer {accessToken}
     "inspectedBy": 1,
     "startedAt": "2026-05-01T00:00:00",
     "endedAt": "2026-05-04T00:00:00",
+    "createdAt": "2026-05-01T00:00:00",
     "likeCount": 15,
     "isLiked": true
   },

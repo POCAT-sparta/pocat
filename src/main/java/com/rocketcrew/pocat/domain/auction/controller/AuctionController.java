@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.auction.dto.request.AdminCancelAuctionRequest
 import com.rocketcrew.pocat.domain.auction.dto.request.CreateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.InspectAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.UpdateAuctionRequest;
+import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AdminCancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CancelAuctionResponse;
@@ -12,7 +13,6 @@ import com.rocketcrew.pocat.domain.auction.dto.response.InspectAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
-import com.rocketcrew.pocat.domain.auction.ranking.dto.response.PopularAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.ranking.service.AuctionRankingService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionCommandService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionQueryService;
@@ -51,9 +51,9 @@ public class AuctionController {
 
     // 인기 경매 조회
     @GetMapping("/v1/auctions/popular")
-    public ResponseEntity<ApiResponseDto<List<PopularAuctionResponse>>> getPopularAuctions(
+    public ResponseEntity<ApiResponseDto<List<SearchAuctionResponse>>> getPopularAuctions(
             @RequestParam(defaultValue = "10") int size) {
-        List<PopularAuctionResponse> response = auctionRankingService.getPopular(size);
+        List<SearchAuctionResponse> response = auctionRankingService.getPopular(size);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -74,7 +74,7 @@ public class AuctionController {
 
     // 경매 목록 조회(관리자)
     @GetMapping("/v1/admin/auctions")
-    public ResponseEntity<ApiResponseDto<PageResponseDto<SearchAuctionResponse>>> getAdminAuctions(
+    public ResponseEntity<ApiResponseDto<PageResponseDto<AdminAuctionResponse>>> getAdminAuctions(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String series,
             @RequestParam(required = false) String setName,
@@ -82,9 +82,9 @@ public class AuctionController {
             @RequestParam(required = false) CardCategory category,
             @RequestParam(required = false) AuctionStatus status,
             @PageableDefault(size = 20, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<SearchAuctionResponse> page = auctionQueryService.getAuctions(
+        Page<AdminAuctionResponse> page = auctionQueryService.getAdminAuctions(
                 keyword, series, setName, grade, category, status, pageable);
-        PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
+        PageResponseDto<AdminAuctionResponse> response = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 

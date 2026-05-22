@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.auction.service;
 
 import com.rocketcrew.pocat.domain.auction.dto.request.AuctionSearchCondition;
+import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
@@ -53,6 +54,20 @@ public class AuctionQueryService {
         AuctionSearchCondition condition = new AuctionSearchCondition(
                 keyword, series, setName, grade, category, status);
         return auctionRepository.searchAuctions(condition, pageable);
+    }
+
+    public Page<AdminAuctionResponse> getAdminAuctions(
+            String keyword,
+            String series,
+            String setName,
+            CardGrade grade,
+            CardCategory category,
+            AuctionStatus status,
+            Pageable pageable
+    ) {
+        AuctionSearchCondition condition = new AuctionSearchCondition(
+                keyword, series, setName, grade, category, status);
+        return auctionRepository.searchAdminAuctions(condition, pageable);
     }
 
     public Page<SearchAuctionResponse> getMyAuctions(Long sellerId, AuctionStatus status, Pageable pageable) {

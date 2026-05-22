@@ -2,14 +2,15 @@ package com.rocketcrew.pocat.domain.auction.ranking.service;
 
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.ranking.config.AuctionRankingProperties;
 import com.rocketcrew.pocat.domain.auction.ranking.dto.AuctionCountProjection;
-import com.rocketcrew.pocat.domain.auction.ranking.dto.response.PopularAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,11 +34,12 @@ public class AuctionRankingService {
     private final LikeRepository likeRepository;
     private final AuctionBidRepository auctionBidRepository;
     private final CardQueryService cardQueryService;
+    private final UserQueryService userQueryService;
     private final AuctionRankingProperties properties;
 
     static final String RANKING_KEY = "ranking:auction:popular";
 
-    public List<PopularAuctionResponse> getPopular(int size) {
+    public List<SearchAuctionResponse> getPopular(int size) {
         int clampedSize = Math.min(Math.max(size, 1), properties.getMaxResponseSize());
 
         Set<ZSetOperations.TypedTuple<String>> entries;
@@ -72,9 +74,12 @@ public class AuctionRankingService {
         Map<Long, Auction> auctionMap = auctionRepository.findAllById(auctionIds).stream()
                 .collect(Collectors.toMap(Auction::getId, a -> a));
         Map<Long, Card> cardMap = loadCards(auctionMap.values().stream().map(Auction::getCardId).distinct().toList());
+        Map<Long, String> sellerNicknames = loadSellerNicknames(auctionMap.values().stream()
+                .map(Auction::getSellerId)
+                .distinct()
+                .toList());
 
         Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(auctionIds));
-        Map<Long, Long> bidCounts = toLongMap(auctionBidRepository.countByAuctionIdIn(auctionIds));
 
         return auctionIds.stream()
                 .filter(auctionMap::containsKey)
@@ -82,9 +87,7 @@ public class AuctionRankingService {
                     Auction a = auctionMap.get(id);
                     Card card = cardMap.get(a.getCardId());
                     long likeCount = likeCounts.getOrDefault(id, 0L);
-                    long bidCount = bidCounts.getOrDefault(id, 0L);
-                    double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
-                    return PopularAuctionResponse.of(a, card, likeCount, bidCount, score);
+                    return toSearchAuctionResponse(a, card, sellerNicknames.get(a.getSellerId()), likeCount);
                 })
                 .collect(Collectors.toList());
     }
@@ -132,13 +135,17 @@ public class AuctionRankingService {
         }
     }
 
-    private List<PopularAuctionResponse> fallbackFromDb(int size) {
+    private List<SearchAuctionResponse> fallbackFromDb(int size) {
         List<Auction> activeAuctions = auctionRepository.findAllByStatus(AuctionStatus.ACTIVE);
         if (activeAuctions.isEmpty()) return Collections.emptyList();
 
         List<Long> ids = activeAuctions.stream().map(Auction::getId).toList();
         Map<Long, Card> cardMap = loadCards(activeAuctions.stream()
                 .map(Auction::getCardId)
+                .distinct()
+                .toList());
+        Map<Long, String> sellerNicknames = loadSellerNicknames(activeAuctions.stream()
+                .map(Auction::getSellerId)
                 .distinct()
                 .toList());
         Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(ids));
@@ -150,11 +157,14 @@ public class AuctionRankingService {
                     long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     long bidCount = bidCounts.getOrDefault(a.getId(), 0L);
                     double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
-                    return PopularAuctionResponse.of(a, card, likeCount, bidCount, score);
+                    SearchAuctionResponse response = toSearchAuctionResponse(
+                            a, card, sellerNicknames.get(a.getSellerId()), likeCount);
+                    return new PopularAuctionItem(response, score);
                 })
-                .filter(r -> r.popularityScore() > 0)
-                .sorted(Comparator.comparingDouble(PopularAuctionResponse::popularityScore).reversed())
+                .filter(item -> item.popularityScore() > 0)
+                .sorted(Comparator.comparingDouble(PopularAuctionItem::popularityScore).reversed())
                 .limit(size)
+                .map(PopularAuctionItem::response)
                 .collect(Collectors.toList());
     }
 
@@ -165,8 +175,44 @@ public class AuctionRankingService {
         return cardQueryService.getCardEntities(cardIds);
     }
 
+    private Map<Long, String> loadSellerNicknames(List<Long> sellerIds) {
+        if (sellerIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return userQueryService.getNicknamesByUserIds(sellerIds);
+    }
+
+    private SearchAuctionResponse toSearchAuctionResponse(
+            Auction auction,
+            Card card,
+            String sellerNickname,
+            long likeCount
+    ) {
+        return new SearchAuctionResponse(
+                auction.getId(),
+                auction.getSellerId(),
+                sellerNickname,
+                auction.getTitle(),
+                auction.getCardId(),
+                card.getName(),
+                card.getGrade(),
+                card.getImageUrl(),
+                auction.getStartingPrice(),
+                auction.getHighestPrice(),
+                auction.getBuyoutPrice(),
+                auction.getStatus(),
+                auction.getStartedAt(),
+                auction.getEndedAt(),
+                auction.getCreatedAt(),
+                likeCount
+        );
+    }
+
     private Map<Long, Long> toLongMap(List<AuctionCountProjection> projections) {
         return projections.stream()
                 .collect(Collectors.toMap(AuctionCountProjection::getAuctionId, AuctionCountProjection::getCnt));
+    }
+
+    private record PopularAuctionItem(SearchAuctionResponse response, double popularityScore) {
     }
 }

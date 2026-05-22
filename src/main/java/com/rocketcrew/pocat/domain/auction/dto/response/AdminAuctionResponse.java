@@ -5,7 +5,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 
 import java.time.LocalDateTime;
 
-public record SearchAuctionResponse(
+public record AdminAuctionResponse(
         Long auctionId,
         Long sellerId,
         String sellerNickname,
@@ -20,7 +20,6 @@ public record SearchAuctionResponse(
         AuctionStatus status,
         LocalDateTime startedAt,
         LocalDateTime endedAt,
-        LocalDateTime createdAt,
         long likeCount
 ) {
 }

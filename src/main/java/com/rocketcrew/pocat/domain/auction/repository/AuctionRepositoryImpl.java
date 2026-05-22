@@ -5,12 +5,15 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rocketcrew.pocat.domain.auction.dto.request.AuctionSearchCondition;
+import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.QAuction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
+import com.rocketcrew.pocat.domain.like.entity.QLike;
 import com.rocketcrew.pocat.domain.user.entity.QUser;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
@@ -41,6 +44,15 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
     }
 
     @Override
+    public Page<AdminAuctionResponse> searchAdminAuctions(AuctionSearchCondition condition, Pageable pageable) {
+        QAuction auction = QAuction.auction;
+        QCard card = QCard.card;
+        BooleanBuilder where = buildCondition(condition, auction, card);
+
+        return fetchAdminPage(pageable, auction, card, where);
+    }
+
+    @Override
     public Page<SearchAuctionResponse> searchMyAuctions(Long sellerId, AuctionStatus status, Pageable pageable) {
         QAuction auction = QAuction.auction;
         QCard card = QCard.card;
@@ -51,6 +63,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
     private Page<SearchAuctionResponse> fetchPage(Pageable pageable, QAuction auction, QCard card, BooleanBuilder where) {
         QUser seller = QUser.user;
+        QLike like = QLike.like;
         List<SearchAuctionResponse> content = queryFactory
                 .select(Projections.constructor(SearchAuctionResponse.class,
                         auction.id,
@@ -67,7 +80,52 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.status,
                         auction.startedAt,
                         auction.endedAt,
-                        auction.createdAt))
+                        auction.createdAt,
+                        JPAExpressions.select(like.count())
+                                .from(like)
+                                .where(like.auctionId.eq(auction.id))))
+                .from(auction)
+                .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(seller).on(seller.id.eq(auction.sellerId))
+                .where(where)
+                .orderBy(orderSpecifiers(pageable, auction))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(auction.count())
+                .from(auction)
+                .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(seller).on(seller.id.eq(auction.sellerId))
+                .where(where)
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    private Page<AdminAuctionResponse> fetchAdminPage(Pageable pageable, QAuction auction, QCard card, BooleanBuilder where) {
+        QUser seller = QUser.user;
+        QLike like = QLike.like;
+        List<AdminAuctionResponse> content = queryFactory
+                .select(Projections.constructor(AdminAuctionResponse.class,
+                        auction.id,
+                        auction.sellerId,
+                        seller.nickname,
+                        auction.title,
+                        card.id,
+                        card.name,
+                        card.grade,
+                        card.imageUrl,
+                        auction.startingPrice,
+                        auction.highestPrice,
+                        auction.buyoutPrice,
+                        auction.status,
+                        auction.startedAt,
+                        auction.endedAt,
+                        JPAExpressions.select(like.count())
+                                .from(like)
+                                .where(like.auctionId.eq(auction.id))))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
