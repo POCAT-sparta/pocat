@@ -8,7 +8,7 @@
 | 작성일 | 2026-05-24 |
 | 총 테스트 수 | 269 |
 | 실패 | 0 |
-| 비활성화 | 1 (`PocatApplicationTests` — Redis 인프라 필요) |
+| 비활성화 | 2 (`PocatApplicationTests` — Redis 인프라 필요; `AdminUserCommandServiceTest` — scaffold) |
 
 ---
 
@@ -45,6 +45,19 @@
 | 웹훅 서명 헤더 누락 케이스 미검증 | missing-signature-header 테스트 추가 |
 | `GlobalExceptionHandler` — `MissingRequestHeaderException` 응답 코드 오류 | 500 → 400으로 수정 |
 | 웹훅 테스트 display name 오해 소지 | display name 문구 수정 |
+
+### 외부 코드 리뷰 반영 (Phase 4 추가)
+
+| 지적 사항 | 해결 방법 |
+|-----------|----------|
+| `AuthControllerTest` logout Bearer 파싱 검증 누락 | `verify(authService).logout(eq("validAccessToken"))` 추가 |
+| `AdminOrderControllerTest` 검색 조건 전달 값 미검증 | `ArgumentCaptor<AdminOrderSearchCondition>`으로 `orderStatus` 값 검증 추가 |
+| `PaymentControllerTest` 서비스 미호출 검증 누락 | 시그니처 헤더 없을 때 `verifyNoInteractions(paymentCommandService)` 추가 |
+| `PaymentCommandServiceTest` 멱등성 테스트 불완전 | `verify(settlementCommandService, never()).createSettlement(anyString())` 추가 |
+| `PaymentFailureServiceTest` DisplayName 오류 | 에러 코드 설명 `PAYMENT_NOT_FOUND` → `ORDER_NOT_FOUND` 수정 |
+| `AdminRefundControllerTest` `argThat` 정적 import 누락 | `import static org.mockito.ArgumentMatchers.argThat;` 추가 |
+| `AdminRefundControllerTest` 거절 사유 값 미검증 | `argThat` 람다로 `rejectReason()` 실제 값 검증 |
+| `AdminUserCommandServiceTest` SUT 미구현 scaffold 명시 | `@Disabled("AdminUserCommandService 미구현 — 서비스 클래스 생성 후 활성화")` 추가 |
 
 ---
 
