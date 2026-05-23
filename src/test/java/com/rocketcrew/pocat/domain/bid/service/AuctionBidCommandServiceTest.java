@@ -42,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -122,13 +123,15 @@ class AuctionBidCommandServiceTest {
 
         @Test
         @DisplayName("성공: ACTIVE 경매에 유효한 입찰가로 입찰 생성")
-        void success() {
+        void success() throws Exception {
             // given
             CreateBidRequest request = new CreateBidRequest(2000L);
             given(userQueryService.getUserEntity(3L)).willReturn(normalBidder);
             given(auctionQueryService.findAuctionEntityOrThrow(1L))
                     .willReturn(activeAuction)   // pre-lock call
                     .willReturn(activeAuction);  // post-lock (after detach)
+
+            given(rLock.isHeldByCurrentThread()).willReturn(true);
 
             AuctionBid savedBid = AuctionBid.builder()
                     .userId(3L)
@@ -148,6 +151,8 @@ class AuctionBidCommandServiceTest {
             // then
             assertThat(response.bidPrice()).isEqualTo(2000L);
             assertThat(response.status()).isEqualTo(BidStatus.LEADING);
+            // 락 획득 여부 검증 (unlock은 afterCompletion 콜백에서 실행되므로 트랜잭션 없는 단위 테스트에서는 검증 생략)
+            verify(rLock).tryLock(anyLong(), any(TimeUnit.class));
         }
     }
 

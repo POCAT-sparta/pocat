@@ -265,6 +265,28 @@ class PaymentCommandServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
+
+        @Test
+        @DisplayName("실패: PortOne 결제금액이 주문금액보다 큰 경우 → PAYMENT_AMOUNT_MISMATCH")
+        void fail_amountMismatch_over() {
+            // 프로덕션 코드는 payment.getAmount().equals(portOneClientPayment.amount()) 로 정확히 일치 여부만 검사 (!=)
+            // 따라서 초과 금액(15000L > 10000L)도 동일하게 PAYMENT_AMOUNT_MISMATCH 를 발생시켜야 한다.
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+
+            given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
+            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
+
+            PortOnePaymentResponse portOneResponse = new PortOnePaymentResponse(
+                    "PAID", 15000L, "CARD", LocalDateTime.now()); // 주문금액(10000L)보다 큰 금액
+            given(portOneClient.getPayment("PAY-001")).willReturn(portOneResponse);
+            willDoNothing().given(paymentFailureService).markFailed(anyLong());
+
+            assertThatThrownBy(() -> paymentCommandService.confirmPayment(1L, "PAY-001"))
+                    .isInstanceOf(PaymentException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        }
     }
 
     // ── attemptBillingKeyPayment ───────────────────────────────────────

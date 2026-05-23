@@ -200,7 +200,7 @@ class PaymentControllerTest {
     class HandleWebhook {
 
         @Test
-        @DisplayName("성공: 200 OK 반환 (서비스 호출 완료)")
+        @DisplayName("현재 미구현: PortOne 미연동 시 503 반환 (PORTONE_NOT_INTEGRATED)")
         void success_200() throws Exception {
             willThrow(new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED))
                     .given(paymentCommandService).handleWebhook(anyString(), any(byte[].class));
@@ -226,6 +226,17 @@ class PaymentControllerTest {
                             .content("{}".getBytes()))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value("WEBHOOK_EMPTY_BODY"));
+        }
+
+        @Test
+        @DisplayName("실패: X-PortOne-Signature 헤더 누락 → 400")
+        void fail_missingSignatureHeader() throws Exception {
+            // @RequestHeader("X-PortOne-Signature") 는 required=true (기본값)이므로
+            // Spring MVC 가 서비스 호출 전에 400 Bad Request 를 자동 반환한다.
+            mockMvc.perform(post("/api/v1/payments/webhook")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}".getBytes()))
+                    .andExpect(status().isBadRequest());
         }
     }
 }
