@@ -30,7 +30,7 @@ public class CommentQueryService {
 
     @Cacheable(
             value = CacheNames.POST_COMMENTS,
-            key = "#freePostId + ':page:' + #pageable.pageNumber + ':size:' + #pageable.pageSize",
+            key = "#freePostId + ':page:' + #pageable.pageNumber + ':size:' + #pageable.pageSize + ':sort:' + #pageable.sort.toString()",
             sync = true
     )
     public CachedPage<CommentTreeResponse> getCommentsByPost(Long freePostId, Pageable pageable) {

@@ -50,7 +50,7 @@ public class CommentCommandService {
         CommentResponse response = CommentResponse.from(commentRepository.save(comment));
         freePostCommentCountService.increment(request.freePostId());
         // Evict post detail cache (commentCount changed) and comment list cache
-        freePostDetailCacheService.evict(request.freePostId());
+        freePostDetailCacheService.evictAfterCommit(request.freePostId());
         postCommentCacheEvictor.evictAfterCommit(request.freePostId());
         return response;
     }
@@ -68,7 +68,7 @@ public class CommentCommandService {
         commentRepository.delete(comment);
         freePostCommentCountService.decrement(freePostId);
         // Evict post detail cache (commentCount changed) and comment list cache
-        freePostDetailCacheService.evict(freePostId);
+        freePostDetailCacheService.evictAfterCommit(freePostId);
         postCommentCacheEvictor.evictAfterCommit(freePostId);
     }
 

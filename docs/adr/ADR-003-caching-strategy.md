@@ -154,7 +154,7 @@
 - `UserNicknameCacheService.java` — 수동 Cache-Aside 구현체 (C-02); `StringRedisTemplate` 직접 사용, try-catch 폴백 포함
 - `AuctionBidCacheService.java` — 입찰 이력 캐시 전담 Bean (C-04); self-call AOP 우회 문제 해결을 위해 분리
 - `CachedPage.java` — `Page<T>` Jackson 역직렬화 래퍼 (C-08)
-- `RedisCacheConfig.java` — `RedisCacheManager` Bean 및 네임스페이스별 TTL 설정 (`user:nickname` 제외)
+- `CacheConfig.java` — `RedisCacheManager` Bean 및 네임스페이스별 TTL 설정 (`user:nickname` 제외)
 - `RedisCacheErrorHandler.java` — Redis 장애 시 DB 패스스루 핸들러 (Spring Cache Abstraction 관할)
 - `CacheControlInterceptor.java` — HTTP 레이어 `Cache-Control` 헤더 관리 (C-09)
 - `AdminUserCommandService.java` — `toggleBidBlock()` 메서드에 `@PreAuthorize("hasRole('ADMIN')")` 적용

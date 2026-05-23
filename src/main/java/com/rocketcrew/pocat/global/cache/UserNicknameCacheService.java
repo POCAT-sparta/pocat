@@ -65,6 +65,9 @@ public class UserNicknameCacheService {
     }
 
     public void evict(Long userId) {
-        stringRedisTemplate.delete(KEY_PREFIX + userId);
+        try {
+            stringRedisTemplate.delete(KEY_PREFIX + userId);
+        } catch (Exception ignored) {
+        }
     }
 }

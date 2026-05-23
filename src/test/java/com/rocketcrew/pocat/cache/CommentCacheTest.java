@@ -69,8 +69,8 @@ class CommentCacheTest {
     @BeforeEach
     void setUp() {
         // 캐시 초기화 (테스트 격리)
-        if (cacheManager.getCache("comment:list") != null) {
-            cacheManager.getCache("comment:list").clear();
+        if (cacheManager.getCache("post:comments") != null) {
+            cacheManager.getCache("post:comments").clear();
         }
 
         // 기존 데이터 정리

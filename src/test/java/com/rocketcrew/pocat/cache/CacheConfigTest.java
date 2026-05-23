@@ -81,7 +81,7 @@ class CacheConfigTest {
     }
 
     @Test
-    @DisplayName("T-01-4: comment:list 캐시 이름이 RedisCacheManager에 등록되어야 한다")
+    @DisplayName("T-01-4: post:comments 캐시 이름이 RedisCacheManager에 등록되어야 한다")
     void commentListCacheShouldBeRegistered() {
         CacheManager cacheManager = applicationContext.getBean(CacheManager.class);
         assertThat(cacheManager.getCacheNames())

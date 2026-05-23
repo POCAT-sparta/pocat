@@ -19,7 +19,7 @@ public class AuctionBidCacheService {
 
     @Cacheable(
             value = CacheNames.AUCTION_BID_HISTORY,
-            key = "#auctionId + ':page:' + #pageable.pageNumber + ':size:' + #pageable.pageSize",
+            key = "#auctionId + ':page:' + #pageable.pageNumber + ':size:' + #pageable.pageSize + ':sort:' + #pageable.sort.toString()",
             sync = true
     )
     public Page<AuctionBidHistoryResponse> getBidHistoryByEndedAuction(Long auctionId, Pageable pageable) {

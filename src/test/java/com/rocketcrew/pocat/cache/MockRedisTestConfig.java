@@ -30,7 +30,7 @@ public class MockRedisTestConfig {
     @Primary
     public CacheManager cacheManager() {
         return new ConcurrentMapCacheManager(
-                "user:profile", "user:nickname", "user:bid-blocked",
+                "user:profile", "user:bid-blocked",
                 "post:free:detail", "post:trade:detail",
                 "auction:bid-history", "post:comments");
     }
