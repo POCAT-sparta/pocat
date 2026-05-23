@@ -85,7 +85,7 @@ class CacheConfigTest {
     void commentListCacheShouldBeRegistered() {
         CacheManager cacheManager = applicationContext.getBean(CacheManager.class);
         assertThat(cacheManager.getCacheNames())
-                .as("캐시 이름에 'comment:list' 이 포함되어야 한다")
+                .as("캐시 이름에 'post:comments' 이 포함되어야 한다")
                 .contains("post:comments");
     }
 }
