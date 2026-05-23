@@ -27,6 +27,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -171,6 +173,8 @@ class AuthControllerTest {
             mockMvc.perform(post("/api/v1/auth/logout")
                             .header("Authorization", "Bearer validAccessToken"))
                     .andExpect(status().isOk());
+
+            verify(authService).logout(eq("validAccessToken"));
         }
 
         @Test

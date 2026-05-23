@@ -71,7 +71,7 @@ class PaymentFailureServiceTest {
         }
 
         @Test
-        @DisplayName("실패: payment 의 orderId 에 해당하는 주문이 없음 → ORDER_NOT_FOUND(PAYMENT_NOT_FOUND 코드)")
+        @DisplayName("실패: payment 의 orderId 에 해당하는 주문이 없음 → ORDER_NOT_FOUND")
         void fail_orderNotFound() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // orderId=1L
 

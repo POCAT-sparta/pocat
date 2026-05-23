@@ -224,6 +224,7 @@ class PaymentCommandServiceTest {
 
             assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
             verify(portOneClient, never()).getPayment(anyString());
+            verify(settlementCommandService, never()).createSettlement(anyString());
         }
 
         @Test

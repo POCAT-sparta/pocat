@@ -39,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -161,7 +162,7 @@ class AdminRefundControllerTest {
                     "단순 변심", "파손 없음", RefundStatus.REJECTED,
                     LocalDateTime.now(), LocalDateTime.now());
             RejectRefundRequest request = new RejectRefundRequest("파손 없음");
-            given(refundCommandService.rejectRefund(eq(1L), any(RejectRefundRequest.class))).willReturn(response);
+            given(refundCommandService.rejectRefund(eq(1L), argThat((RejectRefundRequest r) -> "파손 없음".equals(r.rejectReason())))).willReturn(response);
 
             // when & then
             mockMvc.perform(patch("/api/v1/admin/refunds/1/reject")

@@ -23,7 +23,7 @@
 | Auction | AuctionCommandService, AuctionQueryService | AuctionController |
 | Bid | AuctionBidCommandService | — |
 | Auth | AuthService | AuthController |
-| User | UserCommandService, UserQueryService, AdminUserCommandService | UserController |
+| User | UserCommandService, UserQueryService, AdminUserCommandService *(scaffold)* | UserController |
 | FreePost | FreePostCommandService, FreePostQueryService | FreePostController |
 
 ---
@@ -54,3 +54,4 @@
 |------|------|-----------|
 | 웹훅 HMAC 서명 검증 테스트 불가 | `handleWebhook` 서비스 미구현 (`PORTONE_NOT_INTEGRATED` 예외 발생) | PortOne 연동 완료 후 테스트 추가 |
 | 컨트롤러 Admin 역할 강제 미검증 | `standaloneSetup`이 Spring Security 필터 체인을 우회 | `@SpringBootTest` + `MockMvc` 슬라이스 테스트로 별도 보안 검증 필요 |
+| AdminUserCommandService 테스트 비활성화 | `AdminUserCommandService` 미구현 — SUT 호출 없는 위양성 테스트를 `@Disabled` 처리 | 서비스 구현 후 `AdminUserCommandServiceTest` 활성화 |

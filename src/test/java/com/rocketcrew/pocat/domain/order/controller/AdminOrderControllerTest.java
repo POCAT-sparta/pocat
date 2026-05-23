@@ -36,6 +36,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.assertj.core.api.Assertions.assertThat;
+import org.mockito.ArgumentCaptor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -118,6 +121,8 @@ class AdminOrderControllerTest {
         void success_withStatusFilter() throws Exception {
             Page<AdminOrderResponse> page = new PageImpl<>(
                     List.of(sampleAdminOrderResponse()), PageRequest.of(0, 20), 1);
+            ArgumentCaptor<AdminOrderSearchCondition> conditionCaptor =
+                    ArgumentCaptor.forClass(AdminOrderSearchCondition.class);
 
             given(adminOrderQueryService.getAdminOrders(
                     any(AdminOrderSearchCondition.class), any(Pageable.class)))
@@ -127,6 +132,9 @@ class AdminOrderControllerTest {
                             .param("orderStatus", "PAYMENT_COMPLETED"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.content[0].status").value("PAYMENT_COMPLETED"));
+
+            then(adminOrderQueryService).should().getAdminOrders(conditionCaptor.capture(), any(Pageable.class));
+            assertThat(conditionCaptor.getValue().orderStatus()).isEqualTo(OrderStatus.PAYMENT_COMPLETED);
         }
     }
 }

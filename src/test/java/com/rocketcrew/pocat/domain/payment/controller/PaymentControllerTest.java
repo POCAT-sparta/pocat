@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -237,6 +238,8 @@ class PaymentControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}".getBytes()))
                     .andExpect(status().isBadRequest());
+
+            verifyNoInteractions(paymentCommandService);
         }
     }
 }

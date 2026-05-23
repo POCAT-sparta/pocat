@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ import static org.mockito.Mockito.verify;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@Disabled("AdminUserCommandService 미구현 — 서비스 클래스 생성 후 활성화")
 class AdminUserCommandServiceTest {
 
     // TODO: 서비스 구현 후 아래 주석을 해제하고 UserCommandService를 AdminUserCommandService로 교체
