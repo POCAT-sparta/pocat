@@ -20,7 +20,7 @@
 | `FreePostRepository` 벌크 업데이트 반환값 | ✅ 완료 | `void` → `int` (영향 행 수 검증) |
 | dotenv-java OS 환경변수 우선순위 | ✅ 완료 | `System.getenv(key) == null` 체크 후 setProperty |
 | `.env.example` 보안 가이드 | ✅ 완료 | 인라인 주석 제거 (dotenv-java 호환) |
-| Spring Boot Gradle plugin | ✅ 완료 | 3.3.18 (CVE-2026-22733 대응) |
+| Spring Boot Gradle plugin | ✅ 완료 | 3.3.18 ([CVE-2026-22733](https://spring.io/security/cve-2026-22733) 대응 · [NVD](https://nvd.nist.gov/vuln/detail/cve-2026-22733)) |
 | PR 생성 | ✅ 완료 | [pocat-batch PR](https://github.com/POCAT-sparta/pocat-batch/pulls) |
 
 ---
