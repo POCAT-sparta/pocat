@@ -44,3 +44,7 @@ out/
 
 ### Serena ###
 .serena/
+
+### Scripts ###
+scripts/start.sh
+scripts/stop.sh

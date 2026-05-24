@@ -4,12 +4,12 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.settlement.entity.Settlement;
 import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
+import com.rocketcrew.pocat.domain.settlement.event.SettlementCreatedEvent;
 import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +22,10 @@ import com.rocketcrew.pocat.global.util.TsidGenerator;
 @RequiredArgsConstructor
 @Transactional
 public class SettlementCommandService {
-    // TODO: 추후에 이벤트 처리로 고도화 가능 : 결제 완료 이벤트 발행 -> 리스너가 컨슘 -> 정산 객체 생성
-
 
     private final SettlementRepository settlementRepository;
     private final OrderRepository orderRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public void createSettlement(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
@@ -53,10 +52,13 @@ public class SettlementCommandService {
                 .status(SettlementStatus.PENDING)
                 .build();
 
-        try {
-            settlementRepository.save(settlement);
-        } catch (DataIntegrityViolationException e) {
-            // 동시 요청 레이스 컨디션 - 다른 스레드가 이미 생성한 것으로 간주
-        }
+        settlementRepository.save(settlement);
+
+        // 정산 생성 이벤트 발행
+        eventPublisher.publishEvent(new SettlementCreatedEvent(
+                settlement.getSettlementUid(),
+                settlement.getSellerId(),
+                settlement.getSellerAmount()
+        ));
     }
 }
