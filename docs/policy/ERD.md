@@ -138,16 +138,17 @@ CREATE TABLE `auctions` (
 `highest_bidder_id`	BIGINT	NULL,
 `title`	VARCHAR(255)	NOT NULL,
 `description`	TEXT	NULL,
-`card_image_url`	VARCHAR(500)	NULL,
 `starting_price`	BIGINT	NOT NULL,
 `buyout_price`	BIGINT	NULL	COMMENT '즉시구매가',
 `highest_price`	BIGINT	NULL	COMMENT '현재 최고 입찰가',
-`status`	VARCHAR(30)	NOT NULL	COMMENT 'PENDING/INSPECTING/REJECTED/ACTIVE/ENDED/NO_BIDDER/CANCELLED/PAYMENT_PENDING',
-`started_at`	TIMESTAMP	NOT NULL,
-`ended_at`	TIMESTAMP	NOT NULL,
+`status`	VARCHAR(30)	NOT NULL	COMMENT 'PENDING/INSPECTING/APPROVED/REJECTED/ACTIVE/ENDED/NO_BIDDER/CANCELLED/PAYMENT_PENDING',
+`started_at`	TIMESTAMP	NULL,
+`ended_at`	TIMESTAMP	NULL,
 `created_at`	TIMESTAMP	NOT NULL,
 `updated_at`	TIMESTAMP	NOT NULL,
-`candel_reason`	TEXT	NULL
+`reason`	TEXT	NULL,
+`inspected_at`	TIMESTAMP	NULL,
+`inspected_by`	BIGINT	NULL
 );
 
 CREATE TABLE `chat_messages` (

@@ -18,6 +18,11 @@ public interface AuctionBidRepository extends JpaRepository<AuctionBid, Long>, A
             BidStatus status
     );
 
+    Optional<AuctionBid> findFirstByAuctionIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+            Long auctionId,
+            BidStatus status
+    );
+
     @Query("SELECT b.auctionId AS auctionId, COUNT(b) AS cnt FROM AuctionBid b WHERE b.auctionId IN :ids GROUP BY b.auctionId")
     List<AuctionCountProjection> countByAuctionIdIn(@Param("ids") List<Long> ids);
 }
