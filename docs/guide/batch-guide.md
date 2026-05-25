@@ -983,4 +983,4 @@ DB_PASSWORD=mypassword
 ---
 
 > 문의: 팀 채널 또는 GitHub Issues에 남겨주세요.
-> 관련 문서: [ARCHITECTURE.md](../ARCHITECTURE.md) · [RUNBOOK.md](../RUNBOOK.md) · [ADR-001](../ADR-001-spring-batch-separation.md)
+> 관련 문서: [ARCHITECTURE.md](../ARCHITECTURE.md) · [RUNBOOK.md](../RUNBOOK.md) · [ADR-003](../adr/ADR-003-batch-server-extraction.md)
