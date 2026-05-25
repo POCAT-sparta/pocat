@@ -1,91 +1,91 @@
 ## SA문서
 
-# 🃏 POCAT — SA 문서 (v2)
+# ?�� POCAT ??SA 문서 (v2)
 
-> **Pokemon Card Trading Platform** | 7조 로켓단
+> **Pokemon Card Trading Platform** | 7�?로켓??
 >
 
 ---
 
-## 📌 목차
+## ?�� 목차
 
-1. 프로젝트 개요
-2. 기술 스택
-3. 시스템 아키텍처
-4. 비즈니스 흐름
-5. 결제 정책
-6. ERD 상세 설명
-7. API 설계 방향
-8. 성능 및 기술 정책
-9. 보안 정책
+1. ?�로?�트 개요
+2. 기술 ?�택
+3. ?�스???�키?�처
+4. 비즈?�스 ?�름
+5. 결제 ?�책
+6. ERD ?�세 ?�명
+7. API ?�계 방향
+8. ?�능 �?기술 ?�책
+9. 보안 ?�책
 10. 주요 기능 목록
-11. 리스크 및 고려사항
-12. 용어 정의
+11. 리스??�?고려?�항
+12. ?�어 ?�의
 
 ---
 
-## 1. 프로젝트 개요
+## 1. ?�로?�트 개요
 
 ### 1.1 목적
 
-POCAT은 포켓몬 카드를 테마로 한 온라인 C2C 거래 플랫폼이다.
-판매자는 등급 감정을 받은 카드를 **경매** 형태로 등록하고, 구매자는 입찰을 통해 안전하게 카드를 거래할 수 있다.
+POCAT?� ?�켓�?카드�??�마�????�라??C2C 거래 ?�랫?�이??
+?�매?�는 ?�급 감정??받�? 카드�?**경매** ?�태�??�록?�고, 구매?�는 ?�찰???�해 ?�전?�게 카드�?거래?????�다.
 
 ---
 
-### 1.2 사용자 시나리오
+### 1.2 ?�용???�나리오
 
-### 판매자 시나리오
+### ?�매???�나리오
 
-- 자신의 카드를 판매 등록하고 카드를 플랫폼에 배송 (Pending 상태)
-- 관리자가 상품 검증 (가격검증 X, 실물 정품 카드인지만 검증)
-- 경매 게시글 Approve → 경매 게시글 활성화
-- 입찰 → 경매 낙찰 → 자동 결제 → 배송 → 판매자에게 수수료 제외 입금
+- ?�신??카드�??�매 ?�록?�고 카드�??�랫?�에 배송 (Pending ?�태)
+- 관리자가 ?�품 검�?(가격�?�?X, ?�물 ?�품 카드?��?�?검�?
+- 경매 게시글 Approve ??경매 게시글 ?�성??
+- ?�찰 ??경매 ?�찰 ???�동 결제 ??배송 ???�매?�에�??�수�??�외 ?�금
 
-### 구매자 시나리오
+### 구매???�나리오
 
-- 원하는 카드를 검색하여 현재 등급의 카드가 있는지 빠르게 확인
-- 조회 후 원하는 카드의 입찰에 참여 → 가격 경쟁
-- 승리 시 구매
-- 패배 시 구매 불가
+- ?�하??카드�?검?�하???�재 ?�급??카드가 ?�는지 빠르�??�인
+- 조회 ???�하??카드???�찰??참여 ??가�?경쟁
+- ?�리 ??구매
+- ?�배 ??구매 불�?
 
 ---
 
-### 1.3 주요 도메인 범위
+### 1.3 주요 ?�메??범위
 
-| 도메인 | 설명 |
+| ?�메??| ?�명 |
 | --- | --- |
-| 유저 (User) | 회원가입/로그인, 마이페이지, 빌링키 등록, 계좌 등록, 제재(입찰 차단) 관리 |
-| 카드 카탈로그 | TCGdex API 연동 카드 정보 DB 저장 / 수동 등록, 등급 (PSA_10 / PSA_9) 등 관리 |
-| 경매 (Auction) | 경매 등록 → 검수 → 활성 → 종료 전 과정, 즉시 구매, 입찰 관리 |
-| 주문 (Order) | AUCTION 주문 관리 |
-| 결제 (Payment) | PortOne V2 빌링키 자동결제 중심, 경매 낙찰 실패 시 1시간 내 직접결제 허용 |
-| 환불 (Refund) | 환불 요청 → 처리 → 상태 추적 (PortOne 부분환불 미포함) |
-| 정산 (Settlement) | 배송 완료 후 판매자 정산 테이블 관리 |
-| 커뮤니티 | 자유게시판 / 거래게시판, 2depth 댓글 |
-| 채팅 (Chat) | 거래 게시판 기반 1:1 채팅 (채팅 이후 거래 진행은 당사자 간 자율) |
-| 알림 (Notification) | 입찰 갱신·낙찰·배송 등 실시간 알림 |
-| 찜 (Like) | 경매 좋아요/찜 기능 |
+| ?��? (User) | ?�원가??로그?? 마이?�이지, 빌링???�록, 계좌 ?�록, ?�재(?�찰 차단) 관�?|
+| 카드 카탈로그 | TCGdex API ?�동 카드 ?�보 DB ?�??/ ?�동 ?�록, ?�급 (PSA_10 / PSA_9) ??관�?|
+| 경매 (Auction) | 경매 ?�록 ??검?????�인(Approved) ???��?줄러 ?�성????종료 ??과정, 즉시 구매, ?�찰 관�?|
+| 주문 (Order) | AUCTION 주문 관�?|
+| 결제 (Payment) | PortOne V2 빌링???�동결제 중심, 경매 ?�찰 ?�패 ??1?�간 ??직접결제 ?�용 |
+| ?�불 (Refund) | ?�불 ?�청 ??처리 ???�태 추적 (PortOne 부분환�?미포?? |
+| ?�산 (Settlement) | 배송 ?�료 ???�매???�산 ?�이�?관�?|
+| 커�??�티 | ?�유게시??/ 거래게시?? 2depth ?��? |
+| 채팅 (Chat) | 거래 게시??기반 1:1 채팅 (채팅 ?�후 거래 진행?� ?�사??�??�율) |
+| ?�림 (Notification) | ?�찰 갱신·?�찰·배송 ???�시�??�림 |
+| �?(Like) | 경매 좋아??�?기능 |
 
 ---
 
-## 2. 기술 스택
+## 2. 기술 ?�택
 
 ### 2.1 Backend
 
 | 분류 | 기술 | 비고 |
 | --- | --- | --- |
-| 언어/프레임워크 | Java 17 + Spring Boot 3.x |  |
-| ORM | Spring Data JPA + QueryDSL | CQRS 패턴 적용 |
+| ?�어/?�레?�워??| Java 17 + Spring Boot 3.x |  |
+| ORM | Spring Data JPA + QueryDSL | CQRS ?�턴 ?�용 |
 | DB | MySQL 8.x |  |
-| 캐시/분산락 | Redis | 입찰 동시성 제어, 캐싱 |
-| 검색 | ElasticSearch | 카드 카탈로그 풀텍스트 검색 |
-| 메시지 큐 | Kafka | 경매 종료 이벤트 → 주문 생성 |
-| 실시간 통신 | WebSocket (STOMP) | 채팅, 알림 |
-| 결제 | PortOne V2 (KG이니시스) | 빌링키 자동결제 / PG 직접결제 |
-| 외부 API | TCGdex REST API | 포켓몬 카드 데이터 |
-| API 문서화 | Swagger (SpringDoc) | Notion 병행 |
-| 스케줄러 | Spring Scheduler | 배송 상태 60분 주기 변경 (편의상) |
+| 캐시/분산??| Redis | ?�찰 ?�시???�어, 캐싱 |
+| 검??| ElasticSearch | 카드 카탈로그 ?�?�스??검??|
+| 메시지 ??| Kafka | 경매 종료 ?�벤????주문 ?�성 |
+| ?�시�??�신 | WebSocket (STOMP) | 채팅, ?�림 |
+| 결제 | PortOne V2 (KG?�니?�스) | 빌링???�동결제 / PG 직접결제 |
+| ?��? API | TCGdex REST API | ?�켓�?카드 ?�이??|
+| API 문서??| Swagger (SpringDoc) | Notion 병행 |
+| ?��?줄러 | Spring Scheduler | 배송 ?�태 60�?주기 변�?(?�의?? |
 
 ---
 
@@ -93,27 +93,27 @@ POCAT은 포켓몬 카드를 테마로 한 온라인 C2C 거래 플랫폼이다.
 
 | 분류 | 기술 | 비고 |
 | --- | --- | --- |
-| 컨테이너 | Docker | **Amazon ECR** 이미지 관리 |
-| CI/CD | GitHub Actions | PR → Build → Push → Deploy |
-| 클라우드 | AWS (ECS Fargate, ECR) |  |
-| 로드밸런서 | AWS ALB | 인터넷 경계 |
-| 오토스케일링 | AWS ASG | 무중단 배포 |
-| 보안 | AWS IAM, Security Group | 최소 권한 원칙 |
-| 이미지 저장 | AWS S3 | 카드 이미지 URL 저장 |
-| 아키텍처 패턴 | MSA (조건부 검토) | 진행 속도가 계획보다 빠를 경우 그때 고려 |
+| 컨테?�너 | Docker | **Amazon ECR** ?��?지 관�?|
+| CI/CD | GitHub Actions | PR ??Build ??Push ??Deploy |
+| ?�라?�드 | AWS (ECS Fargate, ECR) |  |
+| 로드밸런??| AWS ALB | ?�터??경계 |
+| ?�토?��??�링 | AWS ASG | 무중??배포 |
+| 보안 | AWS IAM, Security Group | 최소 권한 ?�칙 |
+| ?��?지 ?�??| AWS S3 | 카드 ?��?지 URL ?�??|
+| ?�키?�처 ?�턴 | MSA (조건부 검?? | 진행 ?�도가 계획보다 빠�? 경우 그때 고려 |
 
 ---
 
-## 3. 시스템 아키텍처
+## 3. ?�스???�키?�처
 
-### 3.1 전체 구성
+### 3.1 ?�체 구성
 
 ```
 [ Client (Browser) ]
         | HTTPS
-[ AWS ALB ]  ← 인터넷 경계
+[ AWS ALB ]  ???�터??경계
         |
-[ ECS Fargate — Spring Boot App ]
+[ ECS Fargate ??Spring Boot App ]
     |           |            |
 [ MySQL ]   [ Redis ]   [ Kafka ]
     |                        |
@@ -124,278 +124,279 @@ POCAT은 포켓몬 카드를 테마로 한 온라인 C2C 거래 플랫폼이다.
 
 ---
 
-### 3.2 배포 파이프라인
+### 3.2 배포 ?�이?�라??
 
 ```
 GitHub PR
-  ① 단위 테스트 / 빌드
-  ② Docker Image Build
-  ③ Amazon ECR Push
-  ④ ECS 서비스 업데이트 (Rolling Update)
-  ⑤ ALB Health Check → 정상 확인 후 구버전 종료 (무중단 배포)
+  ???�위 ?�스??/ 빌드
+  ??Docker Image Build
+  ??Amazon ECR Push
+  ??ECS ?�비???�데?�트 (Rolling Update)
+  ??ALB Health Check ???�상 ?�인 ??구버??종료 (무중??배포)
 ```
 
 ---
 
-### 3.3 아키텍처 패턴 요약
+### 3.3 ?�키?�처 ?�턴 ?�약
 
-- **CQRS**: 조회(Query)와 커맨드(Command)를 분리하여 읽기 성능 최적화
-- **분산락**: Redis Redisson을 이용한 입찰 동시성 제어
-- **이벤트 드리븐**: Kafka를 통한 경매 종료 → 주문 생성 비동기 처리
-- **스냅샷**: **경매 낙찰 시점** 및 **주문 확정 시점**의 가격·수수료 정보를 별도 스냅샷 테이블에 영구 보관
-
----
-
-## 4. 비즈니스 흐름
-
-### 4.1 경매 등록 흐름 (판매자)
-
-```
-판매자가 판매할 카드의 카탈로그 조회 
-  ↓
-카드 선택 → CardCatalog upsert
-  ↓
-경매 정보 입력
-  ├─ 시작가 (ex. 100,000원)
-  ├─ 즉시구매가 (선택, ex. 1,000,000원)
-  ├─ 경매 기간 (ex. 3일)
-  └─ 등급 (PSA_10 / PSA_9)
-  ↓
-플랫폼으로 실물 카드 배송
-  ↓
-관리자 검수 (Inspection)
-  ├─ PASSED → Auction status: ACTIVE → Notification 발송
-  └─ FAILED → Auction status: REJECTED → 카드 반송 → Notification 발송
-```
+- **CQRS**: 조회(Query)?� 커맨??Command)�?분리?�여 ?�기 ?�능 최적??
+- **분산??*: Redis Redisson???�용???�찰 ?�시???�어
+- **?�벤???�리�?*: Kafka�??�한 경매 종료 ??주문 ?�성 비동�?처리
+- **?�냅??*: **경매 ?�찰 ?�점** �?**주문 ?�정 ?�점**??가격·수?�료 ?�보�?별도 ?�냅???�이블에 ?�구 보�?
 
 ---
 
-### 4.2 입찰 흐름 (구매자)
+## 4. 비즈?�스 ?�름
+
+### 4.1 경매 ?�록 ?�름 (?�매??
 
 ```
-입찰 전 조건 확인
-  ├─ 빌링키(BillingKey) 등록 여부 검증 → 미등록 시 입찰 불가
-  └─ 결제수단 ACTIVE 여부 확인
-  ↓
-Redis 분산락 획득 (key: "auction:{auctionId}")
-  ↓
-현재 최고 입찰가(highest_price)보다 높은지 검증
-  ↳ 즉시구매가(buyout_price) 이상이면 입찰 거절 (즉시구매 API 사용)
-  ↓
-높으면 → AuctionBid 생성, 최고 입찰자(highest_bidder_id) 갱신
-         이전 최고 입찰자 → status: OUTBID
-낮으면 → 입찰 거절 (예외 처리)
-  ↓
-락 해제
+?�매?��? ?�매??카드??카탈로그 조회 
+  ??
+카드 ?�택 ??CardCatalog upsert
+  ??
+경매 ?�보 ?�력
+  ?��? ?�작가 (ex. 100,000??
+  ?��? 즉시구매가 (?�택, ex. 1,000,000??
+  ?��? 경매 기간 (ex. 3??
+  ?��? ?�급 (PSA_10 / PSA_9)
+  ??
+?�랫?�으�??�물 카드 배송
+  ??
+관리자 검??(Inspection)
+  ?��? PASSED ??Auction status: APPROVED ??검???�료 ?�보(inspectedAt / inspectedBy) ?�??
+  ??         ?��? �����ٷ�: APPROVED ?�태??ACTIVE 변�?+ startedAt / endedAt ?�입
+  ?��? FAILED ??Auction status: REJECTED ??reason ?�????카드 반송 ??Notification 발송
 ```
 
-> 기존 최고입찰자 OUTBID 알림은 Kafka 발행 연동 전까지 보류한다.
+---
 
-> 💡 **경매 종료 시 스냅샷 촬영**: 낙찰 확정 시점에 `auction_snapshots` 테이블에 최고 입찰가 등 정보를 기록한다.
+### 4.2 ?�찰 ?�름 (구매??
+
+```
+?�찰 ??조건 ?�인
+  ?��? 빌링??BillingKey) ?�록 ?��? 검�???미등�????�찰 불�?
+  ?��? 결제?�단 ACTIVE ?��? ?�인
+  ??
+Redis 분산???�득 (key: "auction:{auctionId}")
+  ??
+?�재 최고 ?�찰가(highest_price)보다 ?��?지 검�?
+  ??즉시구매가(buyout_price) ?�상?�면 ?�찰 거절 (즉시구매 API ?�용)
+  ??
+?�으�???AuctionBid ?�성, 최고 ?�찰??highest_bidder_id) 갱신
+         ?�전 최고 ?�찰????status: OUTBID
+??���????�찰 거절 (?�외 처리)
+  ??
+???�제
+```
+
+> 기존 최고?�찰??OUTBID ?�림?� Kafka 발행 ?�동 ?�까지 보류?�다.
+
+> ?�� **경매 종료 ???�냅??촬영**: ?�찰 ?�정 ?�점??`auction_snapshots` ?�이블에 최고 ?�찰가 ???�보�?기록?�다.
 >
 
 ---
 
-### 4.3 즉시 구매 흐름
+### 4.3 즉시 구매 ?�름
 
 ```
-구매자가 즉시구매가(buyout_price) 이상 입찰
-  ↓
-분산락 획득 → 즉시구매가 이상 감지
-  ↓
-Auction status: PAYMENT_PENDING (결제 대기 상태 — 다른 입찰 차단)
-  ↓
-billingKey 자동결제 시도
-  ├─ 결제 성공 → Auction status: ENDED
-  │              해당 입찰자 → AuctionBid status: WON
-  │              나머지 입찰자 → AuctionBid status: LOST
-  │              auction_snapshots 스냅샷 생성
-  │              Order 생성으로 이동 (낙찰 확정 흐름 진입)
-  └─ 결제 실패 → 결제 실패 처리 진행
+구매?��? 즉시구매가(buyout_price) ?�상 ?�찰
+  ??
+분산???�득 ??즉시구매가 ?�상 감�?
+  ??
+Auction status: PAYMENT_PENDING (결제 ?��??�태 ???�른 ?�찰 차단)
+  ??
+billingKey ?�동결제 ?�도
+  ?��? 결제 ?�공 ??Auction status: ENDED
+  ??             ?�당 ?�찰????AuctionBid status: WON
+  ??             ?�머지 ?�찰????AuctionBid status: LOST
+  ??             auction_snapshots ?�냅???�성
+  ??             Order ?�성?�로 ?�동 (?�찰 ?�정 ?�름 진입)
+  ?��? 결제 ?�패 ??결제 ?�패 처리 진행
 ```
 
-> ⚠️ 즉시 ENDED 처리 대신 **결제 대기(PAYMENT_PENDING) 상태를 중간에 삽입**하여, 결제가 실제로 완료된 후에 ENDED로 전환한다.
+> ?�️ 즉시 ENDED 처리 ?�??**결제 ?��?PAYMENT_PENDING) ?�태�?중간???�입**?�여, 결제가 ?�제�??�료???�에 ENDED�??�환?�다.
 >
 
 ---
 
-### 4.4 경매 종료 흐름
+### 4.4 경매 종료 ?�름
 
 ```
 Deadline Worker
- → Redis ZSet에서 만료된 auctionId 조회
- → DB에서 status OPEN 확인 후 CLOSED 변경
- → Kafka auction-ended 발행
-  ↓
-입찰자 없음 → Auction status: NO_BIDDER (종료)
-입찰자 있음 → Auction status: ENDED
-             AuctionBid status: WON (최고 입찰자)
-             AuctionBid status: LOST (나머지)
-             auction_snapshots 스냅샷 생성
-  ↓
-Kafka 이벤트 발행 → Notification 발송 → Order 생성으로 이동
+ ??Redis ZSet?�서 만료??auctionId 조회
+ ??DB?�서 status OPEN ?�인 ??CLOSED 변�?
+ ??Kafka auction-ended 발행
+  ??
+?�찰???�음 ??Auction status: NO_BIDDER (종료)
+?�찰???�음 ??Auction status: ENDED
+             AuctionBid status: WON (최고 ?�찰??
+             AuctionBid status: LOST (?�머지)
+             auction_snapshots ?�냅???�성
+  ??
+Kafka ?�벤??발행 ??Notification 발송 ??Order ?�성?�로 ?�동
 ```
 
 ---
 
-### 4.5 낙찰 확정 → 주문 생성
+### 4.5 ?�찰 ?�정 ??주문 ?�성
 
 ```
-Order 생성
-  ├─ auction_id: 해당 경매 ID
-  ├─ buyer_id: 낙찰자
-  ├─ seller_id: 판매자
-  ├─ final_price: 최고 입찰가
-  └─ status: PAYMENT_PENDING
-  ↓
-billingKey로 자동결제 1회 시도 (PortOne V2)
-  성공 → status: PAYMENT_COMPLETED
-  실패 → status: PAYMENT_FAILED
-         → 1시간 내 직접 결제 가능
-         → 미결제 확정 시: 거래 취소 + 패널티(unpaid_strike) +1 기록
-         → 패널티 3회 누적 시: is_bid_blocked = true (입찰 차단)
-  ↓
-order_snapshots 생성
-  ├─ final_price
-  ├─ fee_rate
-  ├─ fee
-  └─ seller_amount (= final_price × (1 - fee_rate))
-  ↓
-배송 시작 (delivery_status: PREPARING → SHIPPING → COMPLETED)
-  ↓
-Settlement 생성 → 판매자 정산 테이블 기록
+Order ?�성
+  ?��? auction_id: ?�당 경매 ID
+  ?��? buyer_id: ?�찰??
+  ?��? seller_id: ?�매??
+  ?��? final_price: 최고 ?�찰가
+  ?��? status: PAYMENT_PENDING
+  ??
+billingKey�??�동결제 1???�도 (PortOne V2)
+  ?�공 ??status: PAYMENT_COMPLETED
+  ?�패 ??status: PAYMENT_FAILED
+         ??1?�간 ??직접 결제 가??
+         ??미결???�정 ?? 거래 취소 + ?�널??unpaid_strike) +1 기록
+         ???�널??3???�적 ?? is_bid_blocked = true (?�찰 차단)
+  ??
+order_snapshots ?�성
+  ?��? final_price
+  ?��? fee_rate
+  ?��? fee
+  ?��? seller_amount (= final_price × (1 - fee_rate))
+  ??
+배송 ?�작 (delivery_status: PREPARING ??SHIPPING ??COMPLETED)
+  ??
+Settlement ?�성 ???�매???�산 ?�이�?기록
 ```
 
-> 🔄 **재결제 정책**: 낙찰 자동결제 실패 시 **1시간 이내**에만 직접 결제 허용
+> ?�� **?�결???�책**: ?�찰 ?�동결제 ?�패 ??**1?�간 ?�내**?�만 직접 결제 ?�용
 >
 
 ---
 
-### 4.6 일반 거래 흐름 (거래게시판)
+### 4.6 ?�반 거래 ?�름 (거래게시??
 
 ```
-판매자 trade_post 등록
-  ├─ 카드 정보 (CardCatalog 선택적 연결)
-  ├─ 고정 가격
-  └─ 카드 상태 설명 + 이미지
-  ↓
-구매자가 채팅 시작 (Chat)
-  ↓
-이후 거래 진행은 당사자 간 자율 진행
-  └─ 서비스 측에서 로직상 관여하지 않음
-     (결제·배송·완료 처리 없음)
+?�매??trade_post ?�록
+  ?��? 카드 ?�보 (CardCatalog ?�택???�결)
+  ?��? 고정 가�?
+  ?��? 카드 ?�태 ?�명 + ?��?지
+  ??
+구매?��? 채팅 ?�작 (Chat)
+  ??
+?�후 거래 진행?� ?�사??�??�율 진행
+  ?��? ?�비??측에??로직??관?�하지 ?�음
+     (결제·배송·?�료 처리 ?�음)
 ```
 
-> 📌 일반 거래(거래게시판)는 서비스가 결제·배송 흐름을 지원하지 않는다. 채팅 개설 이후의 거래는 판매자와 구매자가 직접 진행한다.
+> ?�� ?�반 거래(거래게시?????�비?��? 결제·배송 ?�름??지?�하지 ?�는?? 채팅 개설 ?�후??거래???�매?��? 구매?��? 직접 진행?�다.
 >
 
 ---
 
-## 5. 결제 정책
+## 5. 결제 ?�책
 
-### 5.1 결제 유형 분류
+### 5.1 결제 ?�형 분류
 
-| 결제 유형 | 대상 | 방식 |
+| 결제 ?�형 | ?�??| 방식 |
 | --- | --- | --- |
-| BILLING_KEY (자동결제) | 경매 낙찰 | 사전 등록 빌링키로 서버에서 자동 청구 |
-| PG_DIRECT (직접결제) | 경매 낙찰 자동결제 실패 후 1시간 이내 | 포트원 결제창 직접 호출 |
+| BILLING_KEY (?�동결제) | 경매 ?�찰 | ?�전 ?�록 빌링?�로 ?�버?�서 ?�동 �?�� |
+| PG_DIRECT (직접결제) | 경매 ?�찰 ?�동결제 ?�패 ??1?�간 ?�내 | ?�트??결제�?직접 ?�출 |
 
-**핵심 정책:**
+**?�심 ?�책:**
 
-- **빌링키 미등록 시 경매 입찰 시도 자체가 불가**
-- 경매 낙찰 후 자동결제 실패 시 → **1시간 이내** 직접결제 허용
-
----
-
-### 5.2 경매 결제 상세 정책
-
-- 입찰 전 빌링키 등록 필수 (미등록 시 입찰 불가)
-- 입찰 전 결제수단 ACTIVE 상태 확인
-- 최고 입찰자 변경 시 이전 최고 입찰자 OUTBID 처리 (알림 발송은 Kafka 연동 전까지 보류)
-
-**낙찰 후 처리:**
-
-1. billingKey로 자동결제 1회 시도
-2. 실패 → PAYMENT_FAILED 상태, **1시간** 이내 직접결제 기회 부여
-3. 1시간 내 미결제 확정 → 거래 취소 + 패널티(unpaid_strike) +1
-4. 1순위 낙찰 실패 시 → 2순위에게 알림 (24시간 유효)
-5. 2순위도 실패 시 → 판매자에게 선택권: 재경매 or 즉시판매
+- **빌링??미등�???경매 ?�찰 ?�도 ?�체가 불�?**
+- 경매 ?�찰 ???�동결제 ?�패 ????**1?�간 ?�내** 직접결제 ?�용
 
 ---
 
-### 5.3 수수료 및 정산
+### 5.2 경매 결제 ?�세 ?�책
 
-- 플랫폼 수수료: 낙찰가의 5% (`fee_rate`)
-- 판매자 실수령액: `final_price × (1 - fee_rate)` → `seller_amount`
-- `order_snapshots` 테이블에 `final_price`, `fee_rate`, `fee`, `seller_amount` 영구 보존
-- 배송 완료 후 `settlements` 테이블에 정산 정보 기록 (별도 정산 테이블 운영)
+- ?�찰 ??빌링???�록 ?�수 (미등�????�찰 불�?)
+- ?�찰 ??결제?�단 ACTIVE ?�태 ?�인
+- 최고 ?�찰??변�????�전 최고 ?�찰??OUTBID 처리 (?�림 발송?� Kafka ?�동 ?�까지 보류)
+
+**?�찰 ??처리:**
+
+1. billingKey�??�동결제 1???�도
+2. ?�패 ??PAYMENT_FAILED ?�태, **1?�간** ?�내 직접결제 기회 부??
+3. 1?�간 ??미결???�정 ??거래 취소 + ?�널??unpaid_strike) +1
+4. 1?�위 ?�찰 ?�패 ????2?�위?�게 ?�림 (24?�간 ?�효)
+5. 2?�위???�패 ?????�매?�에�??�택�? ?�경�?or 즉시?�매
 
 ---
 
-## 6. ERD 상세 설명
+### 5.3 ?�수�?�??�산
 
-### 6.1 핵심 테이블 관계
+- ?�랫???�수�? ?�찰가??5% (`fee_rate`)
+- ?�매???�수?�액: `final_price × (1 - fee_rate)` ??`seller_amount`
+- `order_snapshots` ?�이블에 `final_price`, `fee_rate`, `fee`, `seller_amount` ?�구 보존
+- 배송 ?�료 ??`settlements` ?�이블에 ?�산 ?�보 기록 (별도 ?�산 ?�이�??�영)
+
+---
+
+## 6. ERD ?�세 ?�명
+
+### 6.1 ?�심 ?�이�?관�?
 
 ```
-users  ──────────────┬── auctions (seller_id, highest_bidder_id)
-                     ├── auction_bids (user_id)
-                     ├── orders (buyer_id, seller_id)
-                     ├── card_catalogs (user_id)
-                     └── notifications (user_id)
+users  ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?��??� auctions (seller_id, highest_bidder_id)
+                     ?��??� auction_bids (user_id)
+                     ?��??� orders (buyer_id, seller_id)
+                     ?��??� card_catalogs (user_id)
+                     ?��??� notifications (user_id)
 
-auctions ────────────┬── auction_bids (auction_id)
-                     ├── orders (auction_id)
-                     └── auction_snapshots (auction_id)
+auctions ?�?�?�?�?�?�?�?�?�?�?�?�?��??� auction_bids (auction_id)
+                     ?��??� orders (auction_id)
+                     ?��??� auction_snapshots (auction_id)
 
-orders ──────────────┬── payments (order_id)
-                     ├── refunds (order_id)
-                     └── order_snapshots (order_id)
+orders ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?��??� payments (order_id)
+                     ?��??� refunds (order_id)
+                     ?��??� order_snapshots (order_id)
 
-trade_posts ──────────── chats (free_post_id)
-free_posts ───────────── comments (trade_post_id)
+trade_posts ?�?�?�?�?�?�?�?�?�?�?�?� chats (free_post_id)
+free_posts ?�?�?�?�?�?�?�?�?�?�?�?�?� comments (trade_post_id)
 
-likes ───────────────── auctions (auction_id)
+likes ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?� auctions (auction_id)
 ```
 
 ---
 
-### 6.2 주요 테이블 명세
+### 6.2 주요 ?�이�?명세
 
 ### `users`
 
-| 컬럼 | 타입 | 설명 |
+| 컬럼 | ?�??| ?�명 |
 | --- | --- | --- |
-| `billing_key` | VARCHAR(255) | 경매/이벤트 자동결제용 빌링키 (PortOne V2) |
-| `unpaid_strike` | INT | 미결제 패널티 횟수 누적 |
-| `is_bid_blocked` | BOOLEAN | 입찰 차단 여부 (패널티 누적 시 true) |
-| `bank_name` / `bank_account` | VARCHAR | 판매자 정산용 계좌 (마이페이지에서 원하는 시기에 등록 가능) |
+| `billing_key` | VARCHAR(255) | 경매/?�벤???�동결제??빌링??(PortOne V2) |
+| `unpaid_strike` | INT | 미결???�널???�수 ?�적 |
+| `is_bid_blocked` | BOOLEAN | ?�찰 차단 ?��? (?�널???�적 ??true) |
+| `bank_name` / `bank_account` | VARCHAR | ?�매???�산??계좌 (마이?�이지?�서 ?�하???�기???�록 가?? |
 | `role` | VARCHAR(20) | USER / ADMIN |
 
-> 📌 계좌 정보/ 주소지는 회원가입 후 **마이페이지에서 원하는 시점에 등록·수정** 가능
+> ?�� 계좌 ?�보/ 주소지???�원가????**마이?�이지?�서 ?�하???�점???�록·?�정** 가??
 >
 
 ---
 
 ### `auctions`
 
-| 컬럼 | 타입 | 설명 |
+| 컬럼 | ?�??| ?�명 |
 | --- | --- | --- |
 | `status` | VARCHAR(30) | PENDING / INSPECTING / REJECTED / ACTIVE / ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING |
-| `buyout_price` | BIGINT | 즉시구매가 (선택값, null 가능) |
-| `highest_price` | BIGINT | 현재 최고 입찰가 (실시간 갱신) |
-| `highest_bidder_id` | BIGINT | 현재 최고 입찰자 FK |
-| `card_catalog_id` | BIGINT | CardCatalog FK (카드 등급 정보) |
+| `buyout_price` | BIGINT | 즉시구매가 (?�택�? null 가?? |
+| `highest_price` | BIGINT | ?�재 최고 ?�찰가 (?�시�?갱신) |
+| `highest_bidder_id` | BIGINT | ?�재 최고 ?�찰??FK |
+| `card_catalog_id` | BIGINT | CardCatalog FK (카드 ?�급 ?�보) |
 
 ---
 
 ### `orders`
 
-| 컬럼 | 타입 | 설명 |
+| 컬럼 | ?�??| ?�명 |
 | --- | --- | --- |
-| `auction_id` | BIGINT | 경매 FK (null 가능) |
+| `auction_id` | BIGINT | 경매 FK (null 가?? |
 | `card_catalog_id` | BIGINT | 카드 카탈로그 FK |
-| `seller_id` | BIGINT | 판매자 (이벤트 상품이면 null) |
-| `buyer_id` | BIGINT | 구매자 |
+| `seller_id` | BIGINT | ?�매??(?�벤???�품?�면 null) |
+| `buyer_id` | BIGINT | 구매??|
 | `status` | VARCHAR(30) | PAYMENT_PENDING / CANCELLED / PAYMENT_COMPLETED / SHIPPING / COMPLETED / REFUNDED |
 | `delivery_status` | VARCHAR(20) | PREPARING / SHIPPING / COMPLETED |
 
@@ -403,227 +404,227 @@ likes ───────────────── auctions (auction_id)
 
 ### `order_snapshots`
 
-| 컬럼 | 타입 | 설명 |
+| 컬럼 | ?�??| ?�명 |
 | --- | --- | --- |
 | `order_id` | BIGINT | 주문 FK |
-| `final_price` | DECIMAL(12,2) | 낙찰/확정 금액 |
-| `fee_rate` | DECIMAL(5,2) | 적용 수수료율 |
-| `fee` | DECIMAL(12,2) | 수수료 금액 |
-| `seller_amount` | DECIMAL(12,2) | 판매자 실수령액 |
-| `snapshot_json` | TEXT | 전체 상태 JSON (선택) |
+| `final_price` | DECIMAL(12,2) | ?�찰/?�정 금액 |
+| `fee_rate` | DECIMAL(5,2) | ?�용 ?�수료율 |
+| `fee` | DECIMAL(12,2) | ?�수�?금액 |
+| `seller_amount` | DECIMAL(12,2) | ?�매???�수?�액 |
+| `snapshot_json` | TEXT | ?�체 ?�태 JSON (?�택) |
 
 ---
 
 ### `payments`
 
-| 컬럼 | 타입 | 설명 |
+| 컬럼 | ?�??| ?�명 |
 | --- | --- | --- |
 | `payment_type` | VARCHAR(20) | BILLING_KEY / PG_DIRECT |
-| `payment_method` | VARCHAR(50) | CARD / KAKAO_PAY / TOSS 등 |
+| `payment_method` | VARCHAR(50) | CARD / KAKAO_PAY / TOSS ??|
 | `status` | VARCHAR(20) | PENDING / COMPLETED / FAILED / REFUNDED |
-| `payment_uuid` | VARCHAR(50) | PortOne 거래 고유 식별자 |
+| `payment_uuid` | VARCHAR(50) | PortOne 거래 고유 ?�별??|
 
 ---
 
-### `notifications` — 알림 타입 정의
+### `notifications` ???�림 ?�???�의
 
-| type 값 | 발생 시점 |
+| type �?| 발생 ?�점 |
 | --- | --- |
-| `BID_OUTBID` | 다른 사용자가 더 높은 금액으로 입찰 시 |
-| `AUCTION_WON` | 경매 낙찰 확정 시 |
-| `AUCTION_LOST` | 경매 종료 후 낙찰 실패 시 |
-| `INSPECTION_PASSED` | 관리자 검수 통과 시 |
-| `INSPECTION_FAILED` | 관리자 검수 실패 (REJECTED) 시 |
-| `SHIPPING` | 배송 시작 시 |
-| `SHIPPING_COMPLETED` | 배송 완료 시 |
+| `BID_OUTBID` | ?�른 ?�용?��? ???��? 금액?�로 ?�찰 ??|
+| `AUCTION_WON` | 경매 ?�찰 ?�정 ??|
+| `AUCTION_LOST` | 경매 종료 ???�찰 ?�패 ??|
+| `INSPECTION_PASSED` | 관리자 검???�과 ??|
+| `INSPECTION_FAILED` | 관리자 검???�패 (REJECTED) ??|
+| `SHIPPING` | 배송 ?�작 ??|
+| `SHIPPING_COMPLETED` | 배송 ?�료 ??|
 
 ---
 
-### `settlements` *(별도 정산 테이블 — 추가 설계 필요)*
+### `settlements` *(별도 ?�산 ?�이�???추�? ?�계 ?�요)*
 
-| 컬럼 | 타입 | 설명 |
+| 컬럼 | ?�??| ?�명 |
 | --- | --- | --- |
 | `id` | BIGINT | PK |
 | `order_id` | BIGINT | 주문 FK |
-| `seller_id` | BIGINT | 정산 대상 판매자 |
-| `total_price` | BIGINT | 낙찰 총액 |
-| `platform_fee` | BIGINT | 플랫폼 수수료 (총액의 N%) |
-| `seller_amount` | BIGINT | 판매자 실수령액 |
+| `seller_id` | BIGINT | ?�산 ?�???�매??|
+| `total_price` | BIGINT | ?�찰 총액 |
+| `platform_fee` | BIGINT | ?�랫???�수�?(총액??N%) |
+| `seller_amount` | BIGINT | ?�매???�수?�액 |
 | `status` | VARCHAR(20) | PENDING / COMPLETED |
-| `settled_at` | TIMESTAMP | 정산 완료 시각 |
-| `created_at` | TIMESTAMP | 생성 시각 |
+| `settled_at` | TIMESTAMP | ?�산 ?�료 ?�각 |
+| `created_at` | TIMESTAMP | ?�성 ?�각 |
 
 ---
 
-## 7. API 설계 방향
+## 7. API ?�계 방향
 
-### 7.1 REST API 원칙
+### 7.1 REST API ?�칙
 
 - **Base URL**: `/api/v1/{resource}`
-- **인증**: JWT Bearer Token (Authorization 헤더)
-- **응답 포맷**: { "status": "SUCCESS", "data": {...}, "message": "" }
-- **API 문서화**: Swagger (SpringDoc) + Notion 병행
+- **?�증**: JWT Bearer Token (Authorization ?�더)
+- **?�답 ?�맷**: { "status": "SUCCESS", "data": {...}, "message": "" }
+- **API 문서??*: Swagger (SpringDoc) + Notion 병행
 
 ---
 
-### 7.2 주요 엔드포인트 (요약)
+### 7.2 주요 ?�드?�인??(?�약)
 
-| Method | Endpoint | 설명 |
+| Method | Endpoint | ?�명 |
 | --- | --- | --- |
-| POST | `/api/v1/auth/signup` | 회원가입 |
-| POST | `/api/v1/auth/login` | 로그인 (JWT 발급) |
-| POST | `/api/v1/auth/reissue` | RTR 기반 토큰 재발급 |
-| POST | `/api/v1/auth/logout` | 로그아웃 (블랙리스트 등록) |
-| GET | `/api/v1/card-catalogs` | 카드 카탈로그 목록 (검색/필터) |
-| POST | `/api/v1/auctions` | 경매 등록 |
-| GET | `/api/v1/auctions/{id}` | 경매 상세 조회 |
-| POST | `/api/v1/auctions/{id}/bids` | 입찰 |
+| POST | `/api/v1/auth/signup` | ?�원가??|
+| POST | `/api/v1/auth/login` | 로그??(JWT 발급) |
+| POST | `/api/v1/auth/reissue` | RTR 기반 ?�큰 ?�발�?|
+| POST | `/api/v1/auth/logout` | 로그?�웃 (블랙리스???�록) |
+| GET | `/api/v1/card-catalogs` | 카드 카탈로그 목록 (검???�터) |
+| POST | `/api/v1/auctions` | 경매 ?�록 |
+| GET | `/api/v1/auctions/{id}` | 경매 ?�세 조회 |
+| POST | `/api/v1/auctions/{id}/bids` | ?�찰 |
 | POST | `/api/v1/auctions/{id}/buyout` | 즉시 구매 |
-| POST | `/api/v1/orders` | 주문 생성 |
-| POST | `/api/v1/payments` | 결제 요청 |
-| POST | `/api/v1/refunds` | 환불 요청 |
-| GET | `/api/v1/notifications` | 내 알림 목록 |
-| GET | `/api/v1/posts/free` | 자유게시판 목록 |
-| GET | `/api/v1/posts/trade` | 거래게시판 목록 |
-| POST | `/api/v1/chats`  | 채팅방 생성 |
-| WS | `/ws/chat/{chatId}` | 채팅 WebSocket 연결 |
+| POST | `/api/v1/orders` | 주문 ?�성 |
+| POST | `/api/v1/payments` | 결제 ?�청 |
+| POST | `/api/v1/refunds` | ?�불 ?�청 |
+| GET | `/api/v1/notifications` | ???�림 목록 |
+| GET | `/api/v1/posts/free` | ?�유게시??목록 |
+| GET | `/api/v1/posts/trade` | 거래게시??목록 |
+| POST | `/api/v1/chats`  | 채팅�??�성 |
+| WS | `/ws/chat/{chatId}` | 채팅 WebSocket ?�결 |
 
 ---
 
-## 8. 성능 및 기술 정책
+## 8. ?�능 �?기술 ?�책
 
-### 8.1 동시성 제어 (입찰)
+### 8.1 ?�시???�어 (?�찰)
 
-- Redis Redisson 분산락으로 동일 경매의 중복 입찰 방지
-- 락 키: `"auction:{auctionId}"`
-- 락 획득 실패 시 즉시 예외 반환 (busy-wait 금지)
-
----
-
-### 8.2 캐싱 전략
-
-- 경매 현재 입찰가(`highest_price`): Redis 캐싱, 입찰 시 DB와 동기화
-- 카드 카탈로그 목록: 변경 빈도 낮음 → Redis TTL 캐싱 적용
+- Redis Redisson 분산?�으�??�일 경매??중복 ?�찰 방�?
+- ???? `"auction:{auctionId}"`
+- ???�득 ?�패 ??즉시 ?�외 반환 (busy-wait 금�?)
 
 ---
 
-### 8.3 검색 최적화
+### 8.2 캐싱 ?�략
 
-- 카드 이름·시리즈·세트명 검색: ElasticSearch 풀텍스트 인덱스
-- 경매 목록 조회: MySQL 인덱스 (`status`, `ended_at`, `created_at`)
-- QueryDSL 동적 쿼리로 다양한 필터 조건 처리
-
----
-
-### 8.4 쿼리 성능 정책
-
-- Slow Query 모니터링 설정
-- 페이지네이션: Offset 기반 형식을 기본으로 하고 Cursor 기반 (무한 스크롤) 필요 시 도입
+- 경매 ?�재 ?�찰가(`highest_price`): Redis 캐싱, ?�찰 ??DB?� ?�기??
+- 카드 카탈로그 목록: 변�?빈도 ??�� ??Redis TTL 캐싱 ?�용
 
 ---
 
-### 8.5 데이터 무결성
+### 8.3 검??최적??
 
-- **경매 낙찰 시점**: `auction_snapshots`에 최고 입찰가 기록
-- **주문 확정 시점**: `order_snapshots`에 금액·수수료 정보 영구 보존
-- 환불 처리 시 `payments.status → REFUNDED`, `refunds` 테이블에 사유·금액 기록
+- 카드 ?�름·?�리즈·세?�명 검?? ElasticSearch ?�?�스???�덱??
+- 경매 목록 조회: MySQL ?�덱??(`status`, `ended_at`, `created_at`)
+- QueryDSL ?�적 쿼리�??�양???�터 조건 처리
 
 ---
 
-## 9. 보안 정책
+### 8.4 쿼리 ?�능 ?�책
 
-### 9.1 인증/인가
+- Slow Query 모니?�링 ?�정
+- ?�이지?�이?? Offset 기반 ?�식??기본?�로 ?�고 Cursor 기반 (무한 ?�크�? ?�요 ???�입
 
-- **JWT 이중 구조**: Access Token (단기) + Refresh Token (장기)
-- **RTR(Refresh Token Rotation) 기법 도입**: Refresh Token 사용 시 새 Refresh Token 발급 및 기존 토큰 무효화
-- **토큰 블랙리스트 도입**: 로그아웃/강제 만료 시 Access Token을 Redis 블랙리스트에 등록
-- Spring Security 기반 Role(`USER` / `ADMIN`) 접근 제어
-- 관리자 전용 API: `/api/v1/admin/**` (ADMIN Role만 접근)
+---
+
+### 8.5 ?�이??무결??
+
+- **경매 ?�찰 ?�점**: `auction_snapshots`??최고 ?�찰가 기록
+- **주문 ?�정 ?�점**: `order_snapshots`??금액·?�수�??�보 ?�구 보존
+- ?�불 처리 ??`payments.status ??REFUNDED`, `refunds` ?�이블에 ?�유·금액 기록
+
+---
+
+## 9. 보안 ?�책
+
+### 9.1 ?�증/?��?
+
+- **JWT ?�중 구조**: Access Token (?�기) + Refresh Token (?�기)
+- **RTR(Refresh Token Rotation) 기법 ?�입**: Refresh Token ?�용 ????Refresh Token 발급 �?기존 ?�큰 무효??
+- **?�큰 블랙리스???�입**: 로그?�웃/강제 만료 ??Access Token??Redis 블랙리스?�에 ?�록
+- Spring Security 기반 Role(`USER` / `ADMIN`) ?�근 ?�어
+- 관리자 ?�용 API: `/api/v1/admin/**` (ADMIN Role�??�근)
 
 ---
 
 ### 9.2 결제 보안
 
-- 빌링키는 `users.billing_key`에 암호화 저장 (AES 256)
-- PortOne Webhook 서명 검증 (`X-PortOne-Signature`)
-- 결제 금액 서버 사이드 검증 필수 (클라이언트 금액 신뢰 금지)
+- 빌링?�는 `users.billing_key`???�호???�??(AES 256)
+- PortOne Webhook ?�명 검�?(`X-PortOne-Signature`)
+- 결제 금액 ?�버 ?�이??검�??�수 (?�라?�언??금액 ?�뢰 금�?)
 
 ---
 
-### 9.3 인프라 보안
+### 9.3 ?�프??보안
 
-- AWS Security Group: 필요한 포트만 열람
-- IAM 최소 권한 원칙 적용
-- 환경변수(DB 패스워드, API 키 등): AWS Secrets Manager 관리
+- AWS Security Group: ?�요???�트�??�람
+- IAM 최소 권한 ?�칙 ?�용
+- ?�경변??DB ?�스?�드, API ????: AWS Secrets Manager 관�?
 
 ---
 
 ## 10. 주요 기능 목록
 
-### 10.1 기능 분류 표
+### 10.1 기능 분류 ??
 
-| 기능 영역 | 세부 기능 |
+| 기능 ?�역 | ?��? 기능 |
 | --- | --- |
-| 유저 | 회원가입, 로그인(JWT + RTR), 마이페이지, 빌링키 등록, 계좌 등록(마이페이지에서 자율 등록), 입찰 차단 |
-| 카드 카탈로그 | TCGdex API 연동 후 DB에 카드 정보 저장, 수동 등록, 카드 등급 관리 (PSA_10 / PSA_9), 이미지 저장 |
-| 경매 | 경매 등록, 검수(PASSED/REJECTED), 입찰, 즉시구매, 경매 종료, 스냅샷 |
-| 주문 | AUCTION 주문 생성, 상태 관리, 배송 추적 |
-| 결제 | 빌링키 자동결제, 1시간 내 직접결제(낙찰 실패 시), 결제 재시도, 패널티 |
-| 환불 | 환불 요청, 관리자 승인/거절 (**PortOne 부분환불 미포함**) |
-| 정산 (Settlement) | 배송 완료 후 정산 테이블 기록, 판매자 정산 관리 |
-| 배송 | 배송 상태 업데이트, 구매자 확인 |
-| 커뮤니티 | 자유게시판 CRUD, 거래게시판 CRUD, 2depth 댓글 |
-| 채팅 | 거래 게시판 기반 1:1 채팅방 생성, 실시간 메시지(WebSocket), 채팅 이후 거래는 자율 |
-| 알림 | 알림 유형별 발송, 읽음 처리, 알림 목록 조회 |
-| 찜 | 경매 좋아요 토글, 찜 목록 조회 |
-| 관리자 | 카탈로그 승인/거절, 경매 검수, 배송 관리, 정산 관리 |
+| ?��? | ?�원가?? 로그??JWT + RTR), 마이?�이지, 빌링???�록, 계좌 ?�록(마이?�이지?�서 ?�율 ?�록), ?�찰 차단 |
+| 카드 카탈로그 | TCGdex API ?�동 ??DB??카드 ?�보 ?�?? ?�동 ?�록, 카드 ?�급 관�?(PSA_10 / PSA_9), ?��?지 ?�??|
+| 경매 | 경매 ?�록, 검??PASSED/REJECTED), ?�찰, 즉시구매, 경매 종료, ?�냅??|
+| 주문 | AUCTION 주문 ?�성, ?�태 관�? 배송 추적 |
+| 결제 | 빌링???�동결제, 1?�간 ??직접결제(?�찰 ?�패 ??, 결제 ?�시?? ?�널??|
+| ?�불 | ?�불 ?�청, 관리자 ?�인/거절 (**PortOne 부분환�?미포??*) |
+| ?�산 (Settlement) | 배송 ?�료 ???�산 ?�이�?기록, ?�매???�산 관�?|
+| 배송 | 배송 ?�태 ?�데?�트, 구매???�인 |
+| 커�??�티 | ?�유게시??CRUD, 거래게시??CRUD, 2depth ?��? |
+| 채팅 | 거래 게시??기반 1:1 채팅�??�성, ?�시�?메시지(WebSocket), 채팅 ?�후 거래???�율 |
+| ?�림 | ?�림 ?�형�?발송, ?�음 처리, ?�림 목록 조회 |
+| �?| 경매 좋아???��?, �?목록 조회 |
+| 관리자 | 카탈로그 ?�인/거절, 경매 검?? 배송 관�? ?�산 관�?|
 
 ---
 
-## 11. 리스크 및 고려사항
+## 11. 리스??�?고려?�항
 
-### 11.1 기술적 리스크
+### 11.1 기술??리스??
 
-| 리스크 | 영향도 | 대응 방안 |
+| 리스??| ?�향??| ?�??방안 |
 | --- | --- | --- |
-| 입찰 동시성 충돌 | 높음 | Redis 분산락으로 직렬화 처리 |
-| 결제 실패 후 데이터 불일치 | 높음 | PortOne Webhook + 보상 트랜잭션 |
-| 즉시구매 결제 대기 중 상태 충돌 | 높음 | PAYMENT_PENDING 상태에서 추가 입찰 차단 |
-| 스케줄러 중복 실행 | 중간 | ShedLock 또는 DB락으로 단일 실행 보장 |
-| 실물 카드 배송 분쟁 | 중간 | 검수(Inspection) 단계 필수화, 스냅샷 보존 |
+| ?�찰 ?�시??충돌 | ?�음 | Redis 분산?�으�?직렬??처리 |
+| 결제 ?�패 ???�이??불일�?| ?�음 | PortOne Webhook + 보상 ?�랜??�� |
+| 즉시구매 결제 ?��?�??�태 충돌 | ?�음 | PAYMENT_PENDING ?�태?�서 추�? ?�찰 차단 |
+| ?��?줄러 중복 ?�행 | 중간 | ShedLock ?�는 DB?�으�??�일 ?�행 보장 |
+| ?�물 카드 배송 분쟁 | 중간 | 검??Inspection) ?�계 ?�수?? ?�냅??보존 |
 
 ---
 
-### 11.2 확정된 정책
+### 11.2 ?�정???�책
 
-| 항목 | 확정 내용 |
+| ??�� | ?�정 ?�용 |
 | --- | --- |
-| 판매자 글 등록 조건 | 회원만 글 등록 가능 |
-| 계좌 정보 등록 시점 | 회원가입 후 마이페이지에서 원하는 시기에 등록(수정) 가능 |
-| 빌링키 등록 시점 | 입찰 시도 전 반드시 등록 필요 |
-| 일반거래 검수 | 불필요. 서비스 로직상 관여하지 않음 |
-| 정산 시스템 | settlements 테이블 운영으로 관리 |
-| MSA 전환 시점 | 프로젝트 진행 속도가 계획보다 빠를 경우에만 부분적 분리 고려 |
+| ?�매??글 ?�록 조건 | ?�원�?글 ?�록 가??|
+| 계좌 ?�보 ?�록 ?�점 | ?�원가????마이?�이지?�서 ?�하???�기???�록(?�정) 가??|
+| 빌링???�록 ?�점 | ?�찰 ?�도 ??반드???�록 ?�요 |
+| ?�반거래 검??| 불필?? ?�비??로직??관?�하지 ?�음 |
+| ?�산 ?�스??| settlements ?�이�??�영?�로 관�?|
+| MSA ?�환 ?�점 | ?�로?�트 진행 ?�도가 계획보다 빠�? 경우?�만 부분적 분리 고려 |
 
 ---
 
-## 12. 용어 정의
+## 12. ?�어 ?�의
 
-| 용어 | 설명 |
+| ?�어 | ?�명 |
 | --- | --- |
-| 빌링키 (Billing Key) | PortOne에서 발급하는 카드 자동결제 키. 입찰 및 이벤트 구매 전 사전 등록 필수 |
-| 즉시구매가 (Buyout Price) | 해당 금액 이상 입찰 시 경매 즉시 결제 대기(PAYMENT_PENDING) 전환 후 결제 완료 시 ENDED |
-| 검수 (Inspection) | 플랫폼에 실물 카드 발송 후 관리자가 정품 여부를 확인하는 단계 |
-| OUTBID | 이전 최고 입찰자가 새로운 입찰로 인해 밀려나는 상태 |
-| Snapshot | 경매 낙찰 / 주문 확정 시점의 가격 정보를 변경 불가 형태로 저장한 레코드 |
-| unpaid_strike | 낙찰 후 미결제로 발생한 패널티 누적 횟수 |
-| Settlement | 배송 완료 후 판매자에게 수수료를 제외한 금액을 정산하는 테이블 |
-| TCGdex | 포켓몬 트레이딩 카드 게임 외부 카드 데이터 API |
-| PSA / BGS | 카드 등급 감정 전문 기관. 본 서비스는 PSA_10 / PSA_9 두 등급만 지원 |
-| PortOne V2 | 한국 PG사 통합 결제 플랫폼 (KG이니시스 등 연동) |
-| RTR | Refresh Token Rotation. Refresh Token 사용 시 새 토큰 발급 + 기존 토큰 즉시 무효화 |
-| 토큰 블랙리스트 | 로그아웃된 Access Token을 Redis에 등록하여 재사용 방지하는 보안 기법 |
+| 빌링??(Billing Key) | PortOne?�서 발급?�는 카드 ?�동결제 ?? ?�찰 �??�벤??구매 ???�전 ?�록 ?�수 |
+| 즉시구매가 (Buyout Price) | ?�당 금액 ?�상 ?�찰 ??경매 즉시 결제 ?��?PAYMENT_PENDING) ?�환 ??결제 ?�료 ??ENDED |
+| 검??(Inspection) | ?�랫?�에 ?�물 카드 발송 ??관리자가 ?�품 ?��?�??�인?�는 ?�계 |
+| OUTBID | ?�전 최고 ?�찰?��? ?�로???�찰�??�해 밀?�나???�태 |
+| Snapshot | 경매 ?�찰 / 주문 ?�정 ?�점??가�??�보�?변�?불�? ?�태�??�?�한 ?�코??|
+| unpaid_strike | ?�찰 ??미결?�로 발생???�널???�적 ?�수 |
+| Settlement | 배송 ?�료 ???�매?�에�??�수료�? ?�외??금액???�산?�는 ?�이�?|
+| TCGdex | ?�켓�??�레?�딩 카드 게임 ?��? 카드 ?�이??API |
+| PSA / BGS | 카드 ?�급 감정 ?�문 기�?. �??�비?�는 PSA_10 / PSA_9 ???�급�?지??|
+| PortOne V2 | ?�국 PG???�합 결제 ?�랫??(KG?�니?�스 ???�동) |
+| RTR | Refresh Token Rotation. Refresh Token ?�용 ?????�큰 발급 + 기존 ?�큰 즉시 무효??|
+| ?�큰 블랙리스??| 로그?�웃??Access Token??Redis???�록?�여 ?�사??방�??�는 보안 기법 |
 
 ---
 
-*© 2026 POCAT Team — 7조 로켓단*
+*© 2026 POCAT Team ??7�?로켓??

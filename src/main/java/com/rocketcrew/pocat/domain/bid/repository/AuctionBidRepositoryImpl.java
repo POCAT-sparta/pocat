@@ -88,6 +88,17 @@ public class AuctionBidRepositoryImpl implements AuctionBidRepositoryCustom {
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
+    @Override
+    public List<Long> findDistinctBidderIdsByAuctionId(Long auctionId) {
+        QAuctionBid bid = QAuctionBid.auctionBid;
+        return queryFactory
+                .select(bid.userId)
+                .distinct()
+                .from(bid)
+                .where(bid.auctionId.eq(auctionId))
+                .fetch();
+    }
+
     private BooleanBuilder myBidsCondition(Long userId, BidStatus status, QAuctionBid bid) {
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(bid.userId.eq(userId));

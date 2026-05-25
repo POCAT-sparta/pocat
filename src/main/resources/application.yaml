@@ -31,3 +31,11 @@ jwt:
 portone:
   secret: ${PORTONE_SECRET}
   webhook-secret: ${PORTONE_WEBHOOK_SECRET}
+
+ranking:
+  auction:
+    like-weight: 1.0
+    bid-weight: 3.0
+    ttl-seconds: 70
+    cache-size: 100
+    max-response-size: 50

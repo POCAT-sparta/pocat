@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.auction.enums;
 public enum AuctionStatus {
     PENDING,
     INSPECTING,
+    APPROVED,
     REJECTED,
     ACTIVE,
     ENDED,

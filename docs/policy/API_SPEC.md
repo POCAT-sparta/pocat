@@ -814,6 +814,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 1,
+        "sellerId": 2,
+        "sellerNickname": "카드마스터",
         "title": "PSA 10 리자몽 경매",
         "cardId": 1,
         "cardName": "리자몽",
@@ -824,7 +826,9 @@ Authorization: Bearer {accessToken}
         "highestPrice": 200000,
         "status": "ACTIVE",
         "startedAt": "2026-05-01T00:00:00",
-        "endedAt": "2026-05-04T00:00:00"
+        "endedAt": "2026-05-04T00:00:00",
+        "createdAt": "2026-05-01T00:00:00",
+        "likeCount": 15
       }
     ],
     "totalElements": 50,
@@ -832,6 +836,49 @@ Authorization: Bearer {accessToken}
     "size": 20,
     "number": 0
   },
+  "message": ""
+}
+```
+
+---
+
+### 4.1.1 인기 경매 목록 조회
+
+- **GET** `/api/v1/auctions/popular`
+- **권한**: `PUBLIC`
+- **참고**: 응답 필드는 사용자용 경매 목록 조회(`SearchAuctionResponse`)와 동일합니다. `popularityScore`는 서버 내부 정렬에만 사용하고 응답에는 포함하지 않습니다.
+
+**Query Parameters**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `size` | int | N | 조회 개수 (default: 10) |
+
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": [
+    {
+      "auctionId": 1,
+      "sellerId": 2,
+      "sellerNickname": "카드마스터",
+      "title": "PSA 10 리자몽 경매",
+      "cardId": 1,
+      "cardName": "리자몽",
+      "grade": "PSA_10",
+      "cardImageUrl": "https://...",
+      "startingPrice": 100000,
+      "highestPrice": 200000,
+      "buyoutPrice": 1000000,
+      "status": "ACTIVE",
+      "startedAt": "2026-05-01T00:00:00",
+      "endedAt": "2026-05-04T00:00:00",
+      "createdAt": "2026-05-01T00:00:00",
+      "likeCount": 15
+    }
+  ],
   "message": ""
 }
 ```
@@ -851,12 +898,12 @@ Authorization: Bearer {accessToken}
 | `series` | String | N | 카드 시리즈 필터                         |
 | `setName` | String | N | 카드 확장팩 이름 필터                      |
 | `grade`  | String | N | 카드 등급 필터                          |
-| `status` | String | N | 경매 상태 필터 (default: PENDING)        |
+| `status` | String | N | 경매 상태 필터 (미입력 시 전체 조회)        |
 | `page`   | int | N | 페이지 번호 (default: 0)               |
 | `size`   | int | N | 페이지 크기 (default: 20)              |
 | `sort`   | String | N | 정렬 기준 (default: createdAt,desc then id,desc) |
 
-**Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+**Response** `200 OK` (관리자 목록은 별도 응답 DTO를 사용하며 `createdAt`은 포함하지 않습니다.)
 
 ```json
 {
@@ -865,6 +912,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 42,
+        "sellerId": 2,
+        "sellerNickname": "카드마스터",
         "title": "PSA 10 피카츄 1세대 경매",
         "cardId": 1,
         "cardName": "피카츄",
@@ -876,7 +925,7 @@ Authorization: Bearer {accessToken}
         "status": "ACTIVE",
         "startedAt": "2026-05-15T12:00:00",
         "endedAt": "2026-05-18T12:00:00",
-        "createdAt": "2026-05-15T11:00:00"
+        "likeCount": 7
       }
     ],
     "totalElements": 1,
@@ -904,7 +953,7 @@ Authorization: Bearer {accessToken}
 | `page` | int | N | 페이지 번호 (default: 0) |
 | `size` | int | N | 페이지 크기 (default: 20) |
 
-**Response** `200 OK` (4.1 응답 구조 동일, 관리자 전용 필드 추가)
+**Response** `200 OK` (4.1 응답 구조 동일)
 
 ```json
 {
@@ -913,6 +962,8 @@ Authorization: Bearer {accessToken}
     "content": [
       {
         "auctionId": 42,
+        "sellerId": 2,
+        "sellerNickname": "카드마스터",
         "title": "PSA 10 피카츄 1세대 경매",
         "cardId": 1,
         "cardName": "피카츄",
@@ -924,7 +975,8 @@ Authorization: Bearer {accessToken}
         "status": "ACTIVE",
         "startedAt": "2026-05-15T12:00:00",
         "endedAt": "2026-05-18T12:00:00",
-        "createdAt": "2026-05-15T11:00:00"
+        "createdAt": "2026-05-15T11:00:00",
+        "likeCount": 7
       }
     ],
     "totalElements": 1,
@@ -955,7 +1007,7 @@ Authorization: Bearer {accessToken}
 {
   "status": "SUCCESS",
   "data": {
-    "id": 1,
+    "auctionId": 1,
     "sellerId": 2,
     "sellerNickname": "카드마스터",
     "title": "PSA 10 리자몽 경매",
@@ -970,8 +1022,12 @@ Authorization: Bearer {accessToken}
     "highestBidderId": 3,
     "highestBidderNickname": "피카헌터",
     "status": "ACTIVE",
+    "reason": null,
+    "inspectedAt": "2026-05-15T09:00:00",
+    "inspectedBy": 1,
     "startedAt": "2026-05-01T00:00:00",
     "endedAt": "2026-05-04T00:00:00",
+    "createdAt": "2026-05-01T00:00:00",
     "likeCount": 15,
     "isLiked": true
   },
@@ -1234,13 +1290,14 @@ Authorization: Bearer {accessToken}
 
 - **PATCH** `/api/v1/admin/auctions/{auctionId}/inspect`
 - **권한**: `ADMIN`
+- **설명**: `PENDING` 또는 `INSPECTING` 상태의 경매를 검수할 수 있다.
 
 **Request Body**
 
 ```json
 {
   "result": "PASSED",
-  "rejectReason": null
+  "reason": ""
 }
 ```
 
@@ -1251,7 +1308,10 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "auctionId": 1,
-    "status": "ACTIVE"
+    "status": "APPROVED",
+    "reason": null,
+    "inspectedAt": "2026-05-21T19:00:00",
+    "inspectedBy": 1
   },
   "message": ""
 }
@@ -1263,6 +1323,7 @@ Authorization: Bearer {accessToken}
 
 - **PATCH** `/api/v1/admin/auctions/{auctionId}/cancel`
 - **권한**: `ADMIN`
+- **설명**: 취소 사유를 `reason`에 저장하고, 현재 최고입찰이 있으면 해당 입찰 상태를 `CANCELLED`로 변경한다. 이후 최고입찰자 알림은 Kafka로 발행한다.
 
 **Request Body**
 
@@ -1279,7 +1340,8 @@ Authorization: Bearer {accessToken}
   "status": "SUCCESS",
   "data": {
     "auctionId": 1,
-    "status": "CANCELLED"
+    "status": "CANCELLED",
+    "reason": "규정 위반"
   },
   "message": ""
 }

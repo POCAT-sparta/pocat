@@ -9,7 +9,7 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import java.time.LocalDateTime;
 
 public record AuctionResponse(
-        Long id,
+        Long auctionId,
         Long sellerId,
         String sellerNickname,
         String title,
@@ -24,8 +24,12 @@ public record AuctionResponse(
         Long highestBidderId,
         String highestBidderNickname,
         AuctionStatus status,
+        String reason,
+        LocalDateTime inspectedAt,
+        Long inspectedBy,
         LocalDateTime startedAt,
         LocalDateTime endedAt,
+        LocalDateTime createdAt,
         long likeCount,
         boolean isLiked
 ) {
@@ -46,15 +50,19 @@ public record AuctionResponse(
                 auction.getCardId(),
                 card.getName(),
                 card.getGrade(),
-                auction.getCardImageUrl(),
+                card.getImageUrl(),
                 auction.getStartingPrice(),
                 auction.getBuyoutPrice(),
                 auction.getHighestPrice(),
                 auction.getHighestBidderId(),
                 highestBidder == null ? null : highestBidder.getNickname(),
                 auction.getStatus(),
+                auction.getReason(),
+                auction.getInspectedAt(),
+                auction.getInspectedBy(),
                 auction.getStartedAt(),
                 auction.getEndedAt(),
+                auction.getCreatedAt(),
                 likeCount,
                 isLiked
         );

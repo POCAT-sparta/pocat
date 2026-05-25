@@ -34,9 +34,6 @@ public class Auction extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "card_image_url", length = 500)
-    private String cardImageUrl;
-
     @Column(name = "starting_price", nullable = false)
     private Long startingPrice;
 
@@ -56,8 +53,14 @@ public class Auction extends BaseEntity {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
-    @Column(name = "cancel_reason", columnDefinition = "TEXT")
-    private String cancelReason;
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
+
+    @Column(name = "inspected_at")
+    private LocalDateTime inspectedAt;
+
+    @Column(name = "inspected_by")
+    private Long inspectedBy;
 
     public void update(String title, String description, Long startingPrice, Long buyoutPrice) {
         if (title != null) {
@@ -74,9 +77,32 @@ public class Auction extends BaseEntity {
         }
     }
 
-    public void cancel(String cancelReason) {
+    public void cancel(String reason) {
         this.status = AuctionStatus.CANCELLED;
-        this.cancelReason = cancelReason;
+        this.reason = reason;
+    }
+
+    public void cancelByAdmin(String reason) {
+        this.status = AuctionStatus.CANCELLED;
+        this.reason = reason;
+    }
+
+    public void approve(Long inspectedBy, LocalDateTime inspectedAt) {
+        this.status = AuctionStatus.APPROVED;
+        this.inspectedBy = inspectedBy;
+        this.inspectedAt = inspectedAt;
+        this.startedAt = null;
+        this.endedAt = null;
+        this.reason = null;
+    }
+
+    public void reject(Long inspectedBy, LocalDateTime inspectedAt, String reason) {
+        this.status = AuctionStatus.REJECTED;
+        this.inspectedBy = inspectedBy;
+        this.inspectedAt = inspectedAt;
+        this.reason = reason;
+        this.startedAt = null;
+        this.endedAt = null;
     }
 
     public void updateHighestBid(Long highestPrice, Long highestBidderId) {
