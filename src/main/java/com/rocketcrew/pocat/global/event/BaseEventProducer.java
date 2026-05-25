@@ -15,9 +15,14 @@ public abstract class BaseEventProducer {
     protected void send(String topic, String key, BaseEvent event) {
         try {
             String message = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(topic, key, message);
-            log.info("Kafka 발행: topic={}, eventType={}",
-                    topic, event.getEventType());
+            kafkaTemplate.send(topic, key, message)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Kafka 발행 실패: topic={}, eventType={}", topic, event.getEventType(), ex);
+                        } else {
+                            log.info("Kafka 발행: topic={}, eventType={}", topic, event.getEventType());
+                        }
+                    });
         } catch (Exception e) {
             log.error("Kafka 발행 실패: topic={}, eventType={}",
                     topic, event.getEventType(), e);

@@ -17,6 +17,6 @@ public class AuctionCancelledEvent extends BaseEvent {
         super("auction.cancelled");
         this.auctionId = auctionId;
         this.sellerId = sellerId;
-        this.bidderIds = bidderIds;
+        this.bidderIds = bidderIds != null ? List.copyOf(bidderIds) : List.of();
     }
 }

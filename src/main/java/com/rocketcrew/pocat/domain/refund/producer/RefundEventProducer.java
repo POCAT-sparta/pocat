@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.refund.event.RefundApprovedEvent;
 import com.rocketcrew.pocat.domain.refund.event.RefundRejectedEvent;
 import com.rocketcrew.pocat.domain.refund.event.RefundRequestedEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -13,8 +14,10 @@ public class RefundEventProducer extends BaseEventProducer {
 
     private static final String TOPIC = "refund";
 
-    public RefundEventProducer(KafkaTemplate<String, String> kafkaTemplate,
-                               ObjectMapper objectMapper) {
+    public RefundEventProducer(
+            @Qualifier("refundKafkaTemplate")
+            KafkaTemplate<String, String> kafkaTemplate,
+            ObjectMapper objectMapper) {
         super(kafkaTemplate, objectMapper);
     }
 

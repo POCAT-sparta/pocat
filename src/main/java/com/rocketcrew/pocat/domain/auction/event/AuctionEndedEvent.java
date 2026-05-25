@@ -21,7 +21,7 @@ public class AuctionEndedEvent extends BaseEvent {
         this.auctionId = auctionId;
         this.winnerId = winnerId;
         this.sellerId = sellerId;
-        this.loserIds = loserIds;
+        this.loserIds = loserIds != null ? List.copyOf(loserIds) : List.of();
         this.finalPrice = finalPrice;
     }
 }
