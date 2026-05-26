@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,10 +22,11 @@ public class PokemonNameDictionary {
             if (is != null) {
                 Map<String, Map<String, String>> root = new Yaml().load(is);
                 Map<String, String> koToEn = root.getOrDefault("names", Collections.emptyMap());
-                // 영어명을 정규화(lowercase + 비알파벳 제거)해서 키로 저장 → 조회 시 동일 정규화 적용
+                // 영어명을 정규화(lowercase + 비알파숫자 제거)해서 키로 저장 → 조회 시 동일 정규화 적용
+                // 숫자 보존: Porygon(porygon) vs Porygon2(porygon2) 충돌 방지
                 loaded = koToEn.entrySet().stream()
                         .collect(Collectors.toMap(
-                                e -> e.getValue().toLowerCase().replaceAll("[^a-z]", ""),
+                                e -> e.getValue().toLowerCase().replaceAll("[^a-z0-9]", ""),
                                 Map.Entry::getKey,
                                 (existing, duplicate) -> existing  // 중복 키 발생 시 첫 번째 값 유지
                         ));
@@ -36,18 +38,24 @@ public class PokemonNameDictionary {
         this.enToKo = loaded;
     }
 
-    // "Mega Charizard X ex" → "리자몽" (카드명을 단어 단위로 분리해서 사전 조회)
-    // 조회 시 소문자 + 비알파벳 제거로 정규화 → "Ho-Oh", "Porygon-Z" 등 엣지케이스 대응
+    // "Mega Charizard X ex" → "리자몽"
+    // 긴 구간부터 슬라이딩 윈도우로 조회 → "Mr. Mime", "Tapu Koko" 등 다단어 포켓몬 대응
+    // 조회 시 lowercase + 비알파숫자 제거로 정규화 → "Ho-Oh", "Porygon-Z" 등 엣지케이스 대응
     public String findKoreanName(String englishCardName) {
         if (englishCardName == null) return null;
-        for (String word : englishCardName.split("\\s+")) {
-            String ko = enToKo.get(normalize(word));
-            if (ko != null) return ko;
+        String[] words = englishCardName.split("\\s+");
+        // 긴 구간(다단어)부터 먼저 시도 → Mr. Mime, Tapu Koko 등 매칭
+        for (int len = words.length; len >= 1; len--) {
+            for (int start = 0; start <= words.length - len; start++) {
+                String candidate = String.join("", Arrays.copyOfRange(words, start, start + len));
+                String ko = enToKo.get(normalize(candidate));
+                if (ko != null) return ko;
+            }
         }
         return null;
     }
 
     private static String normalize(String word) {
-        return word.toLowerCase().replaceAll("[^a-z]", "");
+        return word.toLowerCase().replaceAll("[^a-z0-9]", "");
     }
 }
