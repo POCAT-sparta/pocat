@@ -19,7 +19,7 @@ public class AuctionActivationScheduler {
     private final AuctionRepository auctionRepository;
     private final AuctionLifecycleService auctionLifecycleService;
 
-    // 매일 오후 7시에 검수 승인(APPROVED) 상태인 경매를 ACTIVE 상태로 전환한다.
+    // 매일 19시에 승인 경매를 ACTIVE로 전환하고, 실제 처리 시각을 시작 시각으로 확정한다.
     @Scheduled(cron = "0 0 19 * * *", zone = "Asia/Seoul")
     public void activateApprovedAuctions() {
         List<Auction> approvedAuctions = auctionRepository.findAllByStatus(AuctionStatus.APPROVED);
