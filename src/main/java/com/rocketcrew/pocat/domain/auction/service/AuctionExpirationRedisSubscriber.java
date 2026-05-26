@@ -26,10 +26,7 @@ public class AuctionExpirationRedisSubscriber implements MessageListener {
 
         try {
             Long auctionId = auctionExpirationRedisService.parseAuctionId(expiredKey);
-            boolean closed = auctionLifecycleService.closeExpiredAuction(auctionId);
-            if (closed) {
-                auctionExpirationRedisService.deleteShadowKey(auctionId);
-            }
+            auctionLifecycleService.closeExpiredAuction(auctionId);
         } catch (Exception e) {
             log.warn("Redis 만료 이벤트 기반 경매 종료 처리 실패: key={}", expiredKey, e);
         }
