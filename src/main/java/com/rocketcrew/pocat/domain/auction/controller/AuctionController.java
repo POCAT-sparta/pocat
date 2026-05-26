@@ -65,9 +65,10 @@ public class AuctionController {
             @RequestParam(required = false) String setName,
             @RequestParam(required = false) CardGrade grade,
             @RequestParam(required = false) CardCategory category,
+            @RequestParam(required = false) AuctionStatus status,
             @PageableDefault(size = 20, sort = {"startedAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
         Page<SearchAuctionResponse> page = auctionQueryService.getAuctions(
-                keyword, series, setName, grade, category, AuctionStatus.ACTIVE, pageable);
+                keyword, series, setName, grade, category, status, pageable);
         PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
