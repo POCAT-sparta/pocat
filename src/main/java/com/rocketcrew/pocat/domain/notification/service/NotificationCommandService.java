@@ -10,18 +10,23 @@ import com.rocketcrew.pocat.domain.notification.repository.NotificationRepositor
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.NotificationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class NotificationCommandService {
 
     private final NotificationRepository notificationRepository;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+
+    private static final String TOPIC = "notification";
 
     // NotificationEventHandler에서만 호출 — 직접 호출 금지, eventPublisher.publishEvent(NotificationSendEvent) 사용
     void sendInternal(Long userId, NotificationType type, String message, Object relatedData) {
@@ -37,7 +42,15 @@ public class NotificationCommandService {
                 .relatedData(relatedData)
                 .createdAt(notification.getCreatedAt())
                 .build();
-        stringRedisTemplate.convertAndSend("notification:" + userId, toJson(event));
+
+        kafkaTemplate.send(TOPIC,
+                String.valueOf(userId), // Key: userId 기준 파티션
+                toJson(event))
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Kafka 알림 전송 실패 - notificationId={}, userId={}", notification.getId(), userId, ex);
+                    }
+                });
     }
 
     // 개별 읽음 처리

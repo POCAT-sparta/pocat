@@ -47,3 +47,7 @@ manual-test/
 
 ### Serena ###
 .serena/
+
+### Scripts ###
+scripts/start.sh
+scripts/stop.sh
