@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.ai.assistant.tools;
 
 import com.rocketcrew.pocat.domain.card.entity.Card;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +33,12 @@ public class CardSearchTool {
         try {
             log.info("Searching cards with grade={}, maxPrice={}, name={}", grade, maxPrice, name);
 
+            CardGrade cardGrade = null;
+            if (grade != null && !grade.isBlank()) {
+                try { cardGrade = CardGrade.valueOf(grade); } catch (IllegalArgumentException ignored) {}
+            }
             List<Card> cards = cardRepository.findActiveCardsByNameContainingAndGrade(
-                    name, grade, PageRequest.of(0, 10));
+                    name, cardGrade, PageRequest.of(0, 10));
 
             return cards.stream()
                     .map(card -> {

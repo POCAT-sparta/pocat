@@ -89,7 +89,8 @@ public class AuctionTool {
                 days = 7; // 기본값으로 7일
             }
 
-            return auctionRepository.findByCardIdAndStatusOrderByEndedAtDesc(cardId, AuctionStatus.ENDED, PageRequest.of(0, days != null ? days : 10)).stream()
+            java.time.LocalDateTime cutoffDate = java.time.LocalDateTime.now().minusDays(days != null ? days : 7);
+            return auctionRepository.findCompletedByCardIdSince(cardId, AuctionStatus.ENDED, cutoffDate, PageRequest.of(0, 50)).stream()
                     .map(auction -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("finalPrice", auction.getHighestPrice());
