@@ -15,6 +15,8 @@ import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.InnerField;
+import org.springframework.data.elasticsearch.annotations.MultiField;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
 import java.time.LocalDateTime;
@@ -42,7 +44,10 @@ public class CardDocument {
     @Field(type = FieldType.Text, analyzer = "ngram_analyzer", searchAnalyzer = "standard")
     private String nameKo;
 
-    @Field(type = FieldType.Keyword)
+    @MultiField(
+        mainField = @Field(type = FieldType.Keyword),                   // 정확 필터용 (term)
+        otherFields = @InnerField(suffix = "text", type = FieldType.Text) // 키워드 검색용 (match)
+    )
     private String series;
 
     @Field(type = FieldType.Text, analyzer = "ngram_analyzer", searchAnalyzer = "standard")
@@ -51,7 +56,10 @@ public class CardDocument {
     @Field(type = FieldType.Keyword)
     private String setId;
 
-    @Field(type = FieldType.Keyword)
+    @MultiField(
+        mainField = @Field(type = FieldType.Keyword),                   // 정확 필터용 (term)
+        otherFields = @InnerField(suffix = "text", type = FieldType.Text) // 키워드 검색용 (match)
+    )
     private String setName;
 
     @Field(type = FieldType.Text, analyzer = "ngram_analyzer", searchAnalyzer = "standard")

@@ -72,7 +72,7 @@ public class CardQueryService {
             // cross_fields + AND: 여러 단어를 입력하면 모든 토큰이 필드 전체에 걸쳐 존재해야 매칭
             // 예) "반역크래시 리자몽" → setNameKo에 "반역크래시" AND nameKo에 "리자몽" → 교집합
             bool.must(MultiMatchQuery.of(m -> m
-                    .fields("name", "nameKo", "seriesKo", "setNameKo")
+                    .fields("name", "nameKo", "series.text", "seriesKo", "setName.text", "setNameKo")
                     .query(condition.keyword())
                     .type(TextQueryType.CrossFields)
                     .operator(Operator.And))._toQuery());
