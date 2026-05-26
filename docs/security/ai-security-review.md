@@ -87,3 +87,18 @@ spring:
 - [Spring AI Documentation](https://docs.spring.io/spring-ai/reference/)
 - [Resilience4j Circuit Breaker](https://resilience4j.readme.io/docs/circuitbreaker)
 - POCAT ADR: AI 기능 아키텍처 결정 (`docs/adr/`)
+
+## 2차 보안 검토 결과 (2026-05-26)
+
+### 수정 완료
+| 항목 | 조치 |
+|------|------|
+| PII 로그 노출 (AiAssistantService, AiStreamController) | message → msgLen= 으로 마스킹 |
+| Bean Validation 미적용 (@Valid, @Validated) | AiAssistantController, CardAnalysisController 적용 |
+| AiChatRequest 미검증 | @NotBlank + @Size(max=2000) 추가 |
+| ServiceException → RuntimeException 래핑 | 도메인 예외 그대로 전파 |
+| 만료 세션 재사용 | isExpired 필터 적용 |
+
+### 기각 (별도 이슈)
+- AiStreamController SSE subscription leak → 별도 PR
+- V1 FK constraints → V2 migration 필요
