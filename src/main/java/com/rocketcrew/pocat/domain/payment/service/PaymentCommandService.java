@@ -247,7 +247,7 @@ public class PaymentCommandService {
         try {
             redisTemplate.delete(AVG_PRICE_CACHE_PREFIX + cardId);
         } catch (Exception e) {
-            log.warn("[CardCache] 평균가 캐시 삭제 실패 cardId={}: {}", cardId, e.getMessage());
+            log.warn("[CardCache] 평균가 캐시 삭제 실패 cardId={}", cardId, e);
         }
     }
 
