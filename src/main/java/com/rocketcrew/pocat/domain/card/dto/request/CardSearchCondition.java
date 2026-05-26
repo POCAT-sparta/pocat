@@ -8,6 +8,7 @@ public record CardSearchCondition(
         String keyword,
         String series,
         String setName,
+        String rarity,
         CardGrade grade,
         CardCategory category,
         CardStatus status
