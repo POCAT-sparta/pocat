@@ -13,6 +13,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -125,6 +126,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponseDto<Void>> handleMissingServletRequestParameterException(
             MissingServletRequestParameterException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponseDto.error(
+                        ErrorCode.INVALID_INPUT.name(),
+                        ex.getMessage()
+                ));
+    }
+
+    // 400 - 필수 헤더 누락
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleMissingRequestHeaderException(
+            MissingRequestHeaderException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponseDto.error(
