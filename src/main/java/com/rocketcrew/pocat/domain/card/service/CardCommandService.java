@@ -9,6 +9,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
 import com.rocketcrew.pocat.domain.card.util.PokemonNameDictionary;
+import com.rocketcrew.pocat.domain.card.util.SeriesNameDictionary;
+import com.rocketcrew.pocat.domain.card.util.SetNameDictionary;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,8 @@ public class CardCommandService {
     private final CardRepository cardRepository;
     private final CardSearchRepository cardSearchRepository;
     private final PokemonNameDictionary pokemonNameDictionary;
+    private final SeriesNameDictionary seriesNameDictionary;
+    private final SetNameDictionary setNameDictionary;
 
     public CardResponse createCard(Long userId, CreateCardRequest request) {
         if (request.tcgdexId() != null && cardRepository.existsByTcgdexId(request.tcgdexId())) {
@@ -114,8 +118,10 @@ public class CardCommandService {
 
     private void doIndexCard(Card card) {
         try {
-            String nameKo = pokemonNameDictionary.findKoreanName(card.getName());
-            cardSearchRepository.save(CardDocument.from(card, nameKo));
+            String nameKo    = pokemonNameDictionary.findKoreanName(card.getName());
+            String seriesKo  = seriesNameDictionary.getKoreanText(card.getSeries());
+            String setNameKo = setNameDictionary.getKoreanText(card.getSetName());
+            cardSearchRepository.save(CardDocument.from(card, nameKo, seriesKo, setNameKo));
         } catch (Exception e) {
             log.warn("[CardES] 인덱싱 실패 cardId={}: {}", card.getId(), e.getMessage());
         }

@@ -45,11 +45,17 @@ public class CardDocument {
     @Field(type = FieldType.Keyword)
     private String series;
 
+    @Field(type = FieldType.Text, analyzer = "ngram_analyzer", searchAnalyzer = "standard")
+    private String seriesKo;    // 한글 시리즈 별칭 전체 (공백 구분) — 통합 키워드 검색용
+
     @Field(type = FieldType.Keyword)
     private String setId;
 
     @Field(type = FieldType.Keyword)
     private String setName;
+
+    @Field(type = FieldType.Text, analyzer = "ngram_analyzer", searchAnalyzer = "standard")
+    private String setNameKo;  // 한글 확장팩 별칭 전체 (공백 구분) — 통합 키워드 검색용
 
     @Field(type = FieldType.Keyword)
     private String cardNumber;
@@ -79,10 +85,10 @@ public class CardDocument {
     private LocalDateTime updatedAt;
 
     public static CardDocument from(Card card) {
-        return from(card, null);
+        return from(card, null, null, null);
     }
 
-    public static CardDocument from(Card card, String nameKo) {
+    public static CardDocument from(Card card, String nameKo, String seriesKo, String setNameKo) {
         return CardDocument.builder()
                 .id(String.valueOf(card.getId()))
                 .userId(card.getUserId())
@@ -90,8 +96,10 @@ public class CardDocument {
                 .name(card.getName())
                 .nameKo(nameKo)
                 .series(card.getSeries())
+                .seriesKo(seriesKo)
                 .setId(card.getSetId())
                 .setName(card.getSetName())
+                .setNameKo(setNameKo)
                 .cardNumber(card.getCardNumber())
                 .rarity(card.getRarity())
                 .category(card.getCategory() != null ? card.getCategory().name() : null)

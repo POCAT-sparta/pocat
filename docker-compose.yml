@@ -77,29 +77,30 @@ services:
       - pocat-net
 
   kafka-1:
-    image: bitnami/kafka:3.7.0
+    image: apache/kafka:3.7.0
     container_name: pocat-kafka-1
     ports:
       - "127.0.0.1:9092:9092"
     environment:
-      - KAFKA_CFG_NODE_ID=1
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:29092,EXTERNAL://localhost:9092
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_KRAFT_CLUSTER_ID=pocat-kafka-cluster-id-1
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
-      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=controller,broker
+      - KAFKA_LISTENERS=PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:29092,EXTERNAL://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
     volumes:
-      - kafka-1-data:/bitnami/kafka
+      - kafka-1-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -108,29 +109,30 @@ services:
       - pocat-net
 
   kafka-2:
-    image: bitnami/kafka:3.7.0
+    image: apache/kafka:3.7.0
     container_name: pocat-kafka-2
     ports:
       - "127.0.0.1:9094:9094"
     environment:
-      - KAFKA_CFG_NODE_ID=2
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9094
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:29092,EXTERNAL://localhost:9094
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_KRAFT_CLUSTER_ID=pocat-kafka-cluster-id-1
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
-      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_NODE_ID=2
+      - KAFKA_PROCESS_ROLES=controller,broker
+      - KAFKA_LISTENERS=PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:29092,EXTERNAL://localhost:9094
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
     volumes:
-      - kafka-2-data:/bitnami/kafka
+      - kafka-2-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -139,29 +141,30 @@ services:
       - pocat-net
 
   kafka-3:
-    image: bitnami/kafka:3.7.0
+    image: apache/kafka:3.7.0
     container_name: pocat-kafka-3
     ports:
       - "127.0.0.1:9095:9095"
     environment:
-      - KAFKA_CFG_NODE_ID=3
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9095
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-3:29092,EXTERNAL://localhost:9095
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_KRAFT_CLUSTER_ID=pocat-kafka-cluster-id-1
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=3
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
-      - KAFKA_CFG_DEFAULT_REPLICATION_FACTOR=3
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_NODE_ID=3
+      - KAFKA_PROCESS_ROLES=controller,broker
+      - KAFKA_LISTENERS=PLAINTEXT://:29092,CONTROLLER://:9093,EXTERNAL://:9095
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-3:29092,EXTERNAL://localhost:9095
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
     volumes:
-      - kafka-3-data:/bitnami/kafka
+      - kafka-3-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -170,7 +173,7 @@ services:
       - pocat-net
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:v0.7.2
+    image: provectuslabs/kafka-ui:latest
     container_name: pocat-kafka-ui
     ports:
       - "127.0.0.1:8085:8080"

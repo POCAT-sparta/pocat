@@ -4,7 +4,9 @@ import co.elastic.clients.elasticsearch._types.SortOptions;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MultiMatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.card.document.CardDocument;
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
@@ -14,6 +16,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.card.util.SeriesNameDictionary;
+import com.rocketcrew.pocat.domain.card.util.SetNameDictionary;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
@@ -52,6 +57,8 @@ public class CardQueryService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final ElasticsearchOperations elasticsearchOperations;
+    private final SeriesNameDictionary seriesNameDictionary;
+    private final SetNameDictionary setNameDictionary;
 
     public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
         if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() < 2) {
@@ -62,13 +69,21 @@ public class CardQueryService {
                 .filter(TermQuery.of(t -> t.field("status").value("ACTIVE"))._toQuery());
 
         if (StringUtils.hasText(condition.keyword())) {
-            bool.must(MultiMatchQuery.of(m -> m.fields("name", "nameKo").query(condition.keyword()))._toQuery());
+            // cross_fields + AND: 여러 단어를 입력하면 모든 토큰이 필드 전체에 걸쳐 존재해야 매칭
+            // 예) "반역크래시 리자몽" → setNameKo에 "반역크래시" AND nameKo에 "리자몽" → 교집합
+            bool.must(MultiMatchQuery.of(m -> m
+                    .fields("name", "nameKo", "seriesKo", "setNameKo")
+                    .query(condition.keyword())
+                    .type(TextQueryType.CrossFields)
+                    .operator(Operator.And))._toQuery());
         }
         if (StringUtils.hasText(condition.series())) {
-            bool.filter(TermQuery.of(t -> t.field("series").value(condition.series()))._toQuery());
+            String seriesEn = seriesNameDictionary.translate(condition.series());
+            bool.filter(TermQuery.of(t -> t.field("series").value(seriesEn))._toQuery());
         }
         if (StringUtils.hasText(condition.setName())) {
-            bool.filter(TermQuery.of(t -> t.field("setName").value(condition.setName()))._toQuery());
+            String setNameEn = setNameDictionary.translate(condition.setName());
+            bool.filter(TermQuery.of(t -> t.field("setName").value(setNameEn))._toQuery());
         }
         if (condition.grade() != null) {
             bool.filter(TermQuery.of(t -> t.field("grade").value(condition.grade().name()))._toQuery());
@@ -81,7 +96,7 @@ public class CardQueryService {
         }
 
         // 키워드 검색 시 관련도(_score) 기준 정렬, 그 외엔 pageable 정렬(기본: createdAt DESC) 사용
-        NativeQuery.Builder queryBuilder = NativeQuery.builder()
+        NativeQueryBuilder queryBuilder = NativeQuery.builder()
                 .withQuery(bool.build()._toQuery());
 
         if (StringUtils.hasText(condition.keyword())) {
