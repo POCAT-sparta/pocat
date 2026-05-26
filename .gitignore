@@ -39,6 +39,9 @@ out/
 ### Environment ###
 .env
 
+### Test artifacts ###
+manual-test/
+
 ### Claude Code ###
 .claude/
 

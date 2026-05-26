@@ -27,6 +27,11 @@ jwt:
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:86400000}
 
+# == 포트원 ==
+portone:
+  secret: ${PORTONE_SECRET}
+  webhook-secret: ${PORTONE_WEBHOOK_SECRET}
+
 ranking:
   auction:
     like-weight: 1.0

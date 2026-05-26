@@ -57,7 +57,7 @@ public class PaymentController {
      */
     @PostMapping("/v1/payments/webhook")
     public ResponseEntity<ApiResponseDto<Void>> handleWebhook(
-            @RequestHeader("X-PortOne-Signature") String signature,
+            @RequestHeader(value = "X-PortOne-Signature", required = false) String signature,
             @RequestBody byte[] rawBody) {
         paymentCommandService.handleWebhook(signature, rawBody);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
