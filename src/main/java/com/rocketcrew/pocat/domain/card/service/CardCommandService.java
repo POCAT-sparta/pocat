@@ -1,24 +1,31 @@
 package com.rocketcrew.pocat.domain.card.service;
 
+import com.rocketcrew.pocat.domain.card.document.CardDocument;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.card.util.PokemonNameDictionary;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
-import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class CardCommandService {
 
     private final CardRepository cardRepository;
+    private final CardSearchRepository cardSearchRepository;
+    private final PokemonNameDictionary pokemonNameDictionary;
 
     public CardResponse createCard(Long userId, CreateCardRequest request) {
         if (request.tcgdexId() != null && cardRepository.existsByTcgdexId(request.tcgdexId())) {
@@ -62,6 +69,9 @@ public class CardCommandService {
                 request.imageUrl(),
                 request.source()
         );
+        if (card.getStatus() == CardStatus.ACTIVE) {
+            indexCard(card);
+        }
         return CardResponse.from(card);
     }
 
@@ -69,12 +79,14 @@ public class CardCommandService {
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         cardRepository.delete(card);
+        deleteCardIndex(id);
     }
 
     public CardResponse approveCard(Long id) {
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         card.approve();
+        indexCard(card);
         return CardResponse.from(card);
     }
 
@@ -83,5 +95,22 @@ public class CardCommandService {
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         card.reject(rejectReason);
         return CardResponse.from(card);
+    }
+
+    void indexCard(Card card) {
+        try {
+            String nameKo = pokemonNameDictionary.findKoreanName(card.getName());
+            cardSearchRepository.save(CardDocument.from(card, nameKo));
+        } catch (Exception e) {
+            log.warn("[CardES] 인덱싱 실패 cardId={}: {}", card.getId(), e.getMessage());
+        }
+    }
+
+    private void deleteCardIndex(Long id) {
+        try {
+            cardSearchRepository.deleteById(String.valueOf(id));
+        } catch (Exception e) {
+            log.warn("[CardES] 인덱스 삭제 실패 cardId={}: {}", id, e.getMessage());
+        }
     }
 }

@@ -1,6 +1,10 @@
 package com.rocketcrew.pocat.domain.card.service;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MultiMatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.card.document.CardDocument;
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -15,18 +19,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
-import java.util.HexFormat;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -38,44 +41,54 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CardQueryService {
 
-    private static final long SEARCH_CACHE_TTL_MINUTES = 10;
     private static final long AVG_PRICE_CACHE_TTL_HOURS = 1;
-    private static final String SEARCH_CACHE_PREFIX = "card:search:";
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
     private final CardRepository cardRepository;
     private final OrderQueryService orderQueryService;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final ElasticsearchOperations elasticsearchOperations;
 
     public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
         if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() < 2) {
             throw new CardException(ErrorCode.INVALID_INPUT);
         }
 
-        String cacheKey = buildSearchCacheKey(condition, pageable);
-        try {
-            String cached = redisTemplate.opsForValue().get(cacheKey);
-            if (cached != null) {
-                CardSearchCacheDto dto = objectMapper.readValue(cached, CardSearchCacheDto.class);
-                return new PageImpl<>(dto.content(), pageable, dto.totalElements());
-            }
-        } catch (Exception e) {
-            log.warn("[CardCache] 검색 캐시 조회/역직렬화 실패, DB 조회로 폴백: {}", e.getMessage());
+        BoolQuery.Builder bool = new BoolQuery.Builder()
+                .filter(TermQuery.of(t -> t.field("status").value("ACTIVE"))._toQuery());
+
+        if (StringUtils.hasText(condition.keyword())) {
+            bool.must(MultiMatchQuery.of(m -> m.fields("name", "nameKo").query(condition.keyword()))._toQuery());
+        }
+        if (StringUtils.hasText(condition.series())) {
+            bool.filter(TermQuery.of(t -> t.field("series").value(condition.series()))._toQuery());
+        }
+        if (StringUtils.hasText(condition.setName())) {
+            bool.filter(TermQuery.of(t -> t.field("setName").value(condition.setName()))._toQuery());
+        }
+        if (condition.grade() != null) {
+            bool.filter(TermQuery.of(t -> t.field("grade").value(condition.grade().name()))._toQuery());
+        }
+        if (StringUtils.hasText(condition.rarity())) {
+            bool.filter(TermQuery.of(t -> t.field("rarity").value(condition.rarity()))._toQuery());
+        }
+        if (condition.category() != null) {
+            bool.filter(TermQuery.of(t -> t.field("category").value(condition.category().name()))._toQuery());
         }
 
-        Page<CardResponse> page = cardRepository.searchCards(condition, pageable)
-                .map(CardResponse::from);
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(bool.build()._toQuery())
+                .withPageable(pageable)
+                .build();
 
-        try {
-            String json = objectMapper.writeValueAsString(
-                    new CardSearchCacheDto(page.getContent(), page.getTotalElements()));
-            redisTemplate.opsForValue().set(cacheKey, json, SEARCH_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.warn("[CardCache] 검색 캐시 저장 실패: {}", e.getMessage());
-        }
+        SearchHits<CardDocument> hits = elasticsearchOperations.search(query, CardDocument.class);
+        List<CardResponse> content = hits.stream()
+                .map(SearchHit::getContent)
+                .map(CardDocument::toResponse)
+                .toList();
 
-        return page;
+        return new PageImpl<>(content, pageable, hits.getTotalHits());
     }
 
     public CardResponse getCard(Long id) {
@@ -137,37 +150,6 @@ public class CardQueryService {
         return response;
     }
 
-    /**
-     * 카드 검색 조건 + 페이지 정보를 SHA-256 해시로 변환해 Redis 캐시 키를 생성한다.
-     * 단순 문자열 결합 시 값에 구분자(:)가 포함될 경우 키 충돌이 발생할 수 있어
-     * 해시 방식으로 안정화한다.
-     */
-    private String buildSearchCacheKey(CardSearchCondition condition, Pageable pageable) {
-        String raw = Objects.toString(condition.keyword(), "") + "|" +
-                Objects.toString(condition.series(), "") + "|" +
-                Objects.toString(condition.setName(), "") + "|" +
-                Objects.toString(condition.grade(), "") + "|" +
-                Objects.toString(condition.category(), "") + "|" +
-                Objects.toString(condition.status(), "") + "|" +
-                pageable.getPageNumber() + "|" +
-                pageable.getPageSize() + "|" +
-                pageable.getSort();
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
-            return SEARCH_CACHE_PREFIX + HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256은 Java 표준 보장 — 사실상 도달 불가 분기
-            log.warn("[CardCache] SHA-256 해시 실패, raw 키 사용: {}", e.getMessage());
-            return SEARCH_CACHE_PREFIX + raw;
-        }
-    }
-
-    /**
-     * Page&lt;CardResponse&gt;를 Redis에 저장하기 위한 직렬화 전용 DTO.
-     * content(목록) + totalElements(전체 수)만 저장하고 복원 시 PageImpl로 재구성한다.
-     */
-    private record CardSearchCacheDto(List<CardResponse> content, long totalElements) {}
     public Card validateRegistrableForAuction(Long cardId) {
         Card card = getCardEntity(cardId);
         if (card.getStatus() != CardStatus.ACTIVE) {
@@ -175,24 +157,22 @@ public class CardQueryService {
         }
         return card;
     }
-    
+
     public Page<CardResponse> getMyRequests(Long userId, CardStatus status, Pageable pageable) {
-        // status 유무에 따라 분기 — 두 map() 중 하나만 실행되므로 이중 순회 없음
         if (status != null) {
             return cardRepository.findByUserIdAndStatus(userId, status, pageable)
-                    .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
+                    .map(CardResponse::from);
         }
         return cardRepository.findByUserId(userId, pageable)
-                .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
+                .map(CardResponse::from);
     }
 
     public Page<CardResponse> getRequests(CardStatus status, Pageable pageable) {
-        // status 유무에 따라 분기 — 두 map() 중 하나만 실행되므로 이중 순회 없음
         if (status != null) {
             return cardRepository.findByStatus(status, pageable)
-                    .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
+                    .map(CardResponse::from);
         }
         return cardRepository.findAll(pageable)
-                .map(CardResponse::from); // Page<Card> → Page<CardResponse> 단일 순회
+                .map(CardResponse::from);
     }
 }

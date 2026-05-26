@@ -23,6 +23,8 @@ import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,10 +32,13 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class PaymentCommandService {
+
+    private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
@@ -43,6 +48,7 @@ public class PaymentCommandService {
     private final UserRepository userRepository;
     private final PortOneClient portOneClient;
     private final PortOneSignatureVerifier portOneSignatureVerifier;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -115,6 +121,7 @@ public class PaymentCommandService {
         payment.complete(portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
         order.completePayment();
         settlementCommandService.createSettlement(order.getOrderUid());
+        evictAvgPriceCache(order.getCardId());
 
         return PaymentResponse.from(payment);
     }
@@ -186,6 +193,7 @@ public class PaymentCommandService {
             payment.complete(paymentMethod, paidAt);
             order.completePayment();
             settlementCommandService.createSettlement(order.getOrderUid());
+            evictAvgPriceCache(order.getCardId());
         } else {
             paymentFailureService.markFailed(payment.getId());
         }
@@ -230,8 +238,17 @@ public class PaymentCommandService {
         payment.complete(response.paymentMethod(), response.paidAt());
         order.completePayment();
         settlementCommandService.createSettlement(order.getOrderUid());
+        evictAvgPriceCache(order.getCardId());
 
         return PaymentResponse.from(payment);
+    }
+
+    private void evictAvgPriceCache(Long cardId) {
+        try {
+            redisTemplate.delete(AVG_PRICE_CACHE_PREFIX + cardId);
+        } catch (Exception e) {
+            log.warn("[CardCache] 평균가 캐시 삭제 실패 cardId={}: {}", cardId, e.getMessage());
+        }
     }
 
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
