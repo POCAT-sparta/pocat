@@ -20,6 +20,8 @@ spring:
       port: ${REDIS_PORT:6379}
   kafka:
     bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+  elasticsearch:
+    uris: ${ES_URI:http://localhost:9200}
   ai:
     openai:
       api-key: ${GEMINI_API_KEY}

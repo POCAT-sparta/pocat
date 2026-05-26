@@ -23,6 +23,8 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class CardSyncService {
 
+    private final CardCommandService cardCommandService;
+
     private static final String TCGDEX_SETS_URL = "https://api.tcgdex.net/v2/en/sets";
     private static final String TCGDEX_SET_URL  = "https://api.tcgdex.net/v2/en/sets/";
     private static final String TCGDEX_CARD_URL = "https://api.tcgdex.net/v2/en/cards/";
@@ -130,7 +132,8 @@ public class CardSyncService {
                         .build();
 
                 try {
-                    cardRepository.save(card);
+                    Card saved = cardRepository.save(card);
+                    cardCommandService.indexCard(saved);
                     synced++;
                 } catch (DataIntegrityViolationException e) {
                     // 동시 요청 시 race condition 방어

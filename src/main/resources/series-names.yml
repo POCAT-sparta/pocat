@@ -1,0 +1,87 @@
+# 포켓몬 TCG 시리즈 한글명 → 영문명 매핑
+# DB cards.series 필드에 저장된 TCGdex 영문 시리즈명과 매핑
+# 한글명 기준: 포켓몬 코리아 공식 한글판 / TCGdex 한국어 API
+#
+# 사용 예) series=소드실드 → "Sword & Shield" 로 변환 → ES term 필터
+#
+# 정규화 규칙: 공백·특수문자 제거, 한글·영문·숫자만 유지
+#   "소드 & 실드" → "소드실드"
+#   "스칼렛・바이올렛" → "스칼렛바이올렛"
+
+names:
+  # ── 스칼렛 & 바이올렛 (Scarlet & Violet) ───────────────────────────
+  스칼렛바이올렛: Scarlet & Violet
+  스칼렛&바이올렛: Scarlet & Violet
+  스칼렛앤바이올렛: Scarlet & Violet
+
+  # ── 검과 방패 / 소드 & 실드 (Sword & Shield) ────────────────────────
+  검과방패: Sword & Shield
+  소드실드: Sword & Shield
+  소드&실드: Sword & Shield
+  소드앤실드: Sword & Shield
+
+  # ── 썬 & 문 (Sun & Moon) ───────────────────────────────────────────
+  썬문: Sun & Moon
+  썬&문: Sun & Moon
+  태양달: Sun & Moon
+  태양&달: Sun & Moon
+
+  # ── XY ─────────────────────────────────────────────────────────────
+  XY: XY
+
+  # ── 블랙 & 화이트 (Black & White) ───────────────────────────────────
+  블랙화이트: Black & White
+  블랙&화이트: Black & White
+
+  # ── 하트골드 & 소울실버 (HeartGold & SoulSilver) ─────────────────────
+  하트골드소울실버: HeartGold & SoulSilver
+  하트골드&소울실버: HeartGold & SoulSilver
+  HGSS: HeartGold & SoulSilver
+
+  # ── 플라티나 (Platinum) ─────────────────────────────────────────────
+  플라티나: Platinum
+
+  # ── 다이아몬드 & 펄 (Diamond & Pearl) ───────────────────────────────
+  다이아몬드펄: Diamond & Pearl
+  다이아몬드&펄: Diamond & Pearl
+  DP: Diamond & Pearl
+
+  # ── 콜 오브 레전즈 (Call of Legends) ────────────────────────────────
+  콜오브레전즈: Call of Legends
+
+  # ── EX 시리즈 (EX) ─────────────────────────────────────────────────
+  EX: EX
+
+  # ── 네오 (Neo) ──────────────────────────────────────────────────────
+  네오: Neo
+
+  # ── 체육관 (Gym) ────────────────────────────────────────────────────
+  체육관: Gym
+
+  # ── 기본 (Base) ─────────────────────────────────────────────────────
+  기본: Base
+
+  # ── 레전더리 컬렉션 (Legendary Collection) ───────────────────────────
+  레전더리컬렉션: Legendary Collection
+  레전드컬렉션: Legendary Collection
+
+  # ── E-카드 (E-Card) ─────────────────────────────────────────────────
+  E카드: E-Card
+  이카드: E-Card
+
+  # ── POP 시리즈 (POP) ────────────────────────────────────────────────
+  POP: POP
+  POP시리즈: POP
+
+  # ── 트레이너 킷 (Trainer kits) ──────────────────────────────────────
+  트레이너킷: Trainer kits
+  트레이너덱: Trainer kits
+
+  # ── 메가 에볼루션 (Mega Evolution) ──────────────────────────────────
+  메가에볼루션: Mega Evolution
+  메가진화: Mega Evolution
+
+  # ── 포켓몬 카드 게임 포켓 (Pokémon TCG Pocket) ───────────────────────
+  포켓몬카드게임포켓: Pokémon TCG Pocket
+  포켓TCG: Pokémon TCG Pocket
+  TCGP: Pokémon TCG Pocket
