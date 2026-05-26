@@ -14,9 +14,10 @@ for i in range(1, 1026):
     except Exception as e:
         print(f"[{i}/1025] 실패: {e}")
 
-with open("pokemon-names.yml", "w", encoding="utf-8") as f:
+output_path = "src/main/resources/pokemon-names.yml"
+with open(output_path, "w", encoding="utf-8") as f:
     f.write("names:\n")
     for line in result:
         f.write(f"  {line}\n")
 
-print(f"\n완료: {len(result)}개 → pokemon-names.yml 생성됨")
+print(f"\n완료: {len(result)}개 → {output_path} 생성됨")

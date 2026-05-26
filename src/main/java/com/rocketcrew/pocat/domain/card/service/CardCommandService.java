@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -98,6 +100,19 @@ public class CardCommandService {
     }
 
     void indexCard(Card card) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    doIndexCard(card);
+                }
+            });
+        } else {
+            doIndexCard(card);
+        }
+    }
+
+    private void doIndexCard(Card card) {
         try {
             String nameKo = pokemonNameDictionary.findKoreanName(card.getName());
             cardSearchRepository.save(CardDocument.from(card, nameKo));
@@ -107,6 +122,19 @@ public class CardCommandService {
     }
 
     private void deleteCardIndex(Long id) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    doDeleteCardIndex(id);
+                }
+            });
+        } else {
+            doDeleteCardIndex(id);
+        }
+    }
+
+    private void doDeleteCardIndex(Long id) {
         try {
             cardSearchRepository.deleteById(String.valueOf(id));
         } catch (Exception e) {

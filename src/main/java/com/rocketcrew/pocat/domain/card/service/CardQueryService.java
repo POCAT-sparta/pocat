@@ -1,5 +1,7 @@
 package com.rocketcrew.pocat.domain.card.service;
 
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.MultiMatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -77,10 +80,19 @@ public class CardQueryService {
             bool.filter(TermQuery.of(t -> t.field("category").value(condition.category().name()))._toQuery());
         }
 
-        NativeQuery query = NativeQuery.builder()
-                .withQuery(bool.build()._toQuery())
-                .withPageable(pageable)
-                .build();
+        // 키워드 검색 시 관련도(_score) 기준 정렬, 그 외엔 pageable 정렬(기본: createdAt DESC) 사용
+        NativeQuery.Builder queryBuilder = NativeQuery.builder()
+                .withQuery(bool.build()._toQuery());
+
+        if (StringUtils.hasText(condition.keyword())) {
+            queryBuilder
+                    .withPageable(PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()))
+                    .withSort(List.of(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc)))));
+        } else {
+            queryBuilder.withPageable(pageable);
+        }
+
+        NativeQuery query = queryBuilder.build();
 
         SearchHits<CardDocument> hits = elasticsearchOperations.search(query, CardDocument.class);
         List<CardResponse> content = hits.stream()

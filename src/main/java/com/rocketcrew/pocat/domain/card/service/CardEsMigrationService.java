@@ -8,6 +8,9 @@ import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
 import com.rocketcrew.pocat.domain.card.util.PokemonNameDictionary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,18 +21,34 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CardEsMigrationService {
 
+    private static final int BATCH_SIZE = 500;
+
     private final CardRepository cardRepository;
     private final CardSearchRepository cardSearchRepository;
     private final PokemonNameDictionary pokemonNameDictionary;
 
     @Transactional(readOnly = true)
     public int migrateAll() {
-        List<Card> activeCards = cardRepository.findAllByStatus(CardStatus.ACTIVE);
-        List<CardDocument> docs = activeCards.stream()
-                .map(card -> CardDocument.from(card, pokemonNameDictionary.findKoreanName(card.getName())))
-                .toList();
-        cardSearchRepository.saveAll(docs);
-        log.info("[EsMigration] {}개 카드 ES 인덱싱 완료", docs.size());
-        return docs.size();
+        int pageNum = 0;
+        int totalCount = 0;
+        Page<Card> batch;
+
+        do {
+            Pageable pageable = PageRequest.of(pageNum++, BATCH_SIZE);
+            batch = cardRepository.findByStatus(CardStatus.ACTIVE, pageable);
+
+            List<CardDocument> docs = batch.getContent().stream()
+                    .map(card -> CardDocument.from(card, pokemonNameDictionary.findKoreanName(card.getName())))
+                    .toList();
+
+            if (!docs.isEmpty()) {
+                cardSearchRepository.saveAll(docs);
+                totalCount += docs.size();
+                log.info("[EsMigration] 배치 인덱싱 완료 (누적: {}/{})", totalCount, batch.getTotalElements());
+            }
+        } while (batch.hasNext());
+
+        log.info("[EsMigration] 전체 {}개 카드 ES 인덱싱 완료", totalCount);
+        return totalCount;
     }
 }

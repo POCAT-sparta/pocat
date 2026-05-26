@@ -6,7 +6,7 @@
     "tokenizer": {
       "ngram_tokenizer": {
         "type": "ngram",
-        "min_gram": 1,
+        "min_gram": 2,
         "max_gram": 15,
         "token_chars": []
       }
