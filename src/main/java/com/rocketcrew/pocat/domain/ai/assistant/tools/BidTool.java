@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -34,10 +35,7 @@ public class BidTool {
         try {
             log.info("Fetching bid history for userId: {}", userId);
 
-            // 실제 구현은 DB 에이전트가 BidRepository에서 findByBidderId 등 메서드 추가
-            // 여기서는 기본 구조만 제시
-            return bidRepository.findAll().stream()
-                    .filter(bid -> userId.equals(bid.getUserId()))
+            return bidRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 10)).stream()
                     .map(bid -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", bid.getId());
@@ -47,7 +45,6 @@ public class BidTool {
                         m.put("createdAt", bid.getCreatedAt() != null ? bid.getCreatedAt().toString() : "");
                         return m;
                     })
-                    .limit(10)
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Failed to fetch bid history for userId: {}", userId, e);

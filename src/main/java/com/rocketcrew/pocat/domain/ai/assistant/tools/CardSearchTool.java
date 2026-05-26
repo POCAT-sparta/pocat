@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -31,13 +32,8 @@ public class CardSearchTool {
         try {
             log.info("Searching cards with grade={}, maxPrice={}, name={}", grade, maxPrice, name);
 
-            // CardRepository를 사용하여 조건에 맞는 카드 검색
-            // 실제 구현은 DB 에이전트가 쿼리메서드 추가
-            List<Card> cards = cardRepository.findAll().stream()
-                    .filter(card -> grade == null || card.getGrade().toString().equals(grade))
-                    .filter(card -> name == null || card.getName().contains(name))
-                    .limit(10)
-                    .collect(Collectors.toList());
+            List<Card> cards = cardRepository.findActiveCardsByNameContainingAndGrade(
+                    name, grade, PageRequest.of(0, 10));
 
             return cards.stream()
                     .map(card -> {

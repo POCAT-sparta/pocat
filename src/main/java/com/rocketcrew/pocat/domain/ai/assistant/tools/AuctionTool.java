@@ -1,11 +1,13 @@
 package com.rocketcrew.pocat.domain.ai.assistant.tools;
 
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -42,18 +44,15 @@ public class AuctionTool {
                 return List.of();
             }
 
-            // 실제 구현은 DB 에이전트가 AuctionRepository에서 getActiveAuctions 메서드 추가
-            // 여기서는 기본 구조만 제시
-            return auctionRepository.findAll().stream()
-                    .filter(auction -> cardId.equals(auction.getCardId()))
+            return auctionRepository.findByCardIdAndStatus(cardId, AuctionStatus.ACTIVE).stream()
                     .map(auction -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", auction.getId());
                         m.put("cardId", cardId);
-                        m.put("currentPrice", auction.getHighestPrice());
+                        m.put("currentPrice", auction.getHighestPrice() != null ? auction.getHighestPrice() : auction.getStartingPrice());
                         m.put("minBidPrice", auction.getStartingPrice());
                         m.put("status", auction.getStatus().toString());
-                        m.put("remainingTime", "정보 없음");
+                        m.put("endsAt", auction.getEndedAt() != null ? auction.getEndedAt().toString() : "정보 없음");
                         return m;
                     })
                     .collect(Collectors.toList());
@@ -90,17 +89,13 @@ public class AuctionTool {
                 days = 7; // 기본값으로 7일
             }
 
-            // 실제 구현은 DB 에이전트가 커스텀 쿼리로 완료된 경매 이력 조회
-            return auctionRepository.findAll().stream()
-                    .filter(auction -> cardId.equals(auction.getCardId()))
+            return auctionRepository.findByCardIdAndStatusOrderByEndedAtDesc(cardId, AuctionStatus.ENDED, PageRequest.of(0, days != null ? days : 10)).stream()
                     .map(auction -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("finalPrice", auction.getHighestPrice());
-                        m.put("completedAt", "완료 시각");
-                        m.put("buyerCount", "입찰자 수");
+                        m.put("completedAt", auction.getEndedAt() != null ? auction.getEndedAt().toString() : "");
                         return m;
                     })
-                    .limit(10)
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Failed to fetch price history for cardId: {}", cardId, e);
