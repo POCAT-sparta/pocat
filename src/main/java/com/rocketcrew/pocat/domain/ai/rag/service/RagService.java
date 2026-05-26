@@ -36,9 +36,11 @@ public class RagService {
 
             // VectorStore 검색 (유사도 기반)
             List<Document> results = vectorStore.similaritySearch(
-                    SearchRequest.query(query)
-                            .withTopK(TOP_K)
-                            .withSimilarityThreshold(SIMILARITY_THRESHOLD)
+                    SearchRequest.builder()
+                            .query(query)
+                            .topK(TOP_K)
+                            .similarityThreshold(SIMILARITY_THRESHOLD)
+                            .build()
             );
 
             log.debug("RAG search completed: found {} documents", results.size());
@@ -64,12 +66,12 @@ public class RagService {
 
         return docs.stream()
                 .map(doc -> {
-                    String type = doc.getMetadata().getOrDefault("type", "unknown");
-                    String id = doc.getMetadata().getOrDefault(
+                    String type = String.valueOf(doc.getMetadata().getOrDefault("type", "unknown"));
+                    String id = String.valueOf(doc.getMetadata().getOrDefault(
                             type.equals("card") ? "cardId" : "postId",
                             "N/A"
-                    );
-                    return String.format("[%s #%s]: %s", type, id, doc.getContent());
+                    ));
+                    return String.format("[%s #%s]: %s", type, id, doc.getText());
                 })
                 .collect(Collectors.joining("\n\n"));
     }

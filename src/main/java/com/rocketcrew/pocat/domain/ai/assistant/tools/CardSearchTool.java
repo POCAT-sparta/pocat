@@ -4,8 +4,8 @@ import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.tool.Tool;
-import org.springframework.ai.tool.ToolParam;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -40,14 +40,16 @@ public class CardSearchTool {
                     .collect(Collectors.toList());
 
             return cards.stream()
-                    .map(card -> Map.ofEntries(
-                            Map.entry("id", card.getId()),
-                            Map.entry("name", card.getName()),
-                            Map.entry("grade", card.getGrade().toString()),
-                            Map.entry("series", card.getSeries()),
-                            Map.entry("rarity", card.getRarity()),
-                            Map.entry("imageUrl", card.getImageUrl())
-                    ))
+                    .map(card -> {
+                        Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", card.getId());
+                        m.put("name", card.getName());
+                        m.put("grade", card.getGrade().toString());
+                        m.put("series", card.getSeries());
+                        m.put("rarity", card.getRarity());
+                        m.put("imageUrl", card.getImageUrl());
+                        return m;
+                    })
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Card search failed: {}", e.getMessage(), e);

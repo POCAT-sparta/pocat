@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -59,7 +60,7 @@ public class AiStreamController {
                                     .id(String.valueOf(eventId.incrementAndGet()))
                                     .event("message")
                                     .data(chunk)
-                                    .retry(3000)
+                                    .retry(Duration.ofSeconds(3))
                                     .build();
                             sink.next(event);
                         })

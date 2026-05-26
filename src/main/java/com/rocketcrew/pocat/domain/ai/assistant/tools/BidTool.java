@@ -1,10 +1,10 @@
 package com.rocketcrew.pocat.domain.ai.assistant.tools;
 
-import com.rocketcrew.pocat.domain.bid.repository.BidRepository;
+import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.tool.Tool;
-import org.springframework.ai.tool.ToolParam;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BidTool {
 
-    private final BidRepository bidRepository;
+    private final AuctionBidRepository bidRepository;
 
     /**
      * 사용자의 입찰 이력 조회.
@@ -38,13 +38,15 @@ public class BidTool {
             // 여기서는 기본 구조만 제시
             return bidRepository.findAll().stream()
                     .filter(bid -> userId.equals(bid.getId())) // DB 쿼리로 이동 권장
-                    .map(bid -> Map.ofEntries(
-                            Map.entry("id", bid.getId()),
-                            Map.entry("auctionId", "경매 ID"),
-                            Map.entry("bidPrice", "입찰가"),
-                            Map.entry("status", "상태"),
-                            Map.entry("createdAt", "입찰 시간")
-                    ))
+                    .map(bid -> {
+                        Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", bid.getId());
+                        m.put("auctionId", bid.getAuctionId());
+                        m.put("bidPrice", bid.getBidPrice());
+                        m.put("status", bid.getStatus().toString());
+                        m.put("createdAt", bid.getCreatedAt() != null ? bid.getCreatedAt().toString() : "");
+                        return m;
+                    })
                     .limit(10)
                     .collect(Collectors.toList());
         } catch (Exception e) {

@@ -41,7 +41,7 @@ public class EmbeddingService {
                     )
             );
 
-            vectorStore.add(document);
+            vectorStore.add(java.util.List.of(document));
             log.debug("Card embedded successfully: cardId={}", cardId);
         } catch (Exception e) {
             log.error("Failed to embed card: cardId={}", cardId, e);
@@ -67,7 +67,7 @@ public class EmbeddingService {
                     )
             );
 
-            vectorStore.add(document);
+            vectorStore.add(java.util.List.of(document));
             log.debug("Trade post embedded successfully: postId={}", postId);
         } catch (Exception e) {
             log.error("Failed to embed trade post: postId={}", postId, e);

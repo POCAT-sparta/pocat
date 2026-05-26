@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.ai.assistant.entity.AiChatSession;
 import com.rocketcrew.pocat.domain.ai.assistant.entity.AiChatMessage;
 import com.rocketcrew.pocat.domain.ai.assistant.repository.AiChatSessionRepository;
 import com.rocketcrew.pocat.domain.ai.assistant.repository.AiChatMessageRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +65,7 @@ public class AiChatSessionService {
 
         if (!isOwner) {
             log.warn("Session ownership validation failed: sessionUuid={}, userId={}", sessionUuid, userId);
-            throw new ServiceException("세션에 대한 접근 권한이 없습니다");
+            throw new ServiceException(ErrorCode.USER_FORBIDDEN);
         }
     }
 

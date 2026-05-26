@@ -42,17 +42,16 @@ ranking:
     cache-size: 100
     max-response-size: 50
 
-# == Spring AI ==
-spring:
+  # == Spring AI (Gemini via OpenAI-compatible endpoint) ==
   ai:
-    google:
-      genai:
-        api-key: ${GEMINI_API_KEY}
-        chat:
-          options:
-            model: gemini-1.5-flash
-            temperature: 0.3
-            max-output-tokens: 1024
+    openai:
+      api-key: ${GEMINI_API_KEY}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        options:
+          model: gemini-1.5-flash
+          temperature: 0.3
+          max-tokens: 1024
     vectorstore:
       redis:
         index: pocat-ai-index

@@ -4,8 +4,8 @@ import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.tool.Tool;
-import org.springframework.ai.tool.ToolParam;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -46,14 +46,16 @@ public class AuctionTool {
             // 여기서는 기본 구조만 제시
             return auctionRepository.findAll().stream()
                     .filter(auction -> cardId.equals(auction.getId())) // DB 쿼리로 이동 권장
-                    .map(auction -> Map.ofEntries(
-                            Map.entry("id", auction.getId()),
-                            Map.entry("cardId", cardId),
-                            Map.entry("currentPrice", auction.getCurrentPrice()),
-                            Map.entry("minBidPrice", auction.getMinBidPrice()),
-                            Map.entry("status", auction.getStatus().toString()),
-                            Map.entry("remainingTime", "정보 없음") // 실제 계산 필요
-                    ))
+                    .map(auction -> {
+                        Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("id", auction.getId());
+                        m.put("cardId", cardId);
+                        m.put("currentPrice", auction.getHighestPrice());
+                        m.put("minBidPrice", auction.getStartingPrice());
+                        m.put("status", auction.getStatus().toString());
+                        m.put("remainingTime", "정보 없음");
+                        return m;
+                    })
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Failed to fetch active auctions for cardId: {}", cardId, e);
@@ -91,11 +93,13 @@ public class AuctionTool {
             // 실제 구현은 DB 에이전트가 커스텀 쿼리로 완료된 경매 이력 조회
             return auctionRepository.findAll().stream()
                     .filter(auction -> cardId.equals(auction.getId())) // DB 쿼리로 이동 권장
-                    .map(auction -> Map.ofEntries(
-                            Map.entry("finalPrice", auction.getCurrentPrice()),
-                            Map.entry("completedAt", "완료 시각"),
-                            Map.entry("buyerCount", "입찰자 수")
-                    ))
+                    .map(auction -> {
+                        Map<String, Object> m = new java.util.HashMap<>();
+                        m.put("finalPrice", auction.getHighestPrice());
+                        m.put("completedAt", "완료 시각");
+                        m.put("buyerCount", "입찰자 수");
+                        return m;
+                    })
                     .limit(10)
                     .collect(Collectors.toList());
         } catch (Exception e) {

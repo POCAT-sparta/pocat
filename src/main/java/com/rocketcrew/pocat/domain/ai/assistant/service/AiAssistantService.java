@@ -6,7 +6,7 @@ import com.rocketcrew.pocat.domain.ai.assistant.tools.AuctionTool;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.BidTool;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.CardSearchTool;
 import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
-import com.rocketcrew.pocat.domain.ai.rag.RagService;
+import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -73,9 +73,7 @@ public class AiAssistantService {
                             + "다음의 RAG 컨텍스트를 활용하여 답변하세요:\n" + ragContext)
                     .user(request.message())
                     .call()
-                    .getResult()
-                    .getOutput()
-                    .getContent();
+                    .content();
 
             // 6. 메시지 저장
             sessionService.addMessage(chatSessionId, "user", request.message(), 0);

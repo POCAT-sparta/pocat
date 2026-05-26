@@ -5,13 +5,13 @@ import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.ChatClientRequestSpec;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.BeanOutputConverter;
@@ -55,7 +55,7 @@ public class CardAnalysisService {
 
         // 카드 존재 확인
         Card card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new CardException.CardNotFoundException("카드를 찾을 수 없습니다"));
+                .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
 
         // 캐시 확인
         String cacheKey = CACHE_KEY_PREFIX + cardId;
@@ -157,14 +157,14 @@ public class CardAnalysisService {
                     "format", outputConverter.getFormat()
             ));
 
-            String response = chatClient.prompt(prompt).call().getResult().getOutput().getContent();
+            String response = chatClient.prompt(prompt).call().content();
 
             log.debug("LLM response received for card analysis");
             return outputConverter.convert(response);
         } catch (Exception e) {
             log.error("LLM call failed: {}", e.getMessage(), e);
             aiUsageMetrics.recordError("LLM_CALL_FAILED", FALLBACK_MODEL);
-            throw new ServiceException("카드 분석 LLM 호출 실패: " + e.getMessage());
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
