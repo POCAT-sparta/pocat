@@ -7,6 +7,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,7 @@ public class PokemonNameDictionary {
                 // 숫자 보존: Porygon(porygon) vs Porygon2(porygon2) 충돌 방지
                 loaded = koToEn.entrySet().stream()
                         .collect(Collectors.toMap(
-                                e -> e.getValue().toLowerCase().replaceAll("[^a-z0-9]", ""),
+                                e -> normalize(e.getValue()),  // normalize() 재사용으로 정규화 규칙 일원화
                                 Map.Entry::getKey,
                                 (existing, duplicate) -> existing  // 중복 키 발생 시 첫 번째 값 유지
                         ));
@@ -56,6 +57,6 @@ public class PokemonNameDictionary {
     }
 
     private static String normalize(String word) {
-        return word.toLowerCase().replaceAll("[^a-z0-9]", "");
+        return word.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 }
