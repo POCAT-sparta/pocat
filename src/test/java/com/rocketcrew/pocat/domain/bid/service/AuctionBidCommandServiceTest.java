@@ -28,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -68,6 +69,9 @@ class AuctionBidCommandServiceTest {
 
     @Mock
     RLock rLock;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     // ---------------------------------------------------------------
     // Test fixtures
