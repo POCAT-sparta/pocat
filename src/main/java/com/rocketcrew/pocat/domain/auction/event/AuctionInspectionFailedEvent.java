@@ -8,15 +8,15 @@ public class AuctionInspectionFailedEvent extends BaseEvent {
 
     private final Long auctionId;
     private final Long sellerId;
-    private final String cardName;
+    private final String auctionTitle;
     private final String failedReason;
 
     public AuctionInspectionFailedEvent(Long auctionId, Long sellerId,
-                                        String cardName, String failedReason) {
+                                        String auctionTitle, String failedReason) {
         super("auction.inspection.failed");
         this.auctionId = auctionId;
         this.sellerId = sellerId;
-        this.cardName = cardName;
+        this.auctionTitle = auctionTitle;
         this.failedReason = failedReason;
     }
 }
