@@ -1,0 +1,63 @@
+package com.rocketcrew.pocat.domain.card.service;
+
+import com.rocketcrew.pocat.domain.card.document.CardDocument;
+import com.rocketcrew.pocat.domain.card.entity.Card;
+import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
+import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.card.util.PokemonNameDictionary;
+import com.rocketcrew.pocat.domain.card.util.SeriesNameDictionary;
+import com.rocketcrew.pocat.domain.card.util.SetNameDictionary;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class CardEsMigrationService {
+
+    private static final int BATCH_SIZE = 500;
+
+    private final CardRepository cardRepository;
+    private final CardSearchRepository cardSearchRepository;
+    private final PokemonNameDictionary pokemonNameDictionary;
+    private final SeriesNameDictionary seriesNameDictionary;
+    private final SetNameDictionary setNameDictionary;
+
+    @Transactional(readOnly = true)
+    public int migrateAll() {
+        int pageNum = 0;
+        int totalCount = 0;
+        Page<Card> batch;
+
+        do {
+            Pageable pageable = PageRequest.of(pageNum++, BATCH_SIZE);
+            batch = cardRepository.findByStatus(CardStatus.ACTIVE, pageable);
+
+            List<CardDocument> docs = batch.getContent().stream()
+                    .map(card -> CardDocument.from(
+                            card,
+                            pokemonNameDictionary.findKoreanName(card.getName()),
+                            seriesNameDictionary.getKoreanText(card.getSeries()),
+                            setNameDictionary.getKoreanText(card.getSetName())
+                    ))
+                    .toList();
+
+            if (!docs.isEmpty()) {
+                cardSearchRepository.saveAll(docs);
+                totalCount += docs.size();
+                log.info("[EsMigration] 배치 인덱싱 완료 (누적: {}/{})", totalCount, batch.getTotalElements());
+            }
+        } while (batch.hasNext());
+
+        log.info("[EsMigration] 전체 {}개 카드 ES 인덱싱 완료", totalCount);
+        return totalCount;
+    }
+}

@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.service.CardCommandService;
+import com.rocketcrew.pocat.domain.card.service.CardEsMigrationService;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.domain.card.service.CardSyncService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -27,6 +28,7 @@ public class AdminCardController {
     private final CardQueryService cardQueryService;
     private final CardCommandService cardCommandService;
     private final CardSyncService cardSyncService;
+    private final CardEsMigrationService cardEsMigrationService;
 
     @GetMapping("/v1/admin/cards/requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getRequests(
@@ -74,5 +76,14 @@ public class AdminCardController {
     public ResponseEntity<ApiResponseDto<Void>> syncCards() {
         cardSyncService.syncAll();
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
+    }
+
+    /**
+     * DB에 있는 ACTIVE 카드를 ES에 일괄 인덱싱 (최초 1회 실행)
+     */
+    @PostMapping("/v1/admin/cards/es-migrate")
+    public ResponseEntity<ApiResponseDto<Integer>> migrateToEs() {
+        int count = cardEsMigrationService.migrateAll();
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, count));
     }
 }
