@@ -1,0 +1,147 @@
+package com.rocketcrew.pocat.domain.auction.service;
+
+import com.rocketcrew.pocat.domain.auction.entity.Auction;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.event.AuctionActivatedEvent;
+import com.rocketcrew.pocat.domain.auction.event.AuctionEndedEvent;
+import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
+import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
+import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class AuctionLifecycleService {
+
+    private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
+    private static final long AUCTION_LOCK_WAIT_SECONDS = 0L;
+    private static final int AUCTION_DURATION_DAYS = 3;
+
+    private final AuctionRepository auctionRepository;
+    private final AuctionBidRepository auctionBidRepository;
+    private final RedissonClient redissonClient;
+    private final ApplicationEventPublisher eventPublisher;
+
+    // 검수 승인된 경매를 현재 시각 기준으로 ACTIVE 상태로 전환하고 종료 이벤트 예약용 정보를 확정한다.
+    public boolean activateApprovedAuction(Long auctionId) {
+        RLock lock = acquireAuctionLock(auctionId);
+        releaseLockAfterTransaction(lock);
+
+        Auction latestAuction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
+        if (latestAuction.getStatus() != AuctionStatus.APPROVED) {
+            return false;
+        }
+
+        LocalDateTime startedAt = LocalDateTime.now();
+        LocalDateTime endedAt = startedAt.plusDays(AUCTION_DURATION_DAYS);
+        latestAuction.activate(startedAt, endedAt);
+
+        eventPublisher.publishEvent(new AuctionActivatedEvent(
+                latestAuction.getId(),
+                latestAuction.getSellerId(),
+                latestAuction.getEndedAt()
+        ));
+        return true;
+    }
+
+    // 종료 시각이 지난 ACTIVE 경매를 낙찰 또는 유찰 상태로 한 번만 마감한다.
+    public boolean closeExpiredAuction(Long auctionId) {
+        RLock lock = acquireAuctionLock(auctionId);
+        releaseLockAfterTransaction(lock);
+
+        Auction latestAuction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
+        if (!isClosable(latestAuction)) {
+            return false;
+        }
+
+        List<AuctionBid> bids = auctionBidRepository.findAllByAuctionId(auctionId);
+        if (latestAuction.getHighestBidderId() == null) {
+            latestAuction.markNoBidder();
+            publishEndedEvent(latestAuction, List.of());
+            return true;
+        }
+
+        markBidResults(bids, latestAuction.getHighestBidderId());
+        List<Long> loserIds = bids.stream()
+                .map(AuctionBid::getUserId)
+                .filter(userId -> !userId.equals(latestAuction.getHighestBidderId()))
+                .distinct()
+                .toList();
+
+        latestAuction.end();
+        publishEndedEvent(latestAuction, loserIds);
+        return true;
+    }
+
+    // 종료 처리가 가능한 ACTIVE 상태와 종료 시각 경과 여부를 검증한다.
+    private boolean isClosable(Auction auction) {
+        return auction.getStatus() == AuctionStatus.ACTIVE
+                && auction.getEndedAt() != null
+                && !auction.getEndedAt().isAfter(LocalDateTime.now());
+    }
+
+    // 최종 최고 입찰자는 WON, 나머지 입찰자는 LOST 상태로 정리한다.
+    private void markBidResults(List<AuctionBid> bids, Long winnerId) {
+        for (AuctionBid bid : bids) {
+            if (bid.getUserId().equals(winnerId) && bid.getStatus() == BidStatus.LEADING) {
+                bid.markWon();
+            } else {
+                bid.markLost();
+            }
+        }
+    }
+
+    // 경매 종료 후속 처리를 Kafka consumer가 수행할 수 있도록 도메인 이벤트를 발행한다.
+    private void publishEndedEvent(Auction auction, List<Long> loserIds) {
+        eventPublisher.publishEvent(new AuctionEndedEvent(
+                auction.getId(),
+                auction.getHighestBidderId(),
+                auction.getSellerId(),
+                loserIds,
+                auction.getHighestPrice()
+        ));
+    }
+
+    // 같은 경매를 Redis 리스너와 스케줄러가 동시에 처리하지 못하도록 분산 락을 획득한다.
+    private RLock acquireAuctionLock(Long auctionId) {
+        RLock lock = redissonClient.getLock(AUCTION_LOCK_KEY_PREFIX + auctionId);
+        try {
+            if (!lock.tryLock(AUCTION_LOCK_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
+            }
+            return lock;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
+        }
+    }
+
+    // 트랜잭션이 끝난 뒤 현재 스레드가 가진 분산 락을 해제한다.
+    private void releaseLockAfterTransaction(RLock lock) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (lock.isHeldByCurrentThread()) {
+                    lock.unlock();
+                }
+            }
+        });
+    }
+}
