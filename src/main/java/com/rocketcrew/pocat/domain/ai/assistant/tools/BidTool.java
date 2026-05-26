@@ -37,7 +37,7 @@ public class BidTool {
             // 실제 구현은 DB 에이전트가 BidRepository에서 findByBidderId 등 메서드 추가
             // 여기서는 기본 구조만 제시
             return bidRepository.findAll().stream()
-                    .filter(bid -> userId.equals(bid.getId())) // DB 쿼리로 이동 권장
+                    .filter(bid -> userId.equals(bid.getUserId()))
                     .map(bid -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", bid.getId());

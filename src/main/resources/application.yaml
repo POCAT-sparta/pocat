@@ -20,6 +20,20 @@ spring:
       port: ${REDIS_PORT:6379}
   kafka:
     bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+  ai:
+    openai:
+      api-key: ${GEMINI_API_KEY}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        options:
+          model: gemini-1.5-flash
+          temperature: 0.3
+          max-tokens: 1024
+    vectorstore:
+      redis:
+        index: pocat-ai-index
+        prefix: pocat:vectors:
+        initialize-schema: true
 
 view:
   ip-secret: ${VIEW_IP_SECRET}
@@ -41,22 +55,6 @@ ranking:
     ttl-seconds: 70
     cache-size: 100
     max-response-size: 50
-
-  # == Spring AI (Gemini via OpenAI-compatible endpoint) ==
-  ai:
-    openai:
-      api-key: ${GEMINI_API_KEY}
-      base-url: https://generativelanguage.googleapis.com/v1beta/openai
-      chat:
-        options:
-          model: gemini-1.5-flash
-          temperature: 0.3
-          max-tokens: 1024
-    vectorstore:
-      redis:
-        index: pocat-ai-index
-        prefix: pocat:vectors:
-        initialize-schema: true
 
 resilience4j:
   circuitbreaker:

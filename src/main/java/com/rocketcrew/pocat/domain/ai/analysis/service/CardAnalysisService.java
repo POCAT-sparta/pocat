@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.analysis.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
 import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
@@ -36,6 +37,7 @@ public class CardAnalysisService {
     private final AiPromptTemplateService promptTemplateService;
     private final AiUsageMetrics aiUsageMetrics;
     private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     private static final String CACHE_KEY_PREFIX = "ai:analysis:card:";
     private static final long CACHE_TTL_HOURS = 24;
@@ -183,21 +185,21 @@ public class CardAnalysisService {
         );
     }
 
-    /**
-     * 분석 결과 직렬화 (Redis 저장용).
-     */
     private String serializeAnalysisResult(CardAnalysisResult result) {
-        // 실제 구현에서는 JSON 직렬화 사용 (예: ObjectMapper)
-        return result.toString();
+        try {
+            return objectMapper.writeValueAsString(result);
+        } catch (Exception e) {
+            log.warn("Failed to serialize analysis result: {}", e.getMessage());
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 
-    /**
-     * 분석 결과 역직렬화 (Redis 조회용).
-     */
     private CardAnalysisResult deserializeAnalysisResult(String cached) {
-        // 실제 구현에서는 JSON 역직렬화 사용
-        // 여기서는 로그만 처리
-        log.debug("Deserialized analysis result from cache");
-        return null; // DB 에이전트에서 처리 요청 필요
+        try {
+            return objectMapper.readValue(cached, CardAnalysisResult.class);
+        } catch (Exception e) {
+            log.warn("Failed to deserialize cached result, returning null: {}", e.getMessage());
+            return null;
+        }
     }
 }

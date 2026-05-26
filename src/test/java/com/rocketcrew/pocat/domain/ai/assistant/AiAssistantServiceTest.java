@@ -77,6 +77,7 @@ class AiAssistantServiceTest {
         given(chatClient.prompt()).willReturn(requestSpec);
         given(requestSpec.system(anyString())).willReturn(requestSpec);
         given(requestSpec.user(anyString())).willReturn(requestSpec);
+        given(requestSpec.tools(any(), any(), any())).willReturn(requestSpec);
         given(requestSpec.call()).willReturn(callResponseSpec);
         given(callResponseSpec.content()).willReturn(AI_REPLY);
 

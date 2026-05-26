@@ -65,13 +65,12 @@ public class AiAssistantService {
             List<Document> ragResults = ragService.search(request.message());
             String ragContext = ragService.buildContext(ragResults);
 
-            // 5. ChatClient 호출 (Tools 등록)
-            // 실제 구현: ChatModel.call()로 Tool Calling 처리
-            // 현재는 기본 구조만 제시, DB 에이전트가 Tool 등록 로직 추가
+            // 5. ChatClient 호출 (Tool Calling + RAG)
             String response = chatClient.prompt()
                     .system("당신은 POCAT 카드 거래 플랫폼 어시스턴트입니다. 사용자가 카드, 경매, 입찰에 관한 질문을 할 때 정확하고 도움이 되는 정보를 제공하세요.\n"
                             + "다음의 RAG 컨텍스트를 활용하여 답변하세요:\n" + ragContext)
                     .user(request.message())
+                    .tools(cardSearchTool, auctionTool, bidTool)
                     .call()
                     .content();
 

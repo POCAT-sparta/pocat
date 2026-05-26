@@ -45,7 +45,7 @@ public class AuctionTool {
             // 실제 구현은 DB 에이전트가 AuctionRepository에서 getActiveAuctions 메서드 추가
             // 여기서는 기본 구조만 제시
             return auctionRepository.findAll().stream()
-                    .filter(auction -> cardId.equals(auction.getId())) // DB 쿼리로 이동 권장
+                    .filter(auction -> cardId.equals(auction.getCardId()))
                     .map(auction -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("id", auction.getId());
@@ -92,7 +92,7 @@ public class AuctionTool {
 
             // 실제 구현은 DB 에이전트가 커스텀 쿼리로 완료된 경매 이력 조회
             return auctionRepository.findAll().stream()
-                    .filter(auction -> cardId.equals(auction.getId())) // DB 쿼리로 이동 권장
+                    .filter(auction -> cardId.equals(auction.getCardId()))
                     .map(auction -> {
                         Map<String, Object> m = new java.util.HashMap<>();
                         m.put("finalPrice", auction.getHighestPrice());

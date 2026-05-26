@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -69,6 +70,9 @@ class CardAnalysisServiceTest {
     @Mock
     private ChatClient.CallResponseSpec callResponseSpec;
 
+    @Mock
+    private ObjectMapper objectMapper;
+
     private Card psa10Card;
 
     @BeforeEach
@@ -91,6 +95,9 @@ class CardAnalysisServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(chatClient.prompt(any(Prompt.class))).willReturn(requestSpec);
         given(requestSpec.call()).willReturn(callResponseSpec);
+        try {
+            given(objectMapper.writeValueAsString(any())).willReturn("{}");
+        } catch (Exception ignored) {}
         willDoNothing().given(aiUsageMetrics).recordUsage(anyInt(), anyInt(), anyLong(), anyString());
     }
 
