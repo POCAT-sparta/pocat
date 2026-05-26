@@ -64,3 +64,11 @@
 - 모든 테스트는 실제 외부 의존성(Gemini API, Redis, DB) 없이 실행됩니다.
 - `MockitoSettings(LENIENT)` 설정은 테스트별 stub 재사용 시 불필요한 경고를 억제하기 위해 사용되었습니다.
 - Circuit Breaker 테스트는 Resilience4j `CircuitBreakerRegistry`를 통해 상태를 강제로 OPEN으로 전환하여 검증합니다.
+
+## 후속 최적화 테스트 (2026-05-26)
+
+| 변경 내용 | 결과 |
+|-----------|------|
+| findAll() 풀스캔 → JPQL 쿼리 교체 | compileJava BUILD SUCCESSFUL |
+| CardGrade enum 비교 수정 | 7/7 PASS |
+| 날짜 범위 쿼리 (cutoffDate) 적용 | 7/7 PASS |
