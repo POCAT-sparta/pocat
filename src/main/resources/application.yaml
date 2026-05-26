@@ -41,3 +41,29 @@ ranking:
     ttl-seconds: 70
     cache-size: 100
     max-response-size: 50
+
+# == Spring AI ==
+spring:
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          options:
+            model: gemini-1.5-flash
+            temperature: 0.3
+            max-output-tokens: 1024
+    vectorstore:
+      redis:
+        index: pocat-ai-index
+        prefix: pocat:vectors:
+        initialize-schema: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      aiService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
