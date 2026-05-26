@@ -25,6 +25,7 @@ public class FreePostQueryService {
     private final FreePostRepository freePostRepository;
     private final UserRepository userRepository;
     private final FreePostViewCountService viewCountService;
+    private final FreePostDetailCacheService freePostDetailCacheService;
 
     public Page<FreePostResponse> getPosts(String keyword, Pageable pageable) {
         Page<FreePost> posts = freePostRepository.searchPosts(keyword, pageable);
@@ -53,11 +54,7 @@ public class FreePostQueryService {
             viewCountService.increaseViewCount(postId, clientIp);
         }
 
-        String nickname = userRepository.findById(freePost.getUserId())
-                .map(User::getNickname)
-                .orElse("");
-
-        return FreePostResponse.of(freePost, nickname, freePost.getCommentCount());
+        return freePostDetailCacheService.loadPostDetail(postId);
     }
 
     public Page<FreePostResponse> getMyPosts(Long userId, Pageable pageable) {

@@ -7,9 +7,13 @@ import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.global.cache.CacheNames;
+import com.rocketcrew.pocat.global.cache.UserNicknameCacheService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserCommandService {
 
     private final UserRepository userRepository;
+    private final UserNicknameCacheService userNicknameCacheService;
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId"),
+            @CacheEvict(value = CacheNames.USER_BID_BLOCKED, key = "#userId")
+    })
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
         User user = findUserOrThrow(userId);
         validateIfPresent(request.nickname());
@@ -29,14 +38,19 @@ public class UserCommandService {
         String phone = request.phone() != null ? request.phone() : user.getPhone();
         String address = request.address() != null ? request.address() : user.getAddress();
         user.updateProfile(nickname, phone, address);
+        if (request.nickname() != null) {
+            userNicknameCacheService.evict(userId);
+        }
         return UserResponse.from(user);
     }
 
+    @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId")
     public void updateBank(Long userId, UpdateBankRequest request) {
         User user = findUserOrThrow(userId);
         user.updateBank(request.bankName(), request.bankAccount());
     }
 
+    @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId")
     public void registerBillingKey(Long userId, RegisterBillingKeyRequest request) {
         int updated = userRepository.updateBillingKeyIfNull(userId, request.billingKey());
         if (updated == 0) {
@@ -47,6 +61,7 @@ public class UserCommandService {
         }
     }
 
+    @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId")
     public void deleteBillingKey(Long userId) {
         User user = findUserOrThrow(userId);
         if (user.getBillingKey() == null) {
@@ -55,6 +70,7 @@ public class UserCommandService {
         user.deleteBillingKey();
     }
 
+    @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId")
     public void updateBillingKey(Long userId, UpdateBillingKeyRequest request) {
         User user = findUserOrThrow(userId);
         if (user.getBillingKey() == null) {

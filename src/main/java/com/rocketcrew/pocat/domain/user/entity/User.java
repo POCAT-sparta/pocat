@@ -71,4 +71,12 @@ public class User extends BaseEntity {
     public void deleteBillingKey() {
         this.billingKey = null;
     }
+
+    public void block() {
+        this.isBidBlocked = true;
+    }
+
+    public void unblock() {
+        this.isBidBlocked = false;
+    }
 }

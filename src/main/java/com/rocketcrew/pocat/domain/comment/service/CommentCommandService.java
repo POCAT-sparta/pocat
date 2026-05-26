@@ -5,8 +5,10 @@ import com.rocketcrew.pocat.domain.comment.dto.request.UpdateCommentRequest;
 import com.rocketcrew.pocat.domain.comment.dto.response.CommentResponse;
 import com.rocketcrew.pocat.domain.comment.entity.Comment;
 import com.rocketcrew.pocat.domain.comment.repository.CommentRepository;
+import com.rocketcrew.pocat.domain.community.freepost.cache.PostCommentCacheEvictor;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommentCountService;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CommentException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
@@ -22,6 +24,8 @@ public class CommentCommandService {
     private final CommentRepository commentRepository;
     private final FreePostRepository freePostRepository;
     private final FreePostCommentCountService freePostCommentCountService;
+    private final PostCommentCacheEvictor postCommentCacheEvictor;
+    private final FreePostDetailCacheService freePostDetailCacheService;
 
     public CommentResponse createComment(Long userId, CreateCommentRequest request) {
         if (!freePostRepository.existsById(request.freePostId())) {
@@ -45,12 +49,16 @@ public class CommentCommandService {
                 .build();
         CommentResponse response = CommentResponse.from(commentRepository.save(comment));
         freePostCommentCountService.increment(request.freePostId());
+        // Evict post detail cache (commentCount changed) and comment list cache
+        freePostDetailCacheService.evictAfterCommit(request.freePostId());
+        postCommentCacheEvictor.evictAfterCommit(request.freePostId());
         return response;
     }
 
     public CommentResponse updateComment(Long id, Long userId, UpdateCommentRequest request) {
         Comment comment = findCommentAndVerifyOwner(id, userId);
         comment.update(request.content());
+        postCommentCacheEvictor.evictAfterCommit(comment.getFreePostId());
         return CommentResponse.from(comment);
     }
 
@@ -59,6 +67,9 @@ public class CommentCommandService {
         Long freePostId = comment.getFreePostId();
         commentRepository.delete(comment);
         freePostCommentCountService.decrement(freePostId);
+        // Evict post detail cache (commentCount changed) and comment list cache
+        freePostDetailCacheService.evictAfterCommit(freePostId);
+        postCommentCacheEvictor.evictAfterCommit(freePostId);
     }
 
     private Comment findCommentAndVerifyOwner(Long id, Long userId) {
