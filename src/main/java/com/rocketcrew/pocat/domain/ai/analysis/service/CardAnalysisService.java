@@ -63,8 +63,13 @@ public class CardAnalysisService {
         String cacheKey = CACHE_KEY_PREFIX + cardId;
         String cachedResult = redisTemplate.opsForValue().get(cacheKey);
         if (cachedResult != null) {
-            log.debug("Cache hit for cardId: {}", cardId);
-            return deserializeAnalysisResult(cachedResult);
+            CardAnalysisResult cached = deserializeAnalysisResult(cachedResult);
+            if (cached != null) {
+                log.debug("Cache hit for cardId: {}", cardId);
+                return cached;
+            }
+            log.warn("Corrupted cache entry for cardId: {}, falling back to LLM", cardId);
+            redisTemplate.delete(cacheKey);
         }
 
         // 등급별 프롬프트 획득
@@ -124,8 +129,12 @@ public class CardAnalysisService {
         String cacheKey = CACHE_KEY_PREFIX + cardId;
         String cachedResult = redisTemplate.opsForValue().get(cacheKey);
         if (cachedResult != null) {
-            log.info("Returning cached result from fallback for cardId: {}", cardId);
-            return deserializeAnalysisResult(cachedResult);
+            CardAnalysisResult cached = deserializeAnalysisResult(cachedResult);
+            if (cached != null) {
+                log.info("Returning cached result from fallback for cardId: {}", cardId);
+                return cached;
+            }
+            log.warn("Corrupted cache in fallback for cardId: {}", cardId);
         }
 
         // Fallback 2: 기본 응답
@@ -166,7 +175,7 @@ public class CardAnalysisService {
         } catch (Exception e) {
             log.error("LLM call failed: {}", e.getMessage(), e);
             aiUsageMetrics.recordError("LLM_CALL_FAILED", FALLBACK_MODEL);
-            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, e);
         }
     }
 

@@ -60,7 +60,7 @@ public class RagService {
      * @return 포맷팅된 컨텍스트 문자열
      */
     public String buildContext(List<Document> docs) {
-        if (docs.isEmpty()) {
+        if (docs == null || docs.isEmpty()) {
             return "관련 문서를 찾을 수 없습니다.";
         }
 

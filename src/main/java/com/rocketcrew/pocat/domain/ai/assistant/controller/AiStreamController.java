@@ -42,7 +42,7 @@ public class AiStreamController {
             @RequestParam(required = false) String sessionId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.info("Starting SSE stream for userId: {}, message: {}", userDetails.getUserId(), message);
+        log.info("Starting SSE stream for userId: {}, msgLen={}", userDetails.getUserId(), message != null ? message.length() : 0);
 
         return Flux.create(sink -> {
             try {

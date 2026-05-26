@@ -33,6 +33,10 @@ public class BidTool {
             @ToolParam(description = "사용자 ID") Long userId
     ) {
         try {
+            if (userId == null || userId <= 0) {
+                log.warn("Invalid userId for bid history: {}", userId);
+                return List.of();
+            }
             log.info("Fetching bid history for userId: {}", userId);
 
             return bidRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 10)).stream()

@@ -37,6 +37,7 @@ public class AiChatSessionService {
      */
     public Long getOrCreateSession(Long userId, String sessionUuid) {
         return sessionRepository.findByUserIdAndSessionUuid(userId, sessionUuid)
+                .filter(session -> !session.getIsExpired())
                 .map(AiChatSession::getId)
                 .orElseGet(() -> {
                     AiChatSession newSession = AiChatSession.builder()
@@ -77,8 +78,7 @@ public class AiChatSessionService {
      * @return 메시지 목록 (역순)
      */
     public List<String> getRecentMessages(Long sessionId, int limit) {
-        return messageRepository.findByAiChatSessionIdOrderByCreatedAtDesc(sessionId).stream()
-                .limit(limit)
+        return messageRepository.findByAiChatSessionIdOrderByCreatedAtDesc(sessionId, org.springframework.data.domain.PageRequest.of(0, limit)).stream()
                 .map(msg -> msg.getRole() + ": " + msg.getContent())
                 .collect(Collectors.toList());
     }

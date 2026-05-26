@@ -35,7 +35,9 @@ public class CardSearchTool {
 
             CardGrade cardGrade = null;
             if (grade != null && !grade.isBlank()) {
-                try { cardGrade = CardGrade.valueOf(grade); } catch (IllegalArgumentException ignored) {}
+                try {
+                    cardGrade = CardGrade.valueOf(grade.trim().toUpperCase(java.util.Locale.ROOT));
+                } catch (IllegalArgumentException ignored) {}
             }
             List<Card> cards = cardRepository.findActiveCardsByNameContainingAndGrade(
                     name, cardGrade, PageRequest.of(0, 10));

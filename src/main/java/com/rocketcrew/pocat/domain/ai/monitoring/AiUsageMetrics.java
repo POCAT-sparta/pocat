@@ -3,7 +3,6 @@ package com.rocketcrew.pocat.domain.ai.monitoring;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +19,6 @@ public class AiUsageMetrics {
     private final Counter promptTokenCounter;
     private final Counter completionTokenCounter;
     private final Timer responseTimer;
-    private final Counter errorCounter;
 
     public AiUsageMetrics(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
@@ -41,10 +39,6 @@ public class AiUsageMetrics {
                 .publishPercentiles(0.5, 0.95, 0.99)
                 .register(meterRegistry);
 
-        // 에러 카운터
-        this.errorCounter = Counter.builder("ai.errors.total")
-                .description("AI 서비스 에러 누적")
-                .register(meterRegistry);
     }
 
     /**
@@ -79,7 +73,10 @@ public class AiUsageMetrics {
      */
     public void recordError(String errorType, String model) {
         try {
-            errorCounter.increment();
+            meterRegistry.counter("ai.errors.total",
+                    "errorType", errorType != null ? errorType : "UNKNOWN",
+                    "model", model != null ? model : "UNKNOWN")
+                    .increment();
             log.warn("AI error recorded: errorType={}, model={}", errorType, model);
         } catch (Exception e) {
             log.error("Failed to record AI error metrics: {}", e.getMessage(), e);

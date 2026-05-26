@@ -34,7 +34,7 @@ spring:
     vectorstore:
       redis:
         index: pocat-ai-index
-        prefix: pocat:vectors:
+        prefix: 'pocat:vectors:'
         initialize-schema: true
 
 view:

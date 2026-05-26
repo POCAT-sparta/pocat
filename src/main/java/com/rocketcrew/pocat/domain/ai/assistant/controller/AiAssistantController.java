@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatResponse;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiAssistantService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +31,7 @@ public class AiAssistantController {
      */
     @PostMapping("/chat")
     public ResponseEntity<ApiResponseDto<AiChatResponse>> chat(
-            @RequestBody AiChatRequest request,
+            @RequestBody @Valid AiChatRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         AiChatResponse response = aiAssistantService.chat(userDetails.getUserId(), request);

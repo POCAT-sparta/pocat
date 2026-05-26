@@ -24,6 +24,6 @@ public interface AiChatSessionRepository extends JpaRepository<AiChatSession, Lo
      * @return 만료된 세션 수
      */
     @Modifying
-    @Query("UPDATE AiChatSession s SET s.isExpired = true WHERE s.lastActiveAt < :threshold")
+    @Query("UPDATE AiChatSession s SET s.isExpired = true WHERE s.lastActiveAt < :threshold AND s.isExpired = false")
     int expireSessionsBeforeTime(@Param("threshold") LocalDateTime threshold);
 }

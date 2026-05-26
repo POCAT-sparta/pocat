@@ -14,6 +14,8 @@ import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +50,7 @@ public class AiAssistantService {
      */
     @Transactional
     public AiChatResponse chat(Long userId, AiChatRequest request) {
-        log.info("Processing chat for userId: {}, message: {}", userId, request.message());
+        log.info("Processing chat for userId: {}, msgLen={}", userId, request.message() != null ? request.message().length() : 0);
 
         try {
             // 1. 세션 조회 또는 생성
@@ -66,9 +68,11 @@ public class AiAssistantService {
             String ragContext = ragService.buildContext(ragResults);
 
             // 5. ChatClient 호출 (Tool Calling + RAG)
+            String historyContext = recentHistory.isEmpty() ? "" :
+                    "\n\n대화 이력:\n" + String.join("\n", recentHistory);
             String response = chatClient.prompt()
                     .system("당신은 POCAT 카드 거래 플랫폼 어시스턴트입니다. 사용자가 카드, 경매, 입찰에 관한 질문을 할 때 정확하고 도움이 되는 정보를 제공하세요.\n"
-                            + "다음의 RAG 컨텍스트를 활용하여 답변하세요:\n" + ragContext)
+                            + "다음의 RAG 컨텍스트를 활용하여 답변하세요:\n" + ragContext + historyContext)
                     .user(request.message())
                     .tools(cardSearchTool, auctionTool, bidTool)
                     .call()
@@ -85,10 +89,12 @@ public class AiAssistantService {
             return new AiChatResponse(
                     response,
                     sessionId,
-                    List.of("CardSearchTool", "AuctionTool"),
+                    List.of("CardSearchTool", "AuctionTool", "BidTool"),
                     0,
                     0
             );
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Chat processing failed for userId: {}", userId, e);
             aiUsageMetrics.recordError("CHAT_FAILED", MODEL_NAME);

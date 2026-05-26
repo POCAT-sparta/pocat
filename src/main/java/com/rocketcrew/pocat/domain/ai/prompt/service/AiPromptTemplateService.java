@@ -19,8 +19,9 @@ public class AiPromptTemplateService {
      * @return 프롬프트 텍스트
      */
     public String getPrompt(String cardGrade) {
+        String normalized = (cardGrade == null || cardGrade.isBlank()) ? "DEFAULT" : cardGrade.trim().toUpperCase(java.util.Locale.ROOT);
         return promptTemplateRepository
-                .findByCardGradeAndIsActiveTrue(cardGrade)
+                .findByCardGradeAndIsActiveTrue(normalized)
                 .map(AiPromptTemplate::getPromptText)
                 .orElseGet(() -> promptTemplateRepository
                         .findByCardGradeAndIsActiveTrue("DEFAULT")

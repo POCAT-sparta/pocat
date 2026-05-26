@@ -136,7 +136,7 @@ class AiAssistantServiceTest {
         }
 
         @Test
-        @DisplayName("chat 실패: chatClient 예외 발생 시 RuntimeException 전파")
+        @DisplayName("chat 실패: chatClient 예외 발생 시 RuntimeException 전파 및 에러 메트릭 기록")
         void chat_throws_on_client_exception() {
             // given
             AiChatRequest request = new AiChatRequest("테스트 메시지", null);
@@ -145,6 +145,7 @@ class AiAssistantServiceTest {
             // when / then
             assertThatThrownBy(() -> aiAssistantService.chat(USER_ID, request))
                     .isInstanceOf(RuntimeException.class);
+            verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-1.5-flash");
         }
 
         @Test

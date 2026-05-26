@@ -10,6 +10,4 @@ import java.util.Optional;
 public interface AiPromptTemplateRepository extends JpaRepository<AiPromptTemplate, Long> {
 
     Optional<AiPromptTemplate> findByCardGradeAndIsActiveTrue(String cardGrade);
-
-    Optional<AiPromptTemplate> findByIsActiveTrueAndCardGrade(String grade);
 }
