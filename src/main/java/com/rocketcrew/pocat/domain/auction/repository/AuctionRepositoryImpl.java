@@ -7,7 +7,6 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rocketcrew.pocat.domain.auction.dto.request.AuctionSearchCondition;
 import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
@@ -15,7 +14,6 @@ import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.QAuction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
-import com.rocketcrew.pocat.domain.like.entity.QLike;
 import com.rocketcrew.pocat.domain.user.entity.QUser;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
@@ -77,7 +75,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
             boolean usePublicStatusOrder
     ) {
         QUser seller = QUser.user;
-        QLike like = QLike.like;
         List<SearchAuctionResponse> content = queryFactory
                 .select(Projections.constructor(SearchAuctionResponse.class,
                         auction.id,
@@ -94,10 +91,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.status,
                         auction.startedAt,
                         auction.endedAt,
-                        auction.createdAt,
-                        JPAExpressions.select(like.count())
-                                .from(like)
-                                .where(like.auctionId.eq(auction.id))))
+                        auction.createdAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
@@ -120,7 +114,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
     private Page<AdminAuctionResponse> fetchAdminPage(Pageable pageable, QAuction auction, QCard card, BooleanBuilder where) {
         QUser seller = QUser.user;
-        QLike like = QLike.like;
         List<AdminAuctionResponse> content = queryFactory
                 .select(Projections.constructor(AdminAuctionResponse.class,
                         auction.id,
@@ -136,10 +129,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.buyoutPrice,
                         auction.status,
                         auction.startedAt,
-                        auction.endedAt,
-                        JPAExpressions.select(like.count())
-                                .from(like)
-                                .where(like.auctionId.eq(auction.id))))
+                        auction.endedAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))

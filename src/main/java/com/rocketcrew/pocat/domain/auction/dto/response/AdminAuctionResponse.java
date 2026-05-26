@@ -19,7 +19,6 @@ public record AdminAuctionResponse(
         Long buyoutPrice,
         AuctionStatus status,
         LocalDateTime startedAt,
-        LocalDateTime endedAt,
-        long likeCount
+        LocalDateTime endedAt
 ) {
 }

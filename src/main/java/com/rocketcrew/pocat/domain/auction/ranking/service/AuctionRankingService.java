@@ -79,15 +79,12 @@ public class AuctionRankingService {
                 .distinct()
                 .toList());
 
-        Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(auctionIds));
-
         return auctionIds.stream()
                 .filter(auctionMap::containsKey)
                 .map(id -> {
                     Auction a = auctionMap.get(id);
                     Card card = cardMap.get(a.getCardId());
-                    long likeCount = likeCounts.getOrDefault(id, 0L);
-                    return toSearchAuctionResponse(a, card, sellerNicknames.get(a.getSellerId()), likeCount);
+                    return toSearchAuctionResponse(a, card, sellerNicknames.get(a.getSellerId()));
                 })
                 .collect(Collectors.toList());
     }
@@ -154,11 +151,11 @@ public class AuctionRankingService {
         return activeAuctions.stream()
                 .map(a -> {
                     Card card = cardMap.get(a.getCardId());
-                    long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     long bidCount = bidCounts.getOrDefault(a.getId(), 0L);
+                    long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
                     SearchAuctionResponse response = toSearchAuctionResponse(
-                            a, card, sellerNicknames.get(a.getSellerId()), likeCount);
+                            a, card, sellerNicknames.get(a.getSellerId()));
                     return new PopularAuctionItem(response, score);
                 })
                 .filter(item -> item.popularityScore() > 0)
@@ -185,8 +182,7 @@ public class AuctionRankingService {
     private SearchAuctionResponse toSearchAuctionResponse(
             Auction auction,
             Card card,
-            String sellerNickname,
-            long likeCount
+            String sellerNickname
     ) {
         return new SearchAuctionResponse(
                 auction.getId(),
@@ -203,8 +199,7 @@ public class AuctionRankingService {
                 auction.getStatus(),
                 auction.getStartedAt(),
                 auction.getEndedAt(),
-                auction.getCreatedAt(),
-                likeCount
+                auction.getCreatedAt()
         );
     }
 
