@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.global.config;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
+import com.rocketcrew.pocat.domain.auction.service.AuctionExpirationRedisSubscriber;
 import com.rocketcrew.pocat.domain.notification.service.NotificationRedisSubscriber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -48,10 +49,12 @@ public class RedisConfig {
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
-            NotificationRedisSubscriber subscriber) {
+            NotificationRedisSubscriber subscriber,
+            AuctionExpirationRedisSubscriber auctionExpirationRedisSubscriber) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(subscriber, new PatternTopic("notification:*"));
+        container.addMessageListener(auctionExpirationRedisSubscriber, new PatternTopic("__keyevent@*__:expired"));
         return container;
     }
 

@@ -59,6 +59,7 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: pocat-redis
+    command: ["redis-server", "--notify-keyspace-events", "Ex"]
     ports:
       - "127.0.0.1:6379:6379"
     volumes:

@@ -39,6 +39,7 @@ public enum ErrorCode {
     AUCTION_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "사유를 입력해주세요."),
     AUCTION_CANNOT_CANCEL(HttpStatus.CONFLICT, "취소할 수 없는 경매 상태입니다."),
     AUCTION_LOCK_FAILED(HttpStatus.CONFLICT, "다른 경매 처리가 진행 중입니다. 잠시 후 다시 시도해주세요."),
+    AUCTION_INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "변경할 수 없는 경매 상태입니다."),
 
     // Bid
     BID_NOT_FOUND(HttpStatus.NOT_FOUND, "입찰을 찾을 수 없습니다."),
@@ -49,6 +50,7 @@ public enum ErrorCode {
     BID_PRICE_TOO_LOW(HttpStatus.CONFLICT, "입찰가는 최소 입찰가와 현재 최고가보다 높아야 합니다."),
     BID_BUYOUT_PRICE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "즉시구매가 이상 금액은 즉시구매 API를 호출해야 합니다."),
     BID_ALREADY_LEADING(HttpStatus.CONFLICT, "이미 현재 최고 입찰자입니다."),
+    BID_INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "변경할 수 없는 입찰 상태입니다."),
 
     // Order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
