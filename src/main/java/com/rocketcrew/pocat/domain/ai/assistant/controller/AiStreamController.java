@@ -9,6 +9,7 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
@@ -50,7 +51,7 @@ public class AiStreamController {
 
                 // ChatClient의 stream() 메서드 활용
                 // 실제 구현은 Spring AI 3.0 이상에서 stream() 지원 확인
-                chatClient.prompt()
+                Disposable disposable = chatClient.prompt()
                         .user(message)
                         .stream()
                         .content()
@@ -69,7 +70,7 @@ public class AiStreamController {
                             ServerSentEvent<String> errorEvent = ServerSentEvent.<String>builder()
                                     .id(String.valueOf(eventId.incrementAndGet()))
                                     .event("error")
-                                    .data("스트리밍 처리 중 오류: " + error.getMessage())
+                                    .data("스트리밍 처리 중 오류가 발생했습니다.")
                                     .build();
                             sink.next(errorEvent);
                             sink.complete();
@@ -86,6 +87,8 @@ public class AiStreamController {
                             log.info("Stream completed for userId: {}", userDetails.getUserId());
                         })
                         .subscribe();
+
+                sink.onCancel(disposable::dispose);
 
             } catch (Exception e) {
                 log.error("Error in stream processing: {}", e.getMessage(), e);

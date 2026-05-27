@@ -37,8 +37,15 @@ public class AiChatSessionService {
      */
     public Long getOrCreateSession(Long userId, String sessionUuid) {
         return sessionRepository.findByUserIdAndSessionUuid(userId, sessionUuid)
-                .filter(session -> !session.getIsExpired())
-                .map(AiChatSession::getId)
+                .map(session -> {
+                    if (Boolean.TRUE.equals(session.getIsExpired())) {
+                        session.reactivate(LocalDateTime.now());
+                        AiChatSession saved = sessionRepository.save(session);
+                        log.info("Reactivated expired session: sessionId={}, userId={}", saved.getId(), userId);
+                        return saved.getId();
+                    }
+                    return session.getId();
+                })
                 .orElseGet(() -> {
                     AiChatSession newSession = AiChatSession.builder()
                             .userId(userId)
@@ -78,9 +85,12 @@ public class AiChatSessionService {
      * @return 메시지 목록 (역순)
      */
     public List<String> getRecentMessages(Long sessionId, int limit) {
-        return messageRepository.findByAiChatSessionIdOrderByCreatedAtDesc(sessionId, org.springframework.data.domain.PageRequest.of(0, limit)).stream()
+        List<String> messages = messageRepository.findByAiChatSessionIdOrderByCreatedAtDesc(
+                sessionId, org.springframework.data.domain.PageRequest.of(0, limit)).stream()
                 .map(msg -> msg.getRole() + ": " + msg.getContent())
                 .collect(Collectors.toList());
+        java.util.Collections.reverse(messages);
+        return messages;
     }
 
     /**

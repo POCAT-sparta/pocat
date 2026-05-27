@@ -56,4 +56,12 @@ public class AiChatSession extends BaseEntity {
     public void updateLastActiveAt(LocalDateTime now) {
         this.lastActiveAt = now;
     }
+
+    /**
+     * 만료된 세션 재활성화.
+     */
+    public void reactivate(LocalDateTime now) {
+        this.isExpired = false;
+        this.lastActiveAt = now;
+    }
 }
