@@ -39,6 +39,7 @@ public enum ErrorCode {
     AUCTION_REASON_REQUIRED(HttpStatus.BAD_REQUEST, "사유를 입력해주세요."),
     AUCTION_CANNOT_CANCEL(HttpStatus.CONFLICT, "취소할 수 없는 경매 상태입니다."),
     AUCTION_LOCK_FAILED(HttpStatus.CONFLICT, "다른 경매 처리가 진행 중입니다. 잠시 후 다시 시도해주세요."),
+    AUCTION_INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "변경할 수 없는 경매 상태입니다."),
 
     // Bid
     BID_NOT_FOUND(HttpStatus.NOT_FOUND, "입찰을 찾을 수 없습니다."),
@@ -49,6 +50,7 @@ public enum ErrorCode {
     BID_PRICE_TOO_LOW(HttpStatus.CONFLICT, "입찰가는 최소 입찰가와 현재 최고가보다 높아야 합니다."),
     BID_BUYOUT_PRICE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "즉시구매가 이상 금액은 즉시구매 API를 호출해야 합니다."),
     BID_ALREADY_LEADING(HttpStatus.CONFLICT, "이미 현재 최고 입찰자입니다."),
+    BID_INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "변경할 수 없는 입찰 상태입니다."),
 
     // Order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
@@ -75,6 +77,8 @@ public enum ErrorCode {
     WEBHOOK_INVALID_PAYLOAD(HttpStatus.BAD_REQUEST, "Webhook 필수 필드(status·amount)가 누락되었습니다."),
     PORTONE_NOT_INTEGRATED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 연동이 완료되지 않았습니다."),
     PORTONE_CANCEL_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 취소(환불) 요청에 실패했습니다."),
+    PORTONE_INVALID_PAID_AT(HttpStatus.BAD_GATEWAY, "PortOne 응답의 paidAt 형식이 올바르지 않습니다."),
+    BILLING_PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "자동 결제가 정상적으로 진행되지 않았습니다."),
     PAYMENT_STATUS_NOT_PAID(HttpStatus.BAD_REQUEST, "PortOne 결제 상태가 PAID가 아닙니다."),
 
     // Refund

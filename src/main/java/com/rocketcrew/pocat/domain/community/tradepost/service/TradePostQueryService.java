@@ -24,6 +24,7 @@ public class TradePostQueryService {
     private final TradePostRepository tradePostRepository;
     private final UserQueryService userQueryService;
     private final ViewCountService viewCountService;
+    private final TradePostDetailCacheService tradePostDetailCacheService;
 
     public Page<TradePostListResponse> getPostsByUserId(Long userId, Pageable pageable) {
         String nickname = userQueryService.getUserById(userId).nickname();
@@ -49,10 +50,9 @@ public class TradePostQueryService {
     public TradePostResponse getPost(Long id, String clientIp, Long requesterId) {
         TradePost tradePost = tradePostRepository.findById(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
-        String nickname = userQueryService.getUserById(tradePost.getUserId()).nickname();
         if (!tradePost.getUserId().equals(requesterId)) {
             viewCountService.increaseViewCount(id, clientIp);
         }
-        return TradePostResponse.from(tradePost, nickname);
+        return tradePostDetailCacheService.loadPostDetail(id);
     }
 }

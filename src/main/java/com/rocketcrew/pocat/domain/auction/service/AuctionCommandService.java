@@ -12,6 +12,9 @@ import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionInspectionResult;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.event.AuctionCancelledEvent;
+import com.rocketcrew.pocat.domain.auction.event.AuctionInspectionFailedEvent;
+import com.rocketcrew.pocat.domain.auction.event.AuctionInspectionPassedEvent;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
@@ -24,6 +27,7 @@ import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +49,7 @@ public class AuctionCommandService {
 
     private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
     private static final long AUCTION_LOCK_WAIT_SECONDS = 0L;
+    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
@@ -51,6 +57,7 @@ public class AuctionCommandService {
     private final UserQueryService userQueryService;
     private final EntityManager entityManager;
     private final RedissonClient redissonClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
         Card card = cardQueryService.validateRegistrableForAuction(request.cardId());
@@ -108,9 +115,18 @@ public class AuctionCommandService {
 
         Set<Long> recipientIds = collectAdminCancelNotificationRecipients(latestAuction);
         cancelCurrentLeadingBid(latestAuction);
-        latestAuction.cancelByAdmin(request.reason().trim());
-        // TODO Publish auction force-cancel notifications to Kafka for seller and all bid recipients.
-        // recipientIds contains seller + every bidder who should receive the event.
+        String cancelReason = request.reason().trim();
+        latestAuction.cancelByAdmin(cancelReason);
+
+        eventPublisher.publishEvent(new AuctionCancelledEvent(
+                latestAuction.getId(),
+                latestAuction.getSellerId(),
+                adminId,
+                cancelReason,
+                recipientIds.stream()
+                        .filter(recipientId -> !recipientId.equals(latestAuction.getSellerId()))
+                        .toList()
+        ));
 
         return AdminCancelAuctionResponse.from(latestAuction);
     }
@@ -133,12 +149,29 @@ public class AuctionCommandService {
 
         if (request.result() == AuctionInspectionResult.PASSED) {
             validateAuctionDataForInspection(latestAuction);
-            latestAuction.approve(adminId, LocalDateTime.now());
+            LocalDateTime inspectedAt = LocalDateTime.now(AUCTION_ZONE);
+            latestAuction.approve(adminId, inspectedAt);
+
+            eventPublisher.publishEvent(new AuctionInspectionPassedEvent(
+                    latestAuction.getId(),
+                    latestAuction.getSellerId(),
+                    latestAuction.getTitle(),
+                    inspectedAt
+            ));
             return InspectAuctionResponse.from(latestAuction);
         }
 
         validateRejectReason(request.reason());
-        latestAuction.reject(adminId, LocalDateTime.now(), request.reason().trim());
+        LocalDateTime inspectedAt = LocalDateTime.now(AUCTION_ZONE);
+        String rejectReason = request.reason().trim();
+        latestAuction.reject(adminId, inspectedAt, rejectReason);
+
+        eventPublisher.publishEvent(new AuctionInspectionFailedEvent(
+                latestAuction.getId(),
+                latestAuction.getSellerId(),
+                latestAuction.getTitle(),
+                rejectReason
+        ));
         return InspectAuctionResponse.from(latestAuction);
     }
 

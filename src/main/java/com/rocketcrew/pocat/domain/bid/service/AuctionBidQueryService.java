@@ -22,21 +22,25 @@ public class AuctionBidQueryService {
 
     private final AuctionBidRepository auctionBidRepository;
     private final AuctionRepository auctionRepository;
+    private final AuctionBidCacheService auctionBidCacheService;
 
     public Page<AuctionBidHistoryResponse> getBidHistoryByAuction(Long auctionId, Pageable pageable) {
-        validateActiveAuction(auctionId);
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
+
+        AuctionStatus status = auction.getStatus();
+        if (status == AuctionStatus.ENDED || status == AuctionStatus.NO_BIDDER) {
+            return auctionBidCacheService.getBidHistoryByEndedAuction(auctionId, pageable);
+        }
+
+        if (status != AuctionStatus.ACTIVE) {
+            throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
+        }
+
         return auctionBidRepository.findBidHistoryByAuctionId(auctionId, pageable);
     }
 
     public Page<MyBidResponse> getMyBids(Long userId, BidStatus status, Pageable pageable) {
         return auctionBidRepository.findMyBids(userId, status, pageable);
-    }
-
-    private void validateActiveAuction(Long auctionId) {
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
-        if (auction.getStatus() != AuctionStatus.ACTIVE) {
-            throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
-        }
     }
 }

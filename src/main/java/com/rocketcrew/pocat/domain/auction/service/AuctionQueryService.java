@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -36,6 +37,11 @@ public class AuctionQueryService {
             AuctionStatus.ENDED,
             AuctionStatus.NO_BIDDER
     );
+    private static final Set<AuctionStatus> PUBLIC_LIST_STATUSES = Set.copyOf(List.of(
+            AuctionStatus.ACTIVE,
+            AuctionStatus.ENDED,
+            AuctionStatus.NO_BIDDER
+    ));
 
     private final AuctionRepository auctionRepository;
     private final CardQueryService cardQueryService;
@@ -51,6 +57,7 @@ public class AuctionQueryService {
             AuctionStatus status,
             Pageable pageable
     ) {
+        validatePublicListStatus(status);
         AuctionSearchCondition condition = new AuctionSearchCondition(
                 keyword, series, setName, grade, category, status);
         return auctionRepository.searchAuctions(condition, pageable);
@@ -93,6 +100,12 @@ public class AuctionQueryService {
     private boolean canViewAuctionDetail(Auction auction, Long userId) {
         return PUBLIC_DETAIL_STATUSES.contains(auction.getStatus())
                 || auction.getSellerId().equals(userId);
+    }
+
+    private void validatePublicListStatus(AuctionStatus status) {
+        if (status != null && !PUBLIC_LIST_STATUSES.contains(status)) {
+            throw new AuctionException(ErrorCode.INVALID_INPUT);
+        }
     }
 
     public Auction findAuctionEntityOrThrow(Long id) {

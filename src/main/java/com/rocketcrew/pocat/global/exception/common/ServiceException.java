@@ -13,6 +13,11 @@ public class ServiceException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    public ServiceException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode.getMessage(), cause);
+        this.errorCode = errorCode;
+    }
+
     public HttpStatus getStatus() {
         return errorCode.getStatus();
     }

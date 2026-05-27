@@ -11,9 +11,8 @@ import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -78,5 +77,16 @@ public class OrderQueryService {
         long count = (Long) result[1];
         Long averagePrice = avg != null ? Math.round(avg) : null;
         return new CardAveragePriceResponse(cardId, averagePrice, count, since, now);
+    }
+
+    public Order findByOrderid(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new PaymentException(ErrorCode.ORDER_NOT_FOUND));
+    }
+
+    @Transactional
+    public Order findByOrderIdWithLock(Long orderId) {
+        return orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new PaymentException(ErrorCode.ORDER_NOT_FOUND));
     }
 }

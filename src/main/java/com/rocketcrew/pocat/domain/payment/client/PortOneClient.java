@@ -1,6 +1,5 @@
 package com.rocketcrew.pocat.domain.payment.client;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Slf4j
@@ -33,7 +31,7 @@ public class PortOneClient {
                         .uri("/payments/{paymentUid}", paymentUid)
                         .retrieve()
                         .body(PortOneRawResponse.class);
-                return toResponse(raw);
+                return PortOneRawResponse.toResponse(raw);
             } catch (RestClientException e) {
                 lastEx = e;
                 log.warn("PortOne 결제 조회 실패 paymentUid={} attempt={}/{}", paymentUid, attempt, MAX_RETRY, e);
@@ -67,7 +65,7 @@ public class PortOneClient {
                         .body(body)
                         .retrieve()
                         .body(PortOneRawResponse.class);
-                return toResponse(raw);
+                return PortOneRawResponse.toResponse(raw);
             } catch (RestClientException e) {
                 lastEx = e;
                 log.warn("PortOne 빌링키 결제 실패 paymentUid={} attempt={}/{}", paymentUid, attempt, MAX_RETRY, e);
@@ -81,7 +79,7 @@ public class PortOneClient {
                                 .body(PortOneRawResponse.class);
                         if (check != null && "PAID".equals(check.status())) {
                             log.info("빌링키 결제 이미 완료 확인, 재시도 생략 paymentUid={}", paymentUid);
-                            return toResponse(check);
+                            return PortOneRawResponse.toResponse(check);
                         }
                     } catch (Exception checkEx) {
                         log.warn("재시도 전 결제 상태 조회 실패, 재시도 진행 paymentUid={}", paymentUid, checkEx);
@@ -91,7 +89,7 @@ public class PortOneClient {
             }
         }
         log.error("PortOne 빌링키 결제 최대 재시도 초과 paymentUid={}", paymentUid, lastEx);
-        throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, lastEx);
+        throw new PaymentException(ErrorCode.BILLING_PAYMENT_FAILED, lastEx);
     }
 
     /**
@@ -122,21 +120,6 @@ public class PortOneClient {
         throw new PaymentException(ErrorCode.PORTONE_CANCEL_FAILED, lastEx);
     }
 
-    private PortOnePaymentResponse toResponse(PortOneRawResponse raw) {
-        if (raw == null) {
-            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
-        }
-        if (raw.failure() != null) {
-            log.warn("PortOne 결제 실패 응답 code={} message={}", raw.failure().code(), raw.failure().message());
-        }
-        return new PortOnePaymentResponse(
-                raw.status(),
-                raw.amount() != null ? raw.amount().total() : null,
-                raw.method() != null ? raw.method().type() : null,
-                raw.paidAt() != null ? OffsetDateTime.parse(raw.paidAt()).toLocalDateTime() : null
-        );
-    }
-
     /**
      * 재시도 전 대기. InterruptedException 발생 시 interrupt 상태를 복원한다.
      */
@@ -147,23 +130,5 @@ public class PortOneClient {
             Thread.currentThread().interrupt();
             throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, ie);
         }
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private record PortOneRawResponse(
-            String status,
-            AmountDetail amount,
-            MethodDetail method,
-            FailureDetail failure,
-            String paidAt
-    ) {
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record AmountDetail(Long total) {}
-
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record MethodDetail(String type) {}
-
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record FailureDetail(String code, String message) {}
     }
 }

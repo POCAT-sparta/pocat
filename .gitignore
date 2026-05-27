@@ -39,8 +39,15 @@ out/
 ### Environment ###
 .env
 
+### Test artifacts ###
+manual-test/
+
 ### Claude Code ###
 .claude/
 
 ### Serena ###
 .serena/
+
+### Scripts ###
+scripts/start.sh
+scripts/stop.sh

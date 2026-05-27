@@ -71,4 +71,10 @@ public class Payment extends BaseEntity {
         }
         this.status = PaymentStatus.REFUNDED;
     }
+
+    public boolean isFinalized(){
+        return this.status == PaymentStatus.COMPLETED
+                || this.status == PaymentStatus.FAILED
+                || this.status == PaymentStatus.REFUNDED;
+    }
 }
