@@ -40,6 +40,11 @@ public class SeriesCommandService {
         return SeriesResponse.from(series);
     }
 
+    public Series findById(Long id) {
+        return seriesRepository.findById(id)
+                .orElseThrow(() -> new SeriesException(ErrorCode.SERIES_NOT_FOUND));
+    }
+
     public void delete(Long id) {
         Series series = seriesRepository.findById(id)
                 .orElseThrow(() -> new SeriesException(ErrorCode.SERIES_NOT_FOUND));
