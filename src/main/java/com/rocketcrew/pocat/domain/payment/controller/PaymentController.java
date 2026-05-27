@@ -2,8 +2,9 @@ package com.rocketcrew.pocat.domain.payment.controller;
 
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
-import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
+import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
+import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -18,15 +19,16 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class PaymentController {
 
-    private final PaymentCommandService paymentCommandService;
     private final PaymentQueryService paymentQueryService;
+    private final PaymentWebhookService paymentWebhookService;
+    private final PaymentApplicationService paymentApplicationService;
 
     /** 6.1 결제 요청 — PG 직접결제 레코드 생성 */
     @PostMapping("/v1/payments")
     public ResponseEntity<ApiResponseDto<PaymentResponse>> createPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreatePaymentRequest request) {
-        PaymentResponse response = paymentCommandService.createPayment(userDetails.getUserId(), request);
+        PaymentResponse response = paymentApplicationService.generatePayment(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }
@@ -36,7 +38,7 @@ public class PaymentController {
     public ResponseEntity<ApiResponseDto<PaymentResponse>> confirmPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String paymentUid) {
-        PaymentResponse response = paymentCommandService.confirmPayment(userDetails.getUserId(), paymentUid);
+        PaymentResponse response = paymentApplicationService.confirmPayment(userDetails.getUserId(), paymentUid);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
@@ -59,7 +61,7 @@ public class PaymentController {
     public ResponseEntity<ApiResponseDto<Void>> handleWebhook(
             @RequestHeader(value = "X-PortOne-Signature", required = false) String signature,
             @RequestBody byte[] rawBody) {
-        paymentCommandService.handleWebhook(signature, rawBody);
+        paymentWebhookService.handleWebhook(signature, rawBody);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 }

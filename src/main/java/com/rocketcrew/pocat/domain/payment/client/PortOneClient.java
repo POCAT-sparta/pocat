@@ -1,6 +1,5 @@
 package com.rocketcrew.pocat.domain.payment.client;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Slf4j
@@ -25,7 +23,7 @@ public class PortOneClient {
                     .uri("/payments/{paymentUid}", paymentUid)
                     .retrieve()
                     .body(PortOneRawResponse.class);
-            return toResponse(raw);
+            return PortOneRawResponse.toResponse(raw);
         } catch (RestClientException e) {
             log.error("PortOne 결제 조회 실패 - paymentUid: {}", paymentUid, e);
             throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, e);
@@ -50,45 +48,10 @@ public class PortOneClient {
                     .body(body)
                     .retrieve()
                     .body(PortOneRawResponse.class);
-            return toResponse(raw);
+            return PortOneRawResponse.toResponse(raw);
         } catch (RestClientException e) {
             log.error("PortOne 빌링키 결제 실패 - paymentUid: {}", paymentUid, e);
-            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, e);
+            throw new PaymentException(ErrorCode.BILLING_PAYMENT_FAILED,e);
         }
-    }
-
-    private PortOnePaymentResponse toResponse(PortOneRawResponse raw) {
-        if (raw == null) {
-            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
-        }
-
-        if (raw.failure() != null) {
-            log.warn("PortOne 결제 실패 - code: {}, message: {}", raw.failure().code(), raw.failure().message());
-        }
-
-        return new PortOnePaymentResponse(
-                raw.status(),
-                raw.amount() != null ? raw.amount().total() : null,
-                raw.method() != null ? raw.method().type() : null,
-                raw.paidAt() != null ? OffsetDateTime.parse(raw.paidAt()).toLocalDateTime() : null
-        );
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private record PortOneRawResponse(
-            String status,
-            AmountDetail amount,
-            MethodDetail method,
-            FailureDetail failure,
-            String paidAt
-    ) {
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record AmountDetail(Long total) {}
-
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record MethodDetail(String type) {}
-
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record FailureDetail(String code, String message) {}
     }
 }
