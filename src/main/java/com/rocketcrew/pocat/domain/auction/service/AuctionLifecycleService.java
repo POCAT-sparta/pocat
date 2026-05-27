@@ -80,13 +80,13 @@ public class AuctionLifecycleService {
             return true;
         }
 
-        markBidResults(bids, latestAuction.getHighestBidderId());
         List<Long> loserIds = bids.stream()
+                .filter(bid -> bid.getStatus() == BidStatus.OUTBID)
                 .map(AuctionBid::getUserId)
-                .filter(userId -> !userId.equals(latestAuction.getHighestBidderId()))
                 .distinct()
                 .toList();
 
+        markBidResults(bids, latestAuction.getHighestBidderId());
         latestAuction.end();
         publishEndedEvent(latestAuction, loserIds);
         return true;
@@ -99,12 +99,12 @@ public class AuctionLifecycleService {
                 && !auction.getEndedAt().isAfter(LocalDateTime.now(AUCTION_ZONE));
     }
 
-    // 최종 최고 입찰자는 WON, 나머지 입찰자는 LOST 상태로 정리한다.
+    // 최종 최고 입찰자는 WON, 이미 최고가 갱신으로 밀린 OUTBID 입찰자만 LOST 상태로 정리한다.
     private void markBidResults(List<AuctionBid> bids, Long winnerId) {
         for (AuctionBid bid : bids) {
             if (bid.getUserId().equals(winnerId) && bid.getStatus() == BidStatus.LEADING) {
                 bid.markWon();
-            } else {
+            } else if (bid.getStatus() == BidStatus.OUTBID) {
                 bid.markLost();
             }
         }
