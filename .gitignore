@@ -49,5 +49,3 @@ manual-test/
 .serena/
 
 ### Scripts ###
-scripts/start.sh
-scripts/stop.sh
