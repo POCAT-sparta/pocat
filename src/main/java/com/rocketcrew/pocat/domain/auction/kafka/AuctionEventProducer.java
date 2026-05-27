@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.auction.producer;
+package com.rocketcrew.pocat.domain.auction.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.auction.event.*;

@@ -1,5 +1,6 @@
-package com.rocketcrew.pocat.domain.auction.service;
+package com.rocketcrew.pocat.domain.auction.redis;
 
+import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
