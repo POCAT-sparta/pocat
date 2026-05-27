@@ -31,10 +31,14 @@ spring:
           model: gemini-1.5-flash
           temperature: 0.3
           max-tokens: 1024
+      embedding:
+        options:
+          model: text-embedding-004
     vectorstore:
-      redis:
-        index: pocat-ai-index
-        prefix: 'pocat:vectors:'
+      elasticsearch:
+        index-name: pocat-ai-index
+        dimensions: 768
+        similarity: cosine
         initialize-schema: true
 
 view:

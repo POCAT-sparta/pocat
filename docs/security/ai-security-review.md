@@ -126,3 +126,17 @@ spring:
 |------|------|
 | AiStreamController sessionId 세션 통합 | AiChatSessionService 주입 + 전체 세션 wiring 필요 — 단순 수정 아님 |
 | CardSearchTool maxPrice 필터 미적용 | Card 엔티티에 price 필드 없음, auction join 쿼리 신규 작성 필요 |
+
+## #112 AI 리팩터링 (2026-05-27)
+
+### 완료
+
+| 항목 | 조치 |
+|------|------|
+| Redis Stack → ES 8.x 벡터스토어 전환 | `spring-ai-starter-vector-store-elasticsearch` + `vectorstore.elasticsearch` 설정 |
+| 임베딩 모델 명시 | `text-embedding-004` (768차원) 설정 추가 |
+| CardSearchTool maxPrice 필터 미적용 | Auction EXISTS 서브쿼리로 startingPrice ≤ maxPrice 필터 구현 |
+| AiStreamController sessionId 미사용 | AiChatSessionService + RagService 주입, 세션·히스토리·RAG 통합 |
+| domain/ai/session/ 고아 패키지 | 4개 파일 삭제 (서비스에서 미참조 확인 후) |
+| V1 Flyway 미완 FK 제약 | V2__ai_tables_fk.sql 추가 (ai_chat_sessions, ai_chat_messages, card_ai_analysis) |
+| V1 고아 단수형 테이블 | ai_chat_session, ai_chat_message DROP (엔티티는 복수형 사용) |
