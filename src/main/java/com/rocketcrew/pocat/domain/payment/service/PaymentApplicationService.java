@@ -17,6 +17,7 @@ import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -39,8 +40,9 @@ public class PaymentApplicationService {
      * 낙찰 후 자동결제(billingKey) 실패 시, 구매자가 PortOne 결제창을 열기 전에
      * 서버가 paymentUid를 먼저 발급하여 금액 위변조를 원천 차단한다.
      */
+    @Transactional
     public PaymentResponse generatePayment(Long buyerId, CreatePaymentRequest request) {
-        Order order = orderQueryService.findByOrderid(request.orderId());
+        Order order = orderQueryService.findByOrderIdWithLock(request.orderId());
 
         if (!order.getBuyerId().equals(buyerId)) {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
@@ -87,16 +89,14 @@ public class PaymentApplicationService {
                 payment.getPaymentUid(), billingKey, payment.getAmount()
         );
 
-        try {
-            if (!"PAID".equals(response.status())) {
-                failureService.handleBillingKeyPaymentFailure(payment, order, orderId);
-            }
-            paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
-            // TODO : 성공 이벤트 발행
-            return PaymentResponse.from(payment);
-        }catch (PaymentException e) {
-            throw e;
+        if (!"PAID".equals(response.status())) {
+            failureService.persistBillingKeyFailure(payment, order, orderId);
+            throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
+
+        paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
+        // TODO : 성공 이벤트 발행
+        return PaymentResponse.from(payment);
     }
 
     /**

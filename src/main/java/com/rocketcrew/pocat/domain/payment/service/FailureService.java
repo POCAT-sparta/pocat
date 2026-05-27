@@ -4,8 +4,6 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
-import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,9 +16,7 @@ import java.time.LocalDateTime;
 
 /**
  * 결제 실패 상태를 독립 트랜잭션으로 저장하는 서비스.
- * payment.fail() / order.failPayment() 후 PaymentException을 던지면
- * 외부 @Transactional이 RuntimeException으로 롤백하여 실패 상태가 저장되지 않는다.
- * REQUIRES_NEW로 먼저 커밋하면 외부 트랜잭션 롤백과 무관하게 실패 상태가 유지된다.
+ * REQUIRES_NEW로 커밋하면 호출부 트랜잭션 롤백과 무관하게 실패 상태가 유지된다.
  */
 @Slf4j
 @Service
@@ -32,14 +28,14 @@ public class FailureService {
     private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
 
-    public void handleBillingKeyPaymentFailure(Payment payment, Order order, Long orderId) {
-        // TODO : 실패 시 왜 실패했는지 받을 수 있어야 함 PORTONE API 확인 필요.
+    // TODO : 실패 시 왜 실패했는지 받을 수 있어야 함 PORTONE API 확인 필요.
+    // TODO : LocalDateTime.now().plusHours(24) -> order.getExpireAt 으로 변경해야 함: 승현님 작업 완료후 진행
+    // TODO : 실패 이벤트 발행
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void persistBillingKeyFailure(Payment payment, Order order, Long orderId) {
         payment.fail();
-        // TODO : LocalDateTime.now().plusHours(24) -> order.getExpireAt 으로 변경해야 함: 승현님 작업 완료후 진행
         order.failPayment();
         scheduleExpiry(orderId, LocalDateTime.now().plusHours(24));
-        // TODO : 실패 이벤트 발행
-        throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
     }
 
     /**
@@ -49,7 +45,7 @@ public class FailureService {
     public void scheduleExpiry(Long orderId, LocalDateTime expireAt) {
         Duration ttl = Duration.between(LocalDateTime.now(), expireAt);
         if (ttl.isNegative() || ttl.isZero()) return;
-        redisTemplate.opsForValue().set(
+        redisTemplate.opsForValue().setIfAbsent(
                 PAYMENT_EXPIRY_KEY_PREFIX + orderId,
                 String.valueOf(orderId),
                 ttl
