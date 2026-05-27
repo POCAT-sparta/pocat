@@ -28,7 +28,7 @@ public class BidTool {
      * @param userId 사용자 ID
      * @return 입찰 이력 목록
      */
-    @Tool(description = "사용자의 최근 입찰 이력을 조회합니다. 입찰가, 카드 정보, 상태를 포함합니다.")
+    @Tool(description = "사용자의 최근 입찰 이력을 조회합니다. 입찰가, 경매 ID, 입찰 상태, 생성 시각을 포함합니다.")
     public List<Map<String, Object>> getUserBidHistory(
             @ToolParam(description = "사용자 ID") Long userId
     ) {

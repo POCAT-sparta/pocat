@@ -90,7 +90,9 @@ spring:
 
 ## 2차 보안 검토 결과 (2026-05-26)
 
+
 ### 수정 완료
+
 | 항목 | 조치 |
 |------|------|
 | PII 로그 노출 (AiAssistantService, AiStreamController) | message → msgLen= 으로 마스킹 |
