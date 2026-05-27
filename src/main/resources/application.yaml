@@ -9,19 +9,24 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
   kafka:
-    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
   elasticsearch:
     uris: ${ES_URI:http://localhost:9200}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 2
+    locations: classpath:db/migration
   ai:
     openai:
       api-key: ${GEMINI_API_KEY}
@@ -70,3 +75,9 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 30s
         permittedNumberOfCallsInHalfOpenState: 3
+  ratelimiter:
+    instances:
+      aiEndpoint:
+        limitForPeriod: 10
+        limitRefreshPeriod: 60s
+        timeoutDuration: 0s
