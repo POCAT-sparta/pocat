@@ -56,12 +56,15 @@ public class SettlementCommandService {
                 .build();
 
         try {
-            settlementRepository.save(settlement);
+            settlementRepository.saveAndFlush(settlement);
         } catch (DataIntegrityViolationException e) {
-            // orderId 또는 settlementUid 중복: 동시 요청 레이스 컨디션으로 다른 스레드가 먼저 생성
-            // settlementUid 충돌(TSID 생성 오류)인 경우는 재시도 없이 로그만 남김
-            log.warn("정산 생성 중복 예외 (무시) orderId={} msg={}", order.getId(), e.getMessage());
-            return;
+            // orderId 중복: 동시 요청 레이스 컨디션으로 다른 스레드가 먼저 정산을 생성한 경우
+            if (settlementRepository.existsByOrderId(order.getId())) {
+                log.warn("정산 생성 중복 예외 — 이미 존재하여 무시 orderId={}", order.getId());
+                return;
+            }
+            // orderId 중복이 아닌 다른 무결성 오류(settlementUid 충돌 등) — 정산 누락 방지를 위해 전파
+            throw e;
         }
 
         // 정산 생성 이벤트 발행

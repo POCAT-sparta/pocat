@@ -70,9 +70,14 @@ public class FailureService {
 
     /**
      * 결제가 성공적으로 완료되거나 이미 즉시 실패 처리될 때 Redis 만료 키를 정리한다.
+     * Redis 오류는 결제 완료 처리와 무관하므로 예외를 흡수하고 로그만 남긴다.
      */
     public void cancelExpiry(Long orderId) {
-        redisTemplate.delete(PAYMENT_EXPIRY_KEY_PREFIX + orderId);
+        try {
+            redisTemplate.delete(PAYMENT_EXPIRY_KEY_PREFIX + orderId);
+        } catch (Exception e) {
+            log.warn("[PaymentExpiry] 만료 키 삭제 실패 orderId={}", orderId, e);
+        }
     }
 
 }

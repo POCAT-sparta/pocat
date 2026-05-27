@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,7 +20,6 @@ public class RefundRetryScheduler {
     private final RefundCommandService refundCommandService;
 
     @Scheduled(fixedDelay = 60_000)
-    @Transactional(readOnly = true)
     public void retryFailedRefunds() {
         // ID만 추출해 별도 트랜잭션에서 처리 — 엔티티를 영속성 컨텍스트 밖에서
         // 직접 참조하면 LazyLoadingException 발생 위험이 있다.

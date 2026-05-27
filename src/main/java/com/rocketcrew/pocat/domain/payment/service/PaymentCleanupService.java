@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,8 +36,8 @@ public class PaymentCleanupService {
         orderRepository.findById(payment.getOrderId()).ifPresent(order -> {
             try {
                 order.failPayment();
-            } catch (Exception e) {
-                // 주문이 이미 다른 상태로 전이된 경우 — 정상 케이스
+            } catch (OrderException e) {
+                // 주문이 이미 다른 상태로 전이된 경우(PAYMENT_COMPLETED 등) — 정상 케이스
                 log.debug("주문 상태 전이 스킵 orderId={} status={}", order.getId(), order.getStatus());
             }
         });

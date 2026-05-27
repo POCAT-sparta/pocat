@@ -9,6 +9,12 @@ public final class RefundRetryPolicy {
     private RefundRetryPolicy() {}
 
     public static LocalDateTime calculateNextRetryAt(int retryCount, LocalDateTime now) {
+        if (now == null) {
+            throw new IllegalArgumentException("now cannot be null");
+        }
+        if (retryCount < 0) {
+            throw new IllegalArgumentException("retryCount must be non-negative");
+        }
         int minutes = switch (retryCount) {
             case 0 -> 1;
             case 1 -> 5;
@@ -19,6 +25,9 @@ public final class RefundRetryPolicy {
     }
 
     public static boolean isAutoRetryExhausted(int retryCount) {
+        if (retryCount < 0) {
+            throw new IllegalArgumentException("retryCount must be non-negative");
+        }
         return retryCount >= MAX_RETRY_COUNT;
     }
 }

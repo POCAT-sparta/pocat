@@ -24,9 +24,9 @@
     <!-- 공통 설정 -->
     <div class="section">
         <h2>공통 설정</h2>
-        <label>PortOne Store ID (포트원 콘솔 → 결제 연동 → 상단 "상점 아이디")</label>
+        <label for="storeId">PortOne Store ID (포트원 콘솔 → 결제 연동 → 상단 "상점 아이디")</label>
         <input type="text" id="storeId" placeholder="store-b3436568-70ad-419b-b6aa-3e93f55ea4b5">
-        <label>Access Token (로그인 응답의 accessToken)</label>
+        <label for="accessToken">Access Token (로그인 응답의 accessToken)</label>
         <input type="text" id="accessToken" placeholder="eyJhbGciOiJIUzI1NiJ9...">
     </div>
 
@@ -39,7 +39,7 @@
 
         <hr>
         <div class="step">Step 2. 발급된 빌링키를 서버에 등록</div>
-        <label>빌링키 (위에서 자동 채워짐, 또는 직접 입력)</label>
+        <label for="billingKey">빌링키 (위에서 자동 채워짐, 또는 직접 입력)</label>
         <input type="text" id="billingKey" placeholder="billing-key-xxxxxxxx">
         <button onclick="registerBillingKey()">서버에 빌링키 등록</button>
         <pre id="registerResult">-</pre>
@@ -49,9 +49,9 @@
     <div class="section">
         <h2>직접결제 — 결제창 띄우고 확정</h2>
         <div class="step">Step 1. DB에 넣은 주문 ID 입력 후 결제</div>
-        <label>Order ID (DB에서 확인한 orders.id)</label>
+        <label for="orderId">Order ID (DB에서 확인한 orders.id)</label>
         <input type="number" id="orderId" placeholder="1">
-        <label>결제 금액 (orders.final_price와 일치해야 함)</label>
+        <label for="payAmount">결제 금액 (orders.final_price와 일치해야 함)</label>
         <input type="number" id="payAmount" value="1000">
         <button onclick="createAndPay()">직접결제 시작</button>
         <pre id="directResult">-</pre>
@@ -111,41 +111,66 @@
 
             if (!token || !billingKey) { alert('Access Token과 빌링키를 입력하세요'); return; }
 
-            const res = await fetch(`${SERVER}/api/v1/users/me/billing-key`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({ billingKey })
-            });
-            const data = await res.json();
-            result.textContent = JSON.stringify(data, null, 2);
+            try {
+                const res = await fetch(`${SERVER}/api/v1/users/me/billing-key`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ billingKey })
+                });
+                const data = await res.json().catch(() => ({ message: 'Non-JSON response' }));
+                if (!res.ok) {
+                    result.textContent = `❌ 등록 실패 (${res.status})\n` + JSON.stringify(data, null, 2);
+                    return;
+                }
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                result.textContent = '❌ 네트워크 오류: ' + (e?.message ?? 'unknown');
+            }
         }
 
         /* ── 직접결제: 결제 레코드 생성 → PortOne 결제창 → 확정 ── */
         async function createAndPay() {
             const token   = getToken();
             const storeId = getStoreId();
-            const orderId = parseInt(document.getElementById('orderId').value);
-            const amount  = parseInt(document.getElementById('payAmount').value);
+            const orderId = Number(document.getElementById('orderId').value);
+            const amount  = Number(document.getElementById('payAmount').value);
             const result  = document.getElementById('directResult');
 
-            if (!token || !storeId || !orderId) { alert('Store ID, Access Token, Order ID를 모두 입력하세요'); return; }
+            if (!token || !storeId || !Number.isInteger(orderId) || orderId <= 0) {
+                alert('Store ID, Access Token, 유효한 Order ID를 입력하세요');
+                return;
+            }
+            if (!Number.isFinite(amount) || amount <= 0) {
+                alert('유효한 결제 금액을 입력하세요');
+                return;
+            }
 
             result.textContent = '1. 서버에 결제 레코드 생성 중...';
 
             // Step 1: 서버에서 paymentUid 발급
-            const createRes = await fetch(`${SERVER}/api/v1/payments`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify({ orderId })
-            });
-            const createData = await createRes.json();
-            result.textContent = '1. 결제 레코드 생성:\n' + JSON.stringify(createData, null, 2);
+            let createData;
+            try {
+                const createRes = await fetch(`${SERVER}/api/v1/payments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ orderId })
+                });
+                createData = await createRes.json().catch(() => ({ message: 'Non-JSON response' }));
+                result.textContent = '1. 결제 레코드 생성:\n' + JSON.stringify(createData, null, 2);
+                if (!createRes.ok) {
+                    result.textContent += `\n\n❌ 생성 실패 (${createRes.status})`;
+                    return;
+                }
+            } catch (e) {
+                result.textContent += '\n\n❌ 생성 API 호출 오류: ' + (e?.message ?? 'unknown');
+                return;
+            }
 
             const paymentUid = createData.data?.paymentUid;
             if (!paymentUid) {
@@ -187,16 +212,24 @@
             result.textContent += '\n\n3. 서버에 결제 확정 요청 중...';
 
             // Step 3: 서버 결제 확정
-            const confirmRes = await fetch(`${SERVER}/api/v1/payments/${paymentUid}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            const confirmData = await confirmRes.json();
-            result.textContent += '\n\n3. 결제 확정:\n' + JSON.stringify(confirmData, null, 2);
-
-            if (confirmRes.ok) {
-                result.textContent += '\n\n✅ 직접결제 완료!';
+            let confirmData;
+            try {
+                const confirmRes = await fetch(`${SERVER}/api/v1/payments/${paymentUid}`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                confirmData = await confirmRes.json().catch(() => ({ message: 'Non-JSON response' }));
+                result.textContent += '\n\n3. 결제 확정:\n' + JSON.stringify(confirmData, null, 2);
+                if (!confirmRes.ok) {
+                    result.textContent += `\n\n❌ 확정 실패 (${confirmRes.status})`;
+                    return;
+                }
+            } catch (e) {
+                result.textContent += '\n\n❌ 확정 API 호출 오류: ' + (e?.message ?? 'unknown');
+                return;
             }
+
+            result.textContent += '\n\n✅ 직접결제 완료!';
         }
     </script>
 </body>
