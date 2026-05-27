@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -15,6 +16,7 @@ public class AuctionExpirationRedisService {
 
     private static final String END_KEY_PREFIX = "auction:end:";
     private static final String SHADOW_KEY_PREFIX = "auction:end:shadow:";
+    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final StringRedisTemplate redisTemplate;
 
@@ -25,7 +27,7 @@ public class AuctionExpirationRedisService {
             return;
         }
 
-        long ttlSeconds = Duration.between(LocalDateTime.now(), endedAt).getSeconds();
+        long ttlSeconds = Duration.between(LocalDateTime.now(AUCTION_ZONE), endedAt).getSeconds();
         if (ttlSeconds <= 0) {
             log.warn("경매 종료 TTL 설정 생략: 이미 종료 시각 경과, auctionId={}, endedAt={}", auctionId, endedAt);
             return;

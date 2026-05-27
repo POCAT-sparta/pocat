@@ -37,6 +37,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +49,7 @@ public class AuctionCommandService {
 
     private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
     private static final long AUCTION_LOCK_WAIT_SECONDS = 0L;
+    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
@@ -147,7 +149,7 @@ public class AuctionCommandService {
 
         if (request.result() == AuctionInspectionResult.PASSED) {
             validateAuctionDataForInspection(latestAuction);
-            LocalDateTime inspectedAt = LocalDateTime.now();
+            LocalDateTime inspectedAt = LocalDateTime.now(AUCTION_ZONE);
             latestAuction.approve(adminId, inspectedAt);
 
             eventPublisher.publishEvent(new AuctionInspectionPassedEvent(
@@ -160,7 +162,7 @@ public class AuctionCommandService {
         }
 
         validateRejectReason(request.reason());
-        LocalDateTime inspectedAt = LocalDateTime.now();
+        LocalDateTime inspectedAt = LocalDateTime.now(AUCTION_ZONE);
         String rejectReason = request.reason().trim();
         latestAuction.reject(adminId, inspectedAt, rejectReason);
 

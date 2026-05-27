@@ -10,12 +10,15 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class AuctionExpirationBackupScheduler {
+
+    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionRepository auctionRepository;
     private final AuctionLifecycleService auctionLifecycleService;
@@ -24,7 +27,10 @@ public class AuctionExpirationBackupScheduler {
     @Scheduled(cron = "0 5-30 19 * * *", zone = "Asia/Seoul")
     public void closeExpiredAuctions() {
         List<Auction> expiredAuctions = auctionRepository
-                .findAllByStatusAndEndedAtLessThanEqualOrderByEndedAtAsc(AuctionStatus.ACTIVE, LocalDateTime.now());
+                .findAllByStatusAndEndedAtLessThanEqualOrderByEndedAtAsc(
+                        AuctionStatus.ACTIVE,
+                        LocalDateTime.now(AUCTION_ZONE)
+                );
         for (Auction auction : expiredAuctions) {
             try {
                 auctionLifecycleService.closeExpiredAuction(auction.getId());

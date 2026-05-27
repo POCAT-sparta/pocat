@@ -26,6 +26,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -35,6 +36,7 @@ public class AuctionBidCommandService {
 
     private static final String BID_LOCK_KEY_PREFIX = "auction:bid:lock:";
     private static final long BID_LOCK_WAIT_SECONDS = 0L;
+    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionBidRepository auctionBidRepository;
     private final AuctionQueryService auctionQueryService;
@@ -88,7 +90,7 @@ public class AuctionBidCommandService {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(AUCTION_ZONE);
         if (auction.getStartedAt() == null || auction.getEndedAt() == null) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
