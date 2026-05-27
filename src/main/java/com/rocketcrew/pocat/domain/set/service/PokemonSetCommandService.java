@@ -40,14 +40,22 @@ public class PokemonSetCommandService {
     }
 
     public PokemonSetResponse create(UpsertPokemonSetRequest request, Series series) {
-        PokemonSet ps = pokemonSetRepository.save(
-                PokemonSet.builder()
-                        .setId(request.setId())
-                        .name(request.name())
-                        .nameKo(request.nameKo())
-                        .series(series)
-                        .build());
-        return PokemonSetResponse.from(ps);
+        String trimmedId = request.setId() != null ? request.setId().strip() : null;
+        try {
+            PokemonSet ps = pokemonSetRepository.save(
+                    PokemonSet.builder()
+                            .setId(trimmedId)
+                            .name(request.name() != null ? request.name().strip() : null)
+                            .nameKo(request.nameKo())
+                            .series(series)
+                            .build());
+            return PokemonSetResponse.from(ps);
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청 또는 중복 setId — 기존 엔티티 반환
+            return pokemonSetRepository.findBySetId(trimmedId)
+                    .map(PokemonSetResponse::from)
+                    .orElseThrow(() -> new PokemonSetException(ErrorCode.POKEMON_SET_NOT_FOUND));
+        }
     }
 
     public PokemonSetResponse updateNameKo(Long id, String nameKo) {

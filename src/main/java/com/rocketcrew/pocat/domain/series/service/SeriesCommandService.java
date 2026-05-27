@@ -34,12 +34,20 @@ public class SeriesCommandService {
     }
 
     public SeriesResponse create(UpsertSeriesRequest request) {
-        Series series = seriesRepository.save(
-                Series.builder()
-                        .name(request.name())
-                        .nameKo(request.nameKo())
-                        .build());
-        return SeriesResponse.from(series);
+        String trimmed = request.name().strip();
+        try {
+            Series series = seriesRepository.save(
+                    Series.builder()
+                            .name(trimmed)
+                            .nameKo(request.nameKo())
+                            .build());
+            return SeriesResponse.from(series);
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청 또는 중복 name — 기존 엔티티 반환
+            return seriesRepository.findByName(trimmed)
+                    .map(SeriesResponse::from)
+                    .orElseThrow(() -> new SeriesException(ErrorCode.SERIES_NOT_FOUND));
+        }
     }
 
     public SeriesResponse updateNameKo(Long id, String nameKo) {
