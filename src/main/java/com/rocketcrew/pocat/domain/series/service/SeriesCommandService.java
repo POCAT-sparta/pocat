@@ -28,7 +28,7 @@ public class SeriesCommandService {
                     } catch (DataIntegrityViolationException e) {
                         // 동시 요청으로 먼저 INSERT된 경우 재조회
                         return seriesRepository.findByName(trimmed)
-                                .orElseThrow(() -> new SeriesException(ErrorCode.SERIES_NOT_FOUND));
+                                .orElseThrow(() -> e); // 재조회도 실패하면 원래 예외 원인 보존
                     }
                 });
     }
@@ -46,7 +46,7 @@ public class SeriesCommandService {
             // 동시 요청 또는 중복 name — 기존 엔티티 반환
             return seriesRepository.findByName(trimmed)
                     .map(SeriesResponse::from)
-                    .orElseThrow(() -> new SeriesException(ErrorCode.SERIES_NOT_FOUND));
+                    .orElseThrow(() -> e); // 재조회도 실패하면 원래 예외 원인 보존
         }
     }
 

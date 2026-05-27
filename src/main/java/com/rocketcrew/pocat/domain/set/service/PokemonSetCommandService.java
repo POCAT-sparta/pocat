@@ -34,7 +34,7 @@ public class PokemonSetCommandService {
                     } catch (DataIntegrityViolationException e) {
                         // 동시 요청으로 먼저 INSERT된 경우 재조회
                         return pokemonSetRepository.findBySetId(trimmedId)
-                                .orElseThrow(() -> new PokemonSetException(ErrorCode.POKEMON_SET_NOT_FOUND));
+                                .orElseThrow(() -> e); // 재조회도 실패하면 원래 예외 원인 보존
                     }
                 });
     }
@@ -54,7 +54,7 @@ public class PokemonSetCommandService {
             // 동시 요청 또는 중복 setId — 기존 엔티티 반환
             return pokemonSetRepository.findBySetId(trimmedId)
                     .map(PokemonSetResponse::from)
-                    .orElseThrow(() -> new PokemonSetException(ErrorCode.POKEMON_SET_NOT_FOUND));
+                    .orElseThrow(() -> e); // 재조회도 실패하면 원래 예외 원인 보존
         }
     }
 
