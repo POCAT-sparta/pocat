@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -16,6 +17,7 @@ public class AuctionExpirationRedisService {
 
     private static final String END_KEY_PREFIX = "auction:end:";
     private static final String SHADOW_KEY_PREFIX = "auction:end:shadow:";
+    private static final Pattern END_KEY_PATTERN = Pattern.compile("^" + Pattern.quote(END_KEY_PREFIX) + "\\d+$");
     private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final StringRedisTemplate redisTemplate;
@@ -40,7 +42,7 @@ public class AuctionExpirationRedisService {
 
     // Redis 만료 이벤트에서 받은 key가 경매 종료 TTL 키인지 확인한다.
     public boolean isAuctionEndKey(String key) {
-        return key != null && key.startsWith(END_KEY_PREFIX);
+        return key != null && END_KEY_PATTERN.matcher(key).matches();
     }
 
     // 경매 종료 TTL 키에서 auctionId를 추출한다.
