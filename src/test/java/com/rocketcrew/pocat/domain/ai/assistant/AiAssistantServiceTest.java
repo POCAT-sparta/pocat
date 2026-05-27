@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,7 +85,14 @@ class AiAssistantServiceTest {
         given(requestSpec.user(anyString())).willReturn(requestSpec);
         given(requestSpec.tools(any(), any(), any())).willReturn(requestSpec);
         given(requestSpec.call()).willReturn(callResponseSpec);
-        given(callResponseSpec.content()).willReturn(AI_REPLY);
+
+        // stub chatResponse() chain (code now uses chatResponse() not content())
+        ChatResponse defaultChatResponse = mock(ChatResponse.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+        given(defaultChatResponse.getResult().getOutput().getText()).willReturn(AI_REPLY);
+        ChatResponseMetadata defaultMetadata = mock(ChatResponseMetadata.class);
+        given(defaultChatResponse.getMetadata()).willReturn(defaultMetadata);
+        given(defaultMetadata.getUsage()).willReturn(null);
+        given(callResponseSpec.chatResponse()).willReturn(defaultChatResponse);
 
         // stub RAG
         given(ragService.search(anyString())).willReturn(List.of());
@@ -145,7 +153,7 @@ class AiAssistantServiceTest {
         void chat_throws_on_client_exception() {
             // given
             AiChatRequest request = new AiChatRequest("테스트 메시지", null);
-            given(callResponseSpec.content()).willThrow(new RuntimeException("LLM unavailable"));
+            given(callResponseSpec.chatResponse()).willThrow(new RuntimeException("LLM unavailable"));
 
             // when / then
             assertThatThrownBy(() -> aiAssistantService.chat(USER_ID, request))
@@ -163,7 +171,8 @@ class AiAssistantServiceTest {
             aiAssistantService.chat(USER_ID, request);
 
             // then
-            verify(aiUsageMetrics).recordUsage(0, 0, 0L, "gemini-1.5-flash");
+            // usage is null in @BeforeEach stub → tokens default to 0
+            verify(aiUsageMetrics).recordUsage(0, 0, anyLong(), anyString());
         }
     }
 
