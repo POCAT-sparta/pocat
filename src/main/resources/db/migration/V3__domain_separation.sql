@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS series (
     updated_at  DATETIME(6) NOT NULL,
     deleted_at  DATETIME(6),
     UNIQUE KEY uk_series_name (name)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pokemon_sets (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS pokemon_sets (
     deleted_at  DATETIME(6),
     UNIQUE KEY uk_pokemon_sets_set_id (set_id),
     CONSTRAINT fk_pokemon_sets_series FOREIGN KEY (series_id) REFERENCES series(id)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pokemon (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS pokemon (
     updated_at  DATETIME(6) NOT NULL,
     deleted_at  DATETIME(6),
     UNIQUE KEY uk_pokemon_name (name)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ② 기존 cards 데이터로 series 시드 (nameKo는 DomainDataSeeder가 채움)
 INSERT IGNORE INTO series (name, name_ko, created_at, updated_at)
