@@ -28,10 +28,10 @@ import static org.mockito.BDDMockito.given;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("PaymentFailureService")
-class PaymentFailureServiceTest {
+class FailureServiceTest {
 
     @InjectMocks
-    private PaymentFailureService paymentFailureService;
+    private FailureService failureService;
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -54,7 +54,7 @@ class PaymentFailureServiceTest {
             given(paymentRepository.findById(1L)).willReturn(Optional.of(payment));
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
 
-            paymentFailureService.markFailed(1L);
+            failureService.markFailed(1L);
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PAYMENT_FAILED);
@@ -65,7 +65,7 @@ class PaymentFailureServiceTest {
         void fail_paymentNotFound() {
             given(paymentRepository.findById(99L)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> paymentFailureService.markFailed(99L))
+            assertThatThrownBy(() -> failureService.markFailed(99L))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_NOT_FOUND);
         }
@@ -79,7 +79,7 @@ class PaymentFailureServiceTest {
             given(orderRepository.findById(1L)).willReturn(Optional.empty());
 
             // PaymentFailureService 는 주문 미발견 시 PaymentException(ORDER_NOT_FOUND) 를 던진다
-            assertThatThrownBy(() -> paymentFailureService.markFailed(1L))
+            assertThatThrownBy(() -> failureService.markFailed(1L))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_NOT_FOUND);
         }
