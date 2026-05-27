@@ -25,6 +25,15 @@ public enum ErrorCode {
     CARD_NOT_ACTIVE(HttpStatus.CONFLICT, "ACTIVE 상태의 카드만 경매에 등록할 수 있습니다."),
     CARD_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 카드입니다."),
 
+    // Series
+    SERIES_NOT_FOUND(HttpStatus.NOT_FOUND, "시리즈를 찾을 수 없습니다."),
+
+    // PokemonSet
+    POKEMON_SET_NOT_FOUND(HttpStatus.NOT_FOUND, "확장팩을 찾을 수 없습니다."),
+
+    // Pokemon
+    POKEMON_NOT_FOUND(HttpStatus.NOT_FOUND, "포켓몬을 찾을 수 없습니다."),
+
     // Auction
     AUCTION_NOT_ACTIVE(HttpStatus.CONFLICT, "ACTIVE 상태의 경매만 가능합니다."),
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "경매를 찾을 수 없습니다."),

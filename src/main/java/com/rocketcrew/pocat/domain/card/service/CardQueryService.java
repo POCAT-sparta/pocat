@@ -16,8 +16,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
-import com.rocketcrew.pocat.domain.card.util.SeriesNameDictionary;
-import com.rocketcrew.pocat.domain.card.util.SetNameDictionary;
+import com.rocketcrew.pocat.domain.series.service.SeriesQueryService;
+import com.rocketcrew.pocat.domain.set.service.PokemonSetQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
@@ -57,8 +57,8 @@ public class CardQueryService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final ElasticsearchOperations elasticsearchOperations;
-    private final SeriesNameDictionary seriesNameDictionary;
-    private final SetNameDictionary setNameDictionary;
+    private final SeriesQueryService seriesQueryService;
+    private final PokemonSetQueryService pokemonSetQueryService;
 
     public Page<CardResponse> getCards(CardSearchCondition condition, Pageable pageable) {
         if (StringUtils.hasText(condition.keyword()) && condition.keyword().trim().length() < 2) {
@@ -78,11 +78,11 @@ public class CardQueryService {
                     .operator(Operator.And))._toQuery());
         }
         if (StringUtils.hasText(condition.series())) {
-            String seriesEn = seriesNameDictionary.translate(condition.series());
+            String seriesEn = seriesQueryService.translate(condition.series());
             bool.filter(TermQuery.of(t -> t.field("series").value(seriesEn))._toQuery());
         }
         if (StringUtils.hasText(condition.setName())) {
-            String setNameEn = setNameDictionary.translate(condition.setName());
+            String setNameEn = pokemonSetQueryService.translate(condition.setName());
             bool.filter(TermQuery.of(t -> t.field("setName").value(setNameEn))._toQuery());
         }
         if (condition.grade() != null) {

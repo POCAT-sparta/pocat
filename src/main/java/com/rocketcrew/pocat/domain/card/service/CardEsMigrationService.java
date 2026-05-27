@@ -5,9 +5,6 @@ import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
-import com.rocketcrew.pocat.domain.card.util.PokemonNameDictionary;
-import com.rocketcrew.pocat.domain.card.util.SeriesNameDictionary;
-import com.rocketcrew.pocat.domain.card.util.SetNameDictionary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,9 +24,6 @@ public class CardEsMigrationService {
 
     private final CardRepository cardRepository;
     private final CardSearchRepository cardSearchRepository;
-    private final PokemonNameDictionary pokemonNameDictionary;
-    private final SeriesNameDictionary seriesNameDictionary;
-    private final SetNameDictionary setNameDictionary;
 
     @Transactional(readOnly = true)
     public int migrateAll() {
@@ -44,11 +38,11 @@ public class CardEsMigrationService {
             List<CardDocument> docs = batch.getContent().stream()
                     .map(card -> CardDocument.from(
                             card,
-                            pokemonNameDictionary.findKoreanName(card.getName()),
-                            seriesNameDictionary.getKoreanText(card.getSeries()),
-                            setNameDictionary.getKoreanText(card.getSetName())
+                            card.getPokemon() != null ? card.getPokemon().getNameKo() : null,
+                            card.getSeries() != null ? card.getSeries().getNameKo() : null,
+                            card.getPokemonSet() != null ? card.getPokemonSet().getNameKo() : null
                     ))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
 
             if (!docs.isEmpty()) {
                 cardSearchRepository.saveAll(docs);

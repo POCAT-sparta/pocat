@@ -188,8 +188,8 @@ public class CardAnalysisService {
                 "카드 이름: %s\n등급: %s\n시리즈: %s\n세트: %s\nURL: %s\n레어도: %s",
                 card.getName(),
                 card.getGrade().toString(),
-                card.getSeries(),
-                card.getSetName(),
+                card.getSeries() != null ? card.getSeries().getName() : "N/A",
+                card.getPokemonSet() != null ? card.getPokemonSet().getName() : "N/A",
                 card.getImageUrl() != null ? card.getImageUrl() : "N/A",
                 card.getRarity()
         );

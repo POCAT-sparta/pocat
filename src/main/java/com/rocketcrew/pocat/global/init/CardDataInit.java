@@ -8,6 +8,12 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
+import com.rocketcrew.pocat.domain.pokemon.service.PokemonCommandService;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.series.service.SeriesCommandService;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
+import com.rocketcrew.pocat.domain.set.service.PokemonSetCommandService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -45,6 +51,9 @@ public class CardDataInit implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final SeriesCommandService seriesCommandService;
+    private final PokemonSetCommandService pokemonSetCommandService;
+    private final PokemonCommandService pokemonCommandService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
@@ -106,13 +115,19 @@ public class CardDataInit implements ApplicationRunner {
                     CardCategory category = parseCategory(cardRoot.path("category").asText(""));
                     CardGrade grade = GRADES[saved % GRADES.length];
 
+                    Series seriesEntity = seriesCommandService.findOrCreate(seriesName);
+                    PokemonSet pokemonSetEntity = pokemonSetCommandService.findOrCreate(setId, setName, seriesEntity);
+                    Pokemon pokemonEntity = (category == CardCategory.POKEMON)
+                            ? pokemonCommandService.findOrCreateForCardName(name).orElse(null)
+                            : null;
+
                     Card card = Card.builder()
                             .userId(userId)
                             .tcgdexId(tcgdexId)
                             .name(name)
-                            .series(seriesName)
-                            .setId(setId)
-                            .setName(setName)
+                            .series(seriesEntity)
+                            .pokemonSet(pokemonSetEntity)
+                            .pokemon(pokemonEntity)
                             .cardNumber(localId)
                             .rarity(rarity.isEmpty() ? "UNKNOWN" : rarity)
                             .category(category)
