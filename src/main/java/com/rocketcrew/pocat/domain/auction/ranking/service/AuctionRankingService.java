@@ -13,6 +13,7 @@ import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
@@ -56,7 +57,7 @@ public class AuctionRankingService {
         }
 
         List<Long> auctionIds = entries.stream()
-                .filter(e -> e.getValue() != null && e.getScore() != null && e.getScore() > 0)
+                .filter(e -> e.getValue() != null && e.getScore() != null)
                 .flatMap(e -> {
                     try {
                         return Stream.of(Long.parseLong(e.getValue()));
@@ -79,29 +80,30 @@ public class AuctionRankingService {
                 .distinct()
                 .toList());
 
-        Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(auctionIds));
-
         return auctionIds.stream()
                 .filter(auctionMap::containsKey)
                 .map(id -> {
                     Auction a = auctionMap.get(id);
+                    if (a.getStatus() != AuctionStatus.ACTIVE) {
+                        return null;
+                    }
                     Card card = cardMap.get(a.getCardId());
-                    long likeCount = likeCounts.getOrDefault(id, 0L);
-                    return toSearchAuctionResponse(a, card, sellerNicknames.get(a.getSellerId()), likeCount);
+                    return toSearchAuctionResponse(a, card, sellerNicknames.get(a.getSellerId()));
                 })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     public void refreshRanking() {
         try {
-            List<Auction> activeAuctions = auctionRepository.findAllByStatus(AuctionStatus.ACTIVE);
-            if (activeAuctions.isEmpty()) {
+            List<Auction> rankingCandidates = loadRankingCandidates();
+            if (rankingCandidates.isEmpty()) {
                 redisTemplate.delete(RANKING_KEY);
                 log.debug("No active auctions — cleared stale ranking");
                 return;
             }
 
-            List<Long> ids = activeAuctions.stream().map(Auction::getId).toList();
+            List<Long> ids = rankingCandidates.stream().map(Auction::getId).toList();
 
             Map<Long, Long> likeCounts = toLongMap(likeRepository.countByAuctionIdIn(ids));
             Map<Long, Long> bidCounts = toLongMap(auctionBidRepository.countByAuctionIdIn(ids));
@@ -109,29 +111,57 @@ public class AuctionRankingService {
             String newKey = RANKING_KEY + ":new";
             redisTemplate.delete(newKey);
 
-            int added = 0;
-            for (Auction auction : activeAuctions) {
+            for (Auction auction : rankingCandidates) {
                 long likeCount = likeCounts.getOrDefault(auction.getId(), 0L);
                 long bidCount = bidCounts.getOrDefault(auction.getId(), 0L);
                 double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
-                if (score > 0) {
-                    redisTemplate.opsForZSet().add(newKey, auction.getId().toString(), score);
-                    added++;
-                }
+                redisTemplate.opsForZSet().add(newKey, auction.getId().toString(), score);
             }
-
-            if (added == 0) {
-                redisTemplate.delete(RANKING_KEY);
-                log.debug("No auctions with score > 0 — cleared stale ranking");
-                return;
-            }
+            trimToCacheSize(newKey);
 
             redisTemplate.rename(newKey, RANKING_KEY);
             redisTemplate.expire(RANKING_KEY, properties.getTtlSeconds(), TimeUnit.SECONDS);
-            log.debug("Auction ranking refreshed: {} auctions", added);
+            log.debug("Auction ranking refreshed: {} auctions", rankingCandidates.size());
 
         } catch (Exception e) {
             log.warn("Auction ranking refresh failed", e);
+        }
+    }
+
+    private List<Auction> loadRankingCandidates() {
+        int cacheSize = properties.getCacheSize();
+        List<Auction> signalAuctions = auctionRepository.findByStatusWithPopularitySignal(AuctionStatus.ACTIVE);
+        if (signalAuctions.size() >= cacheSize) {
+            return signalAuctions;
+        }
+
+        Set<Long> selectedIds = signalAuctions.stream()
+                .map(Auction::getId)
+                .collect(Collectors.toSet());
+        List<Auction> candidates = new ArrayList<>(signalAuctions);
+        if (candidates.size() >= cacheSize) {
+            return candidates;
+        }
+
+        List<Auction> latestActiveAuctions = auctionRepository.findByStatusOrderByStartedAtDescIdDesc(
+                AuctionStatus.ACTIVE,
+                PageRequest.of(0, cacheSize)
+        );
+        for (Auction auction : latestActiveAuctions) {
+            if (candidates.size() >= cacheSize) {
+                break;
+            }
+            if (selectedIds.add(auction.getId())) {
+                candidates.add(auction);
+            }
+        }
+        return candidates;
+    }
+
+    private void trimToCacheSize(String key) {
+        Long size = redisTemplate.opsForZSet().zCard(key);
+        if (size != null && size > properties.getCacheSize()) {
+            redisTemplate.opsForZSet().removeRange(key, 0, size - properties.getCacheSize() - 1);
         }
     }
 
@@ -154,14 +184,13 @@ public class AuctionRankingService {
         return activeAuctions.stream()
                 .map(a -> {
                     Card card = cardMap.get(a.getCardId());
-                    long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     long bidCount = bidCounts.getOrDefault(a.getId(), 0L);
+                    long likeCount = likeCounts.getOrDefault(a.getId(), 0L);
                     double score = likeCount * properties.getLikeWeight() + bidCount * properties.getBidWeight();
                     SearchAuctionResponse response = toSearchAuctionResponse(
-                            a, card, sellerNicknames.get(a.getSellerId()), likeCount);
+                            a, card, sellerNicknames.get(a.getSellerId()));
                     return new PopularAuctionItem(response, score);
                 })
-                .filter(item -> item.popularityScore() > 0)
                 .sorted(Comparator.comparingDouble(PopularAuctionItem::popularityScore).reversed())
                 .limit(size)
                 .map(PopularAuctionItem::response)
@@ -185,8 +214,7 @@ public class AuctionRankingService {
     private SearchAuctionResponse toSearchAuctionResponse(
             Auction auction,
             Card card,
-            String sellerNickname,
-            long likeCount
+            String sellerNickname
     ) {
         return new SearchAuctionResponse(
                 auction.getId(),
@@ -203,8 +231,7 @@ public class AuctionRankingService {
                 auction.getStatus(),
                 auction.getStartedAt(),
                 auction.getEndedAt(),
-                auction.getCreatedAt(),
-                likeCount
+                auction.getCreatedAt()
         );
     }
 

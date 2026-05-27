@@ -20,7 +20,6 @@ public record SearchAuctionResponse(
         AuctionStatus status,
         LocalDateTime startedAt,
         LocalDateTime endedAt,
-        LocalDateTime createdAt,
-        long likeCount
+        LocalDateTime createdAt
 ) {
 }

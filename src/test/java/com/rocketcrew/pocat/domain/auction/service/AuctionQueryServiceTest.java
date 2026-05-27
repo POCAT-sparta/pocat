@@ -127,7 +127,7 @@ class AuctionQueryServiceTest {
             SearchAuctionResponse resp = new SearchAuctionResponse(
                     1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.ACTIVE, null, null, null, 0L);
+                    AuctionStatus.ACTIVE, null, null, null);
             Page<SearchAuctionResponse> page = new PageImpl<>(List.of(resp), pageable, 1);
             given(auctionRepository.searchAuctions(any(), eq(pageable))).willReturn(page);
 
@@ -170,7 +170,7 @@ class AuctionQueryServiceTest {
             AdminAuctionResponse resp = new AdminAuctionResponse(
                     1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.PENDING, null, null, 0L);
+                    AuctionStatus.PENDING, null, null);
             Page<AdminAuctionResponse> page = new PageImpl<>(List.of(resp), pageable, 1);
             given(auctionRepository.searchAdminAuctions(any(), eq(pageable))).willReturn(page);
 
@@ -212,7 +212,7 @@ class AuctionQueryServiceTest {
             SearchAuctionResponse resp = new SearchAuctionResponse(
                     1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.ACTIVE, null, null, null, 0L);
+                    AuctionStatus.ACTIVE, null, null, null);
             Page<SearchAuctionResponse> page = new PageImpl<>(List.of(resp), pageable, 1);
             given(auctionRepository.searchMyAuctions(eq(2L), any(), eq(pageable))).willReturn(page);
 

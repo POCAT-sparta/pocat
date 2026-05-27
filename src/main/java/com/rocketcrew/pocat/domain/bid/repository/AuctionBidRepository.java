@@ -13,6 +13,9 @@ import java.util.Optional;
 
 public interface AuctionBidRepository extends JpaRepository<AuctionBid, Long>, AuctionBidRepositoryCustom {
 
+    // 경매 종료 시 해당 경매의 모든 입찰 상태를 WON/LOST로 정리하기 위해 조회한다.
+    List<AuctionBid> findAllByAuctionId(Long auctionId);
+
     Optional<AuctionBid> findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
             Long auctionId,
             Long userId,

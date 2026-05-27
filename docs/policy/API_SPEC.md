@@ -827,8 +827,7 @@ Authorization: Bearer {accessToken}
         "status": "ACTIVE",
         "startedAt": "2026-05-01T00:00:00",
         "endedAt": "2026-05-04T00:00:00",
-        "createdAt": "2026-05-01T00:00:00",
-        "likeCount": 15
+        "createdAt": "2026-05-01T00:00:00"
       }
     ],
     "totalElements": 50,
@@ -875,8 +874,7 @@ Authorization: Bearer {accessToken}
       "status": "ACTIVE",
       "startedAt": "2026-05-01T00:00:00",
       "endedAt": "2026-05-04T00:00:00",
-      "createdAt": "2026-05-01T00:00:00",
-      "likeCount": 15
+      "createdAt": "2026-05-01T00:00:00"
     }
   ],
   "message": ""
@@ -924,8 +922,7 @@ Authorization: Bearer {accessToken}
         "highestPrice": 150000,
         "status": "ACTIVE",
         "startedAt": "2026-05-15T12:00:00",
-        "endedAt": "2026-05-18T12:00:00",
-        "likeCount": 7
+        "endedAt": "2026-05-18T12:00:00"
       }
     ],
     "totalElements": 1,
@@ -975,8 +972,7 @@ Authorization: Bearer {accessToken}
         "status": "ACTIVE",
         "startedAt": "2026-05-15T12:00:00",
         "endedAt": "2026-05-18T12:00:00",
-        "createdAt": "2026-05-15T11:00:00",
-        "likeCount": 7
+        "createdAt": "2026-05-15T11:00:00"
       }
     ],
     "totalElements": 1,

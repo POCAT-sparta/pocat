@@ -126,7 +126,7 @@ class AuctionControllerTest {
             SearchAuctionResponse resp = new SearchAuctionResponse(
                     1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.ACTIVE, null, null, null, 5L);
+                    AuctionStatus.ACTIVE, null, null, null);
             given(rankingService.getPopular(anyInt())).willReturn(List.of(resp));
 
             mockMvc.perform(get("/api/v1/auctions/popular"))
@@ -159,7 +159,7 @@ class AuctionControllerTest {
             SearchAuctionResponse resp = new SearchAuctionResponse(
                     1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.ACTIVE, null, null, null, 0L);
+                    AuctionStatus.ACTIVE, null, null, null);
             Page<SearchAuctionResponse> page = new PageImpl<>(List.of(resp), PageRequest.of(0, 20), 1);
             given(queryService.getAuctions(any(), any(), any(), any(), any(), any(), any())).willReturn(page);
 
@@ -194,7 +194,7 @@ class AuctionControllerTest {
             AdminAuctionResponse resp = new AdminAuctionResponse(
                     1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.PENDING, null, null, 0L);
+                    AuctionStatus.PENDING, null, null);
             Page<AdminAuctionResponse> page = new PageImpl<>(List.of(resp), PageRequest.of(0, 20), 1);
             given(queryService.getAdminAuctions(any(), any(), any(), any(), any(), any(), any())).willReturn(page);
 
@@ -228,7 +228,7 @@ class AuctionControllerTest {
             SearchAuctionResponse resp = new SearchAuctionResponse(
                     1L, 1L, "판매자", "리자몽 경매", 1L, "리자몽",
                     CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.ACTIVE, null, null, null, 0L);
+                    AuctionStatus.ACTIVE, null, null, null);
             Page<SearchAuctionResponse> page = new PageImpl<>(List.of(resp), PageRequest.of(0, 20), 1);
             given(queryService.getMyAuctions(anyLong(), any(), any())).willReturn(page);
 
