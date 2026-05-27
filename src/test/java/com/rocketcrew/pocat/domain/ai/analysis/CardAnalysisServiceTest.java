@@ -10,6 +10,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -80,9 +81,8 @@ class CardAnalysisServiceTest {
         psa10Card = Card.builder()
                 .userId(1L)
                 .name("뮤츠")
-                .series("SV")
-                .setId("sv1")
-                .setName("스칼렛 & 바이올렛")
+                .series(TestFixtures.aSeries())
+                .pokemonSet(TestFixtures.aPokemonSet())
                 .cardNumber("001")
                 .rarity("SSR")
                 .category(CardCategory.POKEMON)
