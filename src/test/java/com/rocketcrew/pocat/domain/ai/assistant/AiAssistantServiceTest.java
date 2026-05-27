@@ -172,7 +172,7 @@ class AiAssistantServiceTest {
 
             // then
             // usage is null in @BeforeEach stub → tokens default to 0
-            verify(aiUsageMetrics).recordUsage(0, 0, anyLong(), anyString());
+            verify(aiUsageMetrics).recordUsage(eq(0), eq(0), anyLong(), anyString());
         }
     }
 
@@ -200,18 +200,14 @@ class AiAssistantServiceTest {
         @DisplayName("chat() 성공 시 recordUsage에 실제 토큰 값(>0)이 전달되어야 한다")
         void chat_extractsTokensFromChatResponse() {
             // Given: ChatResponse with real usage metadata returned from chatResponseSpec
-            ChatResponse chatResponse = org.mockito.Mockito.mock(ChatResponse.class);
-            ChatResponseMetadata metadata = org.mockito.Mockito.mock(ChatResponseMetadata.class);
-            Usage usage = org.mockito.Mockito.mock(Usage.class);
-
+            ChatResponse chatResponse = mock(ChatResponse.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+            given(chatResponse.getResult().getOutput().getText()).willReturn(AI_REPLY);
+            ChatResponseMetadata metadata = mock(ChatResponseMetadata.class);
+            Usage usage = mock(Usage.class);
             given(chatResponse.getMetadata()).willReturn(metadata);
             given(metadata.getUsage()).willReturn(usage);
             given(usage.getPromptTokens()).willReturn(120);
             given(usage.getCompletionTokens()).willReturn(80);
-
-            // The fix must make callResponseSpec return a ChatResponse (not just content()),
-            // and extract tokens from it. Until the fix, recordUsage is called with 0,0,0.
-            // We stub chatResponse() to return the mock ChatResponse.
             given(callResponseSpec.chatResponse()).willReturn(chatResponse);
 
             AiChatRequest request = new AiChatRequest("토큰 추출 테스트", null);
