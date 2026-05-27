@@ -39,7 +39,7 @@ public class DomainDataSeeder {
 
     /** series-names.yml → Series.nameKo 업데이트 */
     private void enrichSeriesNameKo() {
-        Map<String, List<String>> enToKoList = loadYamlKoToEn("/series-names.yml");
+        Map<String, List<String>> enToKoList = loadYamlAsEnToKoList("/series-names.yml");
         enToKoList.forEach((en, koList) -> {
             String joined = String.join(" ", koList);
             seriesRepository.findByName(en).ifPresent(s -> {
@@ -51,10 +51,12 @@ public class DomainDataSeeder {
 
     /** set-names.yml → PokemonSet.nameKo 업데이트 */
     private void enrichPokemonSetNameKo() {
-        Map<String, List<String>> enToKoList = loadYamlKoToEn("/set-names.yml");
+        Map<String, List<String>> enToKoList = loadYamlAsEnToKoList("/set-names.yml");
+        if (enToKoList.isEmpty()) return;
+        List<PokemonSet> allSets = pokemonSetRepository.findAll();
         enToKoList.forEach((en, koList) -> {
             String joined = String.join(" ", koList);
-            pokemonSetRepository.findAll().stream()
+            allSets.stream()
                     .filter(ps -> ps.getName().equals(en))
                     .forEach(ps -> {
                         ps.updateNameKo(joined);
@@ -106,7 +108,7 @@ public class DomainDataSeeder {
      * YAML 파일에서 ko → en 맵을 로드하고, en → [ko, ko2, ...] 역방향 맵으로 변환.
      * YAML 구조: names: {한글명: 영문명, ...}
      */
-    private Map<String, List<String>> loadYamlKoToEn(String resource) {
+    private Map<String, List<String>> loadYamlAsEnToKoList(String resource) {
         Map<String, List<String>> enToKoList = new LinkedHashMap<>();
         try (InputStream is = getClass().getResourceAsStream(resource)) {
             if (is == null) {
