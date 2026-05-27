@@ -5,7 +5,6 @@ import com.rocketcrew.pocat.domain.payment.entity.WebhookEventStatus;
 import com.rocketcrew.pocat.domain.payment.repository.WebhookEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,28 +25,34 @@ public class WebhookEventCommandService {
 
     /**
      * 웹훅 이벤트를 RECEIVED 상태로 최초 기록한다.
-     * (payment_id + event_type) unique 충돌 시 기존 이벤트를 반환한다.
+     * 이미 존재하는 이벤트가 있으면 그대로 반환한다 (중복 웹훅 감지용).
      *
-     * @return 새로 저장된 이벤트, 또는 이미 존재하는 이벤트 (중복 웹훅 감지용)
+     * 설계 노트:
+     * try-catch(DataIntegrityViolationException) 패턴을 사용하지 않는다.
+     * 이유: saveAndFlush()에서 예외 발생 시 Spring이 REQUIRES_NEW 트랜잭션을
+     * rollback-only로 마킹하여, catch 블록 내 조회 호출이 UnexpectedRollbackException을 유발한다.
+     *
+     * check-first 패턴의 TOCTOU 가능성:
+     * 두 스레드가 동시에 find → 미존재 → save를 실행하면 하나는 unique 충돌로 실패한다.
+     * 실패한 경우 DataIntegrityViolationException이 전파되어 PortOne이 재전송하며,
+     * 재전송 시점에는 기존 레코드가 이미 커밋된 상태이므로 find에서 정상 반환된다.
+     * PortOne 재전송 간격(수 분)을 고려하면 실질적 동시 충돌 가능성은 극히 낮다.
+     *
+     * @return 새로 저장된 이벤트, 또는 이미 존재하는 이벤트
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public WebhookEvent saveReceivedOrGet(String paymentId, String eventType, String rawBody) {
-        try {
-            WebhookEvent event = WebhookEvent.builder()
-                    .paymentId(paymentId)
-                    .eventType(eventType)
-                    .rawBody(rawBody)
-                    .status(WebhookEventStatus.RECEIVED)
-                    .build();
-            return webhookEventRepository.saveAndFlush(event);
-        } catch (DataIntegrityViolationException e) {
-            // unique 충돌: 동일 (paymentId, eventType) 이벤트가 이미 존재 → 기존 이벤트 반환
-            log.warn("WebhookEvent unique 충돌 — 기존 이벤트 재사용 paymentId={} eventType={}", paymentId, eventType);
-            return webhookEventRepository
-                    .findByPaymentIdAndEventType(paymentId, eventType)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "WebhookEvent unique 충돌 후 조회 실패 paymentId=" + paymentId + " eventType=" + eventType));
-        }
+        return webhookEventRepository.findByPaymentIdAndEventType(paymentId, eventType)
+                .orElseGet(() -> {
+                    log.debug("WebhookEvent 신규 기록 paymentId={} eventType={}", paymentId, eventType);
+                    WebhookEvent event = WebhookEvent.builder()
+                            .paymentId(paymentId)
+                            .eventType(eventType)
+                            .rawBody(rawBody)
+                            .status(WebhookEventStatus.RECEIVED)
+                            .build();
+                    return webhookEventRepository.save(event);
+                });
     }
 
     /**
