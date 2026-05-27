@@ -23,4 +23,7 @@ public interface CardRepository extends JpaRepository<Card, Long>, CardRepositor
 
     @Query("SELECT c FROM Card c WHERE c.status = com.rocketcrew.pocat.domain.card.entity.enums.CardStatus.ACTIVE AND (:name IS NULL OR c.name LIKE %:name%) AND (:grade IS NULL OR c.grade = :grade) ORDER BY c.createdAt DESC")
     List<Card> findActiveCardsByNameContainingAndGrade(@Param("name") String name, @Param("grade") CardGrade grade, Pageable pageable);
+
+    @Query("SELECT c FROM Card c WHERE c.category = com.rocketcrew.pocat.domain.card.entity.enums.CardCategory.POKEMON AND c.pokemon IS NULL")
+    List<Card> findPokemonCardsWithNullPokemon();
 }
