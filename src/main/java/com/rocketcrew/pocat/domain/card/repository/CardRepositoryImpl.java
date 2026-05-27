@@ -25,6 +25,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
 
         List<Card> content = queryFactory
                 .selectFrom(card)
+                .leftJoin(card.series).fetchJoin()
+                .leftJoin(card.pokemonSet).fetchJoin()
                 .where(builder)
                 .orderBy(card.createdAt.desc(), card.id.desc())
                 .offset(pageable.getOffset())
@@ -34,6 +36,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         Long total = queryFactory
                 .select(card.count())
                 .from(card)
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .where(builder)
                 .fetchOne();
 
@@ -49,16 +53,16 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
             String kw = condition.keyword().trim();
             builder.and(
                 card.name.containsIgnoreCase(kw)
-                    .or(card.series.containsIgnoreCase(kw))
-                    .or(card.setName.containsIgnoreCase(kw))
+                    .or(card.series.name.containsIgnoreCase(kw))
+                    .or(card.pokemonSet.name.containsIgnoreCase(kw))
             );
         }
         if (StringUtils.hasText(condition.series())) {
-            builder.and(card.series.equalsIgnoreCase(condition.series().trim()));
+            builder.and(card.series.name.equalsIgnoreCase(condition.series().trim()));
         }
         if (StringUtils.hasText(condition.setName())) {
             String normalizedSetName = condition.setName().trim();
-            builder.and(card.setName.equalsIgnoreCase(normalizedSetName));
+            builder.and(card.pokemonSet.name.equalsIgnoreCase(normalizedSetName));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));

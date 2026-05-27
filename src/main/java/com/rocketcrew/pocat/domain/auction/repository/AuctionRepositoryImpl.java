@@ -4,8 +4,9 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.ComparableExpressionBase;
-import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rocketcrew.pocat.domain.auction.dto.request.AuctionSearchCondition;
 import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
@@ -13,7 +14,6 @@ import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.QAuction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.QCard;
-import com.rocketcrew.pocat.domain.like.entity.QLike;
 import com.rocketcrew.pocat.domain.user.entity.QUser;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
@@ -32,22 +32,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
+    private static final List<AuctionStatus> PUBLIC_LIST_STATUSES = List.of(
+            AuctionStatus.ACTIVE,
+            AuctionStatus.ENDED,
+            AuctionStatus.NO_BIDDER
+    );
+
     private final JPAQueryFactory queryFactory;
 
     @Override
     public Page<SearchAuctionResponse> searchAuctions(AuctionSearchCondition condition, Pageable pageable) {
         QAuction auction = QAuction.auction;
         QCard card = QCard.card;
-        BooleanBuilder where = buildCondition(condition, auction, card);
+        BooleanBuilder where = buildCondition(condition, auction, card, true);
 
-        return fetchPage(pageable, auction, card, where);
+        return fetchPage(pageable, auction, card, where, true);
     }
 
     @Override
     public Page<AdminAuctionResponse> searchAdminAuctions(AuctionSearchCondition condition, Pageable pageable) {
         QAuction auction = QAuction.auction;
         QCard card = QCard.card;
-        BooleanBuilder where = buildCondition(condition, auction, card);
+        BooleanBuilder where = buildCondition(condition, auction, card, false);
 
         return fetchAdminPage(pageable, auction, card, where);
     }
@@ -58,12 +64,17 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
         QCard card = QCard.card;
         BooleanBuilder where = buildMyCondition(sellerId, status, auction);
 
-        return fetchPage(pageable, auction, card, where);
+        return fetchPage(pageable, auction, card, where, false);
     }
 
-    private Page<SearchAuctionResponse> fetchPage(Pageable pageable, QAuction auction, QCard card, BooleanBuilder where) {
+    private Page<SearchAuctionResponse> fetchPage(
+            Pageable pageable,
+            QAuction auction,
+            QCard card,
+            BooleanBuilder where,
+            boolean usePublicStatusOrder
+    ) {
         QUser seller = QUser.user;
-        QLike like = QLike.like;
         List<SearchAuctionResponse> content = queryFactory
                 .select(Projections.constructor(SearchAuctionResponse.class,
                         auction.id,
@@ -80,15 +91,14 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.status,
                         auction.startedAt,
                         auction.endedAt,
-                        auction.createdAt,
-                        JPAExpressions.select(like.count())
-                                .from(like)
-                                .where(like.auctionId.eq(auction.id))))
+                        auction.createdAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
-                .orderBy(orderSpecifiers(pageable, auction))
+                .orderBy(orderSpecifiers(pageable, auction, usePublicStatusOrder))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -97,6 +107,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .select(auction.count())
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .fetchOne();
@@ -106,7 +118,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
     private Page<AdminAuctionResponse> fetchAdminPage(Pageable pageable, QAuction auction, QCard card, BooleanBuilder where) {
         QUser seller = QUser.user;
-        QLike like = QLike.like;
         List<AdminAuctionResponse> content = queryFactory
                 .select(Projections.constructor(AdminAuctionResponse.class,
                         auction.id,
@@ -122,12 +133,11 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.buyoutPrice,
                         auction.status,
                         auction.startedAt,
-                        auction.endedAt,
-                        JPAExpressions.select(like.count())
-                                .from(like)
-                                .where(like.auctionId.eq(auction.id))))
+                        auction.endedAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .orderBy(orderSpecifiers(pageable, auction))
@@ -139,6 +149,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .select(auction.count())
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .fetchOne();
@@ -146,29 +158,36 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 
-    private BooleanBuilder buildCondition(AuctionSearchCondition condition, QAuction auction, QCard card) {
+    private BooleanBuilder buildCondition(
+            AuctionSearchCondition condition,
+            QAuction auction,
+            QCard card,
+            boolean defaultToPublicStatuses
+    ) {
         BooleanBuilder builder = new BooleanBuilder();
 
         if (condition.status() != null) {
             builder.and(auction.status.eq(condition.status()));
+        } else if (defaultToPublicStatuses) {
+            builder.and(auction.status.in(PUBLIC_LIST_STATUSES));
         }
 
         if (StringUtils.hasText(condition.keyword())) {
             String keyword = condition.keyword();
             builder.and(
                     card.name.containsIgnoreCase(keyword)
-                            .or(card.series.containsIgnoreCase(keyword))
-                            .or(card.setName.containsIgnoreCase(keyword))
-                            .or(card.setId.containsIgnoreCase(keyword))
+                            .or(card.series.name.containsIgnoreCase(keyword))
+                            .or(card.pokemonSet.name.containsIgnoreCase(keyword))
+                            .or(card.pokemonSet.setId.containsIgnoreCase(keyword))
                             .or(card.cardNumber.containsIgnoreCase(keyword))
                             .or(auction.title.containsIgnoreCase(keyword))
             );
         }
         if (StringUtils.hasText(condition.series())) {
-            builder.and(card.series.containsIgnoreCase(condition.series()));
+            builder.and(card.series.name.containsIgnoreCase(condition.series()));
         }
         if (StringUtils.hasText(condition.setName())) {
-            builder.and(card.setName.containsIgnoreCase(condition.setName()));
+            builder.and(card.pokemonSet.name.containsIgnoreCase(condition.setName()));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));
@@ -193,14 +212,21 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
     }
 
     private OrderSpecifier<?>[] orderSpecifiers(Pageable pageable, QAuction auction) {
-        if (pageable.getSort().isUnsorted()) {
-            return new OrderSpecifier<?>[] {
-                    auction.startedAt.desc(),
-                    auction.id.desc()
-            };
+        return orderSpecifiers(pageable, auction, false);
+    }
+
+    private OrderSpecifier<?>[] orderSpecifiers(Pageable pageable, QAuction auction, boolean usePublicStatusOrder) {
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        if (usePublicStatusOrder) {
+            orders.add(publicStatusOrder(auction));
         }
 
-        List<OrderSpecifier<?>> orders = new ArrayList<>();
+        if (pageable.getSort().isUnsorted()) {
+            orders.add(auction.startedAt.desc());
+            orders.add(auction.id.desc());
+            return orders.toArray(OrderSpecifier[]::new);
+        }
+
         for (Sort.Order sort : pageable.getSort()) {
             orders.add(toOrderSpecifier(sort, auction));
         }
@@ -209,6 +235,15 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
         }
 
         return orders.toArray(OrderSpecifier[]::new);
+    }
+
+    private OrderSpecifier<Integer> publicStatusOrder(QAuction auction) {
+        NumberExpression<Integer> statusOrder = new CaseBuilder()
+                .when(auction.status.eq(AuctionStatus.ACTIVE)).then(0)
+                .when(auction.status.eq(AuctionStatus.ENDED)).then(1)
+                .when(auction.status.eq(AuctionStatus.NO_BIDDER)).then(2)
+                .otherwise(3);
+        return statusOrder.asc();
     }
 
     private boolean hasIdSort(Sort sort) {

@@ -48,7 +48,7 @@ public class CardSearchTool {
                         m.put("id", card.getId());
                         m.put("name", card.getName());
                         m.put("grade", card.getGrade().toString());
-                        m.put("series", card.getSeries());
+                        m.put("series", card.getSeries() != null ? card.getSeries().getName() : null);
                         m.put("rarity", card.getRarity());
                         m.put("imageUrl", card.getImageUrl());
                         return m;

@@ -12,6 +12,9 @@ import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionInspectionResult;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.event.AuctionCancelledEvent;
+import com.rocketcrew.pocat.domain.auction.event.AuctionInspectionFailedEvent;
+import com.rocketcrew.pocat.domain.auction.event.AuctionInspectionPassedEvent;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -34,6 +37,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -41,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -51,10 +56,12 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,6 +92,9 @@ class AuctionCommandServiceTest {
     @Mock
     RLock rLock;
 
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     private Card activeCard;
 
     @BeforeEach
@@ -96,9 +106,8 @@ class AuctionCommandServiceTest {
         activeCard = Card.builder()
                 .userId(1L)
                 .name("피카츄")
-                .series("SV")
-                .setId("sv1")
-                .setName("스칼렛 & 바이올렛")
+                .series(com.rocketcrew.pocat.support.TestFixtures.aSeries())
+                .pokemonSet(com.rocketcrew.pocat.support.TestFixtures.aPokemonSet())
                 .cardNumber("001")
                 .rarity("RR")
                 .category(CardCategory.POKEMON)
@@ -298,6 +307,7 @@ class AuctionCommandServiceTest {
             // then
             assertThat(response.auctionId()).isEqualTo(1L);
             assertThat(response.status()).isEqualTo(AuctionStatus.CANCELLED);
+            verify(eventPublisher, never()).publishEvent(any());
         }
 
         @Test
@@ -366,6 +376,15 @@ class AuctionCommandServiceTest {
             // then
             assertThat(response.status()).isEqualTo(AuctionStatus.CANCELLED);
             assertThat(response.reason()).isEqualTo("정책 위반");
+            verify(eventPublisher).publishEvent(ArgumentMatchers.<Object>argThat(event -> {
+                if (!(event instanceof AuctionCancelledEvent cancelledEvent)) {
+                    return false;
+                }
+                return cancelledEvent.getAuctionId().equals(1L)
+                        && cancelledEvent.getSellerId().equals(2L)
+                        && cancelledEvent.getCancelledBy().equals(1L)
+                        && cancelledEvent.getReason().equals("정책 위반");
+            }));
         }
 
         @Test
@@ -466,6 +485,15 @@ class AuctionCommandServiceTest {
 
             // then
             assertThat(response.status()).isEqualTo(AuctionStatus.APPROVED);
+            verify(eventPublisher).publishEvent(ArgumentMatchers.<Object>argThat(event -> {
+                if (!(event instanceof AuctionInspectionPassedEvent passedEvent)) {
+                    return false;
+                }
+                return passedEvent.getAuctionId().equals(1L)
+                        && passedEvent.getSellerId().equals(2L)
+                        && passedEvent.getAuctionTitle().equals(auction.getTitle())
+                        && passedEvent.getApprovedAt() != null;
+            }));
         }
 
         @Test
@@ -484,6 +512,15 @@ class AuctionCommandServiceTest {
             // then
             assertThat(response.status()).isEqualTo(AuctionStatus.REJECTED);
             assertThat(response.reason()).isEqualTo("카드 상태 불량");
+            verify(eventPublisher).publishEvent(ArgumentMatchers.<Object>argThat(event -> {
+                if (!(event instanceof AuctionInspectionFailedEvent failedEvent)) {
+                    return false;
+                }
+                return failedEvent.getAuctionId().equals(1L)
+                        && failedEvent.getSellerId().equals(2L)
+                        && failedEvent.getAuctionTitle().equals(auction.getTitle())
+                        && failedEvent.getFailedReason().equals("카드 상태 불량");
+            }));
         }
 
         @Test

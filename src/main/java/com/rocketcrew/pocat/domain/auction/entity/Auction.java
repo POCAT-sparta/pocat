@@ -2,6 +2,8 @@ package com.rocketcrew.pocat.domain.auction.entity;
 
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -105,8 +107,51 @@ public class Auction extends BaseEntity {
         this.endedAt = null;
     }
 
+    // 승인된 경매를 실제 진행 상태로 전환하고 시작/종료 시각을 확정한다.
+    public void activate(LocalDateTime startedAt, LocalDateTime endedAt) {
+        validateApproved();
+        validateAuctionPeriod(startedAt, endedAt);
+        this.status = AuctionStatus.ACTIVE;
+        this.startedAt = startedAt;
+        this.endedAt = endedAt;
+        this.reason = null;
+    }
+
+    // 입찰자가 있는 경매를 정상 종료 상태로 전환한다.
+    public void end() {
+        validateActive();
+        this.status = AuctionStatus.ENDED;
+    }
+
+    // 입찰자가 없는 경매를 유찰 상태로 전환한다.
+    public void markNoBidder() {
+        validateActive();
+        this.status = AuctionStatus.NO_BIDDER;
+    }
+
     public void updateHighestBid(Long highestPrice, Long highestBidderId) {
         this.highestPrice = highestPrice;
         this.highestBidderId = highestBidderId;
+    }
+
+    // 검수 승인 상태인 경매만 ACTIVE 상태로 전환할 수 있도록 보장한다.
+    private void validateApproved() {
+        if (this.status != AuctionStatus.APPROVED) {
+            throw new AuctionException(ErrorCode.AUCTION_INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    // 진행 중인 경매만 종료 또는 유찰 상태로 전환할 수 있도록 보장한다.
+    private void validateActive() {
+        if (this.status != AuctionStatus.ACTIVE) {
+            throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
+        }
+    }
+
+    // 경매 시작/종료 시각이 비어 있거나 순서가 잘못되지 않았는지 확인한다.
+    private void validateAuctionPeriod(LocalDateTime startedAt, LocalDateTime endedAt) {
+        if (startedAt == null || endedAt == null || !endedAt.isAfter(startedAt)) {
+            throw new AuctionException(ErrorCode.INVALID_INPUT);
+        }
     }
 }

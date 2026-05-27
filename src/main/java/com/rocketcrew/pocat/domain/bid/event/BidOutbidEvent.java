@@ -7,14 +7,14 @@ import lombok.Getter;
 public class BidOutbidEvent extends BaseEvent {
 
     private final Long auctionId;
-    private final Long previousBidderId; // 밀려난 입찰자
-    private final Long bidPrice;         // 새 입찰가
+    private final Long previousBidderId;
+    private final Long currentHighestPrice;
 
     public BidOutbidEvent(Long auctionId, Long previousBidderId,
-                          Long bidPrice) {
+                          Long currentHighestPrice) {
         super("bid.outbid");
         this.auctionId = auctionId;
         this.previousBidderId = previousBidderId;
-        this.bidPrice = bidPrice;
+        this.currentHighestPrice = currentHighestPrice;
     }
 }

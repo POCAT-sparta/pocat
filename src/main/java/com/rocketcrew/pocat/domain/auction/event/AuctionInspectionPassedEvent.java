@@ -10,15 +10,15 @@ public class AuctionInspectionPassedEvent extends BaseEvent {
 
     private final Long auctionId;
     private final Long sellerId;
-    private final String cardName;
-    private final LocalDateTime endedAt;
+    private final String auctionTitle;
+    private final LocalDateTime approvedAt;
 
     public AuctionInspectionPassedEvent(Long auctionId, Long sellerId,
-                                        String cardName, LocalDateTime endedAt) {
+                                        String auctionTitle, LocalDateTime approvedAt) {
         super("auction.inspection.passed");
         this.auctionId = auctionId;
         this.sellerId = sellerId;
-        this.cardName = cardName;
-        this.endedAt = endedAt;
+        this.auctionTitle = auctionTitle;
+        this.approvedAt = approvedAt;
     }
 }

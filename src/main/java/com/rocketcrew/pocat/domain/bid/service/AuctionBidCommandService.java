@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.bid.dto.request.CreateBidRequest;
 import com.rocketcrew.pocat.domain.bid.dto.response.CreateAuctionBidResponse;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
+import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
@@ -15,6 +16,7 @@ import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.BidException;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -33,12 +36,14 @@ public class AuctionBidCommandService {
 
     private static final String BID_LOCK_KEY_PREFIX = "auction:bid:lock:";
     private static final long BID_LOCK_WAIT_SECONDS = 0L;
+    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionBidRepository auctionBidRepository;
     private final AuctionQueryService auctionQueryService;
     private final UserQueryService userQueryService;
     private final EntityManager entityManager;
     private final RedissonClient redissonClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CreateAuctionBidResponse createBid(Long userId, Long auctionId, CreateBidRequest request) {
         if (request == null) {
@@ -65,7 +70,7 @@ public class AuctionBidCommandService {
         validateNotCurrentHighestBidder(userId, latestAuction);
         validateBidPrice(request.bidPrice(), latestAuction);
 
-        markPreviousLeadingBidAsOutbid(latestAuction);
+        markPreviousLeadingBidAsOutbid(latestAuction, request.bidPrice());
 
         AuctionBid auctionBid = AuctionBid.builder()
                 .userId(userId)
@@ -85,7 +90,7 @@ public class AuctionBidCommandService {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(AUCTION_ZONE);
         if (auction.getStartedAt() == null || auction.getEndedAt() == null) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
@@ -132,7 +137,7 @@ public class AuctionBidCommandService {
         }
     }
 
-    private void markPreviousLeadingBidAsOutbid(Auction auction) {
+    private void markPreviousLeadingBidAsOutbid(Auction auction, Long currentHighestPrice) {
         Long previousHighestBidderId = auction.getHighestBidderId();
         if (previousHighestBidderId == null) {
             return;
@@ -145,7 +150,11 @@ public class AuctionBidCommandService {
                 )
                 .ifPresent(previousLeadingBid -> {
                     previousLeadingBid.markOutbid();
-                    // TODO Publish bid outbid event to Kafka for previous highest bidder notification.
+                    eventPublisher.publishEvent(new BidOutbidEvent(
+                            auction.getId(),
+                            previousHighestBidderId,
+                            currentHighestPrice
+                    ));
                 });
     }
 
