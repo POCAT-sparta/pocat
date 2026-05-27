@@ -9,6 +9,7 @@ import com.rocketcrew.pocat.domain.ai.assistant.tools.BidTool;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.CardSearchTool;
 import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,7 +21,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -159,6 +164,61 @@ class AiAssistantServiceTest {
 
             // then
             verify(aiUsageMetrics).recordUsage(0, 0, 0L, "gemini-1.5-flash");
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // CircuitBreaker + RateLimiter (infra-fix #116)
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("CircuitBreaker / RateLimiter (#116)")
+    class CircuitBreakerAndRateLimiter {
+
+        @Test
+        @DisplayName("chat() 메서드에 @CircuitBreaker 어노테이션이 선언되어 있어야 한다")
+        void circuitBreaker_chat_triggersCircuitBreakerOnMultipleFailures() throws NoSuchMethodException {
+            // The fix must add @CircuitBreaker to the chat() method.
+            // This test will FAIL until the annotation is added.
+            Method chatMethod = AiAssistantService.class.getMethod("chat", Long.class, AiChatRequest.class);
+            CircuitBreaker cb = chatMethod.getAnnotation(CircuitBreaker.class);
+            assertThat(cb)
+                    .as("chat() must be annotated with @CircuitBreaker")
+                    .isNotNull();
+            assertThat(cb.name()).isEqualTo("aiService");
+        }
+
+        @Test
+        @DisplayName("chat() 성공 시 recordUsage에 실제 토큰 값(>0)이 전달되어야 한다")
+        void chat_extractsTokensFromChatResponse() {
+            // Given: ChatResponse with real usage metadata returned from chatResponseSpec
+            ChatResponse chatResponse = org.mockito.Mockito.mock(ChatResponse.class);
+            ChatResponseMetadata metadata = org.mockito.Mockito.mock(ChatResponseMetadata.class);
+            Usage usage = org.mockito.Mockito.mock(Usage.class);
+
+            given(chatResponse.getMetadata()).willReturn(metadata);
+            given(metadata.getUsage()).willReturn(usage);
+            given(usage.getPromptTokens()).willReturn(120);
+            given(usage.getCompletionTokens()).willReturn(80);
+
+            // The fix must make callResponseSpec return a ChatResponse (not just content()),
+            // and extract tokens from it. Until the fix, recordUsage is called with 0,0,0.
+            // We stub chatResponse() to return the mock ChatResponse.
+            given(callResponseSpec.chatResponse()).willReturn(chatResponse);
+
+            AiChatRequest request = new AiChatRequest("토큰 추출 테스트", null);
+
+            // when
+            aiAssistantService.chat(USER_ID, request);
+
+            // then: after fix, recordUsage must NOT be called with all-zero tokens
+            // This will FAIL until the implementation uses ChatResponse.getMetadata().getUsage()
+            // Verify recordUsage is called with promptTokens=120, completionTokens=80
+            verify(aiUsageMetrics).recordUsage(
+                    org.mockito.ArgumentMatchers.eq(120),
+                    org.mockito.ArgumentMatchers.eq(80),
+                    anyLong(),
+                    anyString()
+            );
         }
     }
 
