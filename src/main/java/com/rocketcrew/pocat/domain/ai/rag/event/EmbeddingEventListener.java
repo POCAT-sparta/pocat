@@ -15,14 +15,14 @@ public class EmbeddingEventListener {
 
     private final EmbeddingService embeddingService;
 
-    @Async
+    @Async  // intentionally no executor — embedding doesn't require SecurityContext
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCardEmbedding(CardEmbeddingEvent event) {
         log.debug("Embedding card after commit: cardId={}", event.cardId());
         embeddingService.embedCard(event.cardId(), event.cardText());
     }
 
-    @Async
+    @Async  // intentionally no executor — embedding doesn't require SecurityContext
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTradePostEmbedding(TradePostEmbeddingEvent event) {
         log.debug("Embedding trade post after commit: postId={}", event.postId());

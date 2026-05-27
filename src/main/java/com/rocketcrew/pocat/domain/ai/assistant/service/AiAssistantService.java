@@ -109,7 +109,7 @@ public class AiAssistantService {
         } catch (Exception e) {
             log.error("Chat processing failed for userId: {}", userId, e);
             aiUsageMetrics.recordError("CHAT_FAILED", MODEL_NAME);
-            throw new RuntimeException("채팅 처리 중 오류 발생: " + e.getMessage(), e);
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 

@@ -3,6 +3,8 @@ package com.rocketcrew.pocat.domain.ai.assistant.controller;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -11,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -28,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 세션 히스토리 및 RAG 컨텍스트 활용.
  */
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/ai/assistant")
 @RequiredArgsConstructor
@@ -51,7 +55,7 @@ public class AiStreamController {
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> stream(
-            @RequestParam String message,
+            @RequestParam @NotBlank @Size(max = 2000) String message,
             @RequestParam(required = false) String sessionId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
