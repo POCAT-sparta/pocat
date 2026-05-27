@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface PokemonSetRepository extends JpaRepository<PokemonSet, Long> {
     Optional<PokemonSet> findBySetId(String setId);
+    boolean existsByName(String name);
 }
