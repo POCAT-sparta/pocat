@@ -14,6 +14,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.List;
@@ -105,8 +107,11 @@ public class AiStreamController {
                             sink.complete();
                         })
                         .doOnComplete(() -> {
-                            sessionService.addMessage(finalChatSessionId, "user", message, 0);
-                            sessionService.addMessage(finalChatSessionId, "assistant", responseBuilder.toString(), 0);
+                            Mono.fromRunnable(() -> {
+                                sessionService.addMessage(finalChatSessionId, "user", message, 0);
+                                sessionService.addMessage(finalChatSessionId, "assistant", responseBuilder.toString(), 0);
+                            }).subscribeOn(Schedulers.boundedElastic())
+                              .subscribe(null, err -> log.error("Failed to persist session messages for userId={}: {}", userId, err.getMessage()));
 
                             ServerSentEvent<String> doneEvent = ServerSentEvent.<String>builder()
                                     .id(String.valueOf(eventId.incrementAndGet()))
