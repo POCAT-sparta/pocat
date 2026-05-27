@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.bid.event.BidCreatedEvent;
 import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
-import lombok.Getter;
+import com.rocketcrew.pocat.global.event.outbox.OutboxRepository;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -14,8 +14,9 @@ public class BidEventProducer extends BaseEventProducer {
     private static final String TOPIC = "bid";
 
     public BidEventProducer(KafkaTemplate<String, String> kafkaTemplate,
-                            ObjectMapper objectMapper) {
-        super(kafkaTemplate, objectMapper);
+                            ObjectMapper objectMapper,
+                            OutboxRepository outboxRepository) {
+        super(kafkaTemplate, objectMapper, outboxRepository);
     }
 
     // 입찰 생성

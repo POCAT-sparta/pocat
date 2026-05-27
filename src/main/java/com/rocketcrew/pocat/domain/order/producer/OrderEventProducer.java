@@ -6,7 +6,7 @@ import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderDeliveryCompletedEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderDeliveryStartedEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
-import lombok.Getter;
+import com.rocketcrew.pocat.global.event.outbox.OutboxRepository;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,8 +16,9 @@ public class OrderEventProducer extends BaseEventProducer {
     private static final String TOPIC = "order";
 
     public OrderEventProducer(KafkaTemplate<String, String> kafkaTemplate,
-                              ObjectMapper objectMapper) {
-        super(kafkaTemplate, objectMapper);
+                              ObjectMapper objectMapper,
+                              OutboxRepository outboxRepository) {
+        super(kafkaTemplate, objectMapper, outboxRepository);
     }
 
     // 주문 생성

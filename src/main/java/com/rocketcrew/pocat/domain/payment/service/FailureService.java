@@ -4,8 +4,11 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.event.PaymentWindowExpiredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -30,7 +33,6 @@ public class FailureService {
 
     // TODO : 실패 시 왜 실패했는지 받을 수 있어야 함 PORTONE API 확인 필요.
     // TODO : LocalDateTime.now().plusHours(24) -> order.getExpireAt 으로 변경해야 함: 승현님 작업 완료후 진행
-    // TODO : 실패 이벤트 발행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void persistBillingKeyFailure(Payment payment, Order order, Long orderId) {
         payment.fail();

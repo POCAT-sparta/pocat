@@ -33,4 +33,6 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
             @Param("since") LocalDateTime since
     );
 
+    Optional<Order> findByAuctionIdAndBidderRank(Long auctionId, Integer bidderRank);
+
 }

@@ -11,6 +11,8 @@ import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
@@ -50,6 +52,12 @@ public class Order extends BaseEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    @Column(name = "payment_deadline")
+    private LocalDateTime paymentDeadline;
+
+    @Column(name = "bidder_rank")
+    private Integer bidderRank;
+
     public void cancel(String reason) {
         this.status = OrderStatus.CANCELLED;
         this.cancelReason = reason;
@@ -58,7 +66,8 @@ public class Order extends BaseEntity {
         }
     }
 
-    public static Order fromAuction(Long auctionId, Long cardId, Long sellerId, Long buyerId, Long finalPrice) {
+    // 주문 생성 메서드 필요 (서비스레벨에서)
+    public static Order fromAuction(Long auctionId, Long cardId, Long sellerId, Long buyerId, Long finalPrice, Integer bidderRank) {
         return Order.builder()
                 .auctionId(auctionId)
                 .cardId(cardId)
@@ -68,23 +77,34 @@ public class Order extends BaseEntity {
                 .finalPrice(finalPrice)
                 .status(OrderStatus.PAYMENT_PENDING)
                 .deliveryStatus(DeliveryStatus.PREPARING)
+                .bidderRank(bidderRank)
                 .build();
     }
 
-    // 빌링키 자동결제(PAYMENT_PENDING) 또는 PG 직접결제(PAYMENT_FAILED) 성공 시 호출
+    public void openPaymentWindow() {
+        this.paymentDeadline = LocalDateTime.now().plusHours(1);
+    }
+
+    // 빌링키 자동결제(PAYMENT_PENDING) 또는 PG 직접결제(AUTO/DIRECT_PAYMENT_FAILED) 성공 시 호출
     public void completePayment() {
-        if (this.status != OrderStatus.PAYMENT_PENDING && this.status != OrderStatus.PAYMENT_FAILED) {
+        if (this.status != OrderStatus.PAYMENT_PENDING
+                && this.status != OrderStatus.AUTO_PAYMENT_FAILED
+                && this.status != OrderStatus.DIRECT_PAYMENT_FAILED) {
             throw new OrderException(ErrorCode.ORDER_CANNOT_COMPLETE_PAYMENT);
         }
         this.status = OrderStatus.PAYMENT_COMPLETED;
     }
 
-    // 빌링키 자동결제 실패(PAYMENT_PENDING) 또는 PG 직접결제 실패(PAYMENT_FAILED, 멱등) 시 호출
+    // 빌링키 자동결제 실패(PAYMENT_PENDING→AUTO) 또는 PG 직접결제 실패(AUTO/DIRECT→DIRECT, 멱등) 시 호출
     public void failPayment() {
-        if (this.status != OrderStatus.PAYMENT_PENDING && this.status != OrderStatus.PAYMENT_FAILED) {
+        if (this.status != OrderStatus.PAYMENT_PENDING
+                && this.status != OrderStatus.AUTO_PAYMENT_FAILED
+                && this.status != OrderStatus.DIRECT_PAYMENT_FAILED) {
             throw new OrderException(ErrorCode.ORDER_CANNOT_FAIL_PAYMENT);
         }
-        this.status = OrderStatus.PAYMENT_FAILED;
+        this.status = this.status == OrderStatus.PAYMENT_PENDING
+                ? OrderStatus.AUTO_PAYMENT_FAILED
+                : OrderStatus.DIRECT_PAYMENT_FAILED;
     }
 
     public void refund() {

@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.auction.producer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.auction.event.*;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
+import com.rocketcrew.pocat.global.event.outbox.OutboxRepository;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +13,9 @@ public class AuctionEventProducer extends BaseEventProducer {
     private static final String TOPIC = "auction";
 
     public AuctionEventProducer(KafkaTemplate<String, String> kafkaTemplate,
-                                ObjectMapper objectMapper) {
-        super(kafkaTemplate, objectMapper);
+                                ObjectMapper objectMapper,
+                                OutboxRepository outboxRepository) {
+        super(kafkaTemplate, objectMapper, outboxRepository);
     }
 
     // 검수 통과
