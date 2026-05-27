@@ -128,7 +128,7 @@ public class PaymentWebhookService {
                         paymentId, payment.getAmount(), paidAmount);
                 failureService.markFailed(payment.getOrderId());
                 failureService.cancelExpiry(payment.getOrderId());
-                throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+                return;  // 실패 처리 완료 — throw 시 non-200으로 PortOne 불필요 재전송 유발
             }
 
             Order order = orderQueryService.findByOrderid(payment.getOrderId());
