@@ -31,6 +31,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.lang.reflect.Method;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -223,22 +224,15 @@ class CardAnalysisServiceTest {
         }
 
         @Test
-        @DisplayName("RateLimiter 한도 초과 시 ServiceException(429)이 발생해야 한다")
-        void analyzeCard_rateLimiter_returns429OnExceedingLimit() {
-            // Given: the service's analyzeCard method must be annotated with @RateLimiter.
-            // Without Spring AOP we simulate: if RateLimiter is absent the annotation check fails.
-            // We verify the annotation exists via reflection — FAILS until @RateLimiter is added.
-            boolean hasRateLimiter = false;
-            try {
-                java.lang.reflect.Method m = CardAnalysisService.class.getMethod("analyzeCard", Long.class);
-                hasRateLimiter = m.isAnnotationPresent(
-                        io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
-            } catch (NoSuchMethodException e) {
-                // method not found — treat as absent
-            }
-            assertThat(hasRateLimiter)
-                    .as("analyzeCard() must be annotated with @RateLimiter for rate-limiting support")
-                    .isTrue();
+        @DisplayName("analyzeCard() 메서드에 @RateLimiter 어노테이션이 선언되어 있어야 한다")
+        void analyzeCard_isAnnotatedWithRateLimiter() throws NoSuchMethodException {
+            Method m = CardAnalysisService.class.getMethod("analyzeCard", Long.class);
+            io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =
+                    m.getAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
+            assertThat(rl)
+                    .as("analyzeCard() must be annotated with @RateLimiter")
+                    .isNotNull();
+            assertThat(rl.name()).isEqualTo("aiEndpoint");
         }
     }
 }

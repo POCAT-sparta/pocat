@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.ai.assistant;
 
 import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatRequest;
 import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatResponse;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiAssistantService;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.AuctionTool;
@@ -157,7 +158,7 @@ class AiAssistantServiceTest {
 
             // when / then
             assertThatThrownBy(() -> aiAssistantService.chat(USER_ID, request))
-                    .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(ServiceException.class);
             verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-1.5-flash");
         }
 
@@ -194,6 +195,19 @@ class AiAssistantServiceTest {
                     .as("chat() must be annotated with @CircuitBreaker")
                     .isNotNull();
             assertThat(cb.name()).isEqualTo("aiService");
+        }
+
+        @Test
+        @DisplayName("chat() 메서드에 @RateLimiter 어노테이션이 선언되어 있어야 한다")
+        void rateLimiter_chat_isAnnotatedWithRateLimiter() throws NoSuchMethodException {
+            Method chatMethod = AiAssistantService.class.getMethod("chat", Long.class, AiChatRequest.class);
+            io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =
+                    chatMethod.getAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
+            assertThat(rl)
+                    .as("chat() must be annotated with @RateLimiter")
+                    .isNotNull();
+            assertThat(rl.name()).isEqualTo("aiEndpoint");
+            assertThat(rl.fallbackMethod()).isEqualTo("chatRateLimitFallback");
         }
 
         @Test
