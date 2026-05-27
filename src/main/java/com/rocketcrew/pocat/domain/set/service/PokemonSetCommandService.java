@@ -21,7 +21,10 @@ public class PokemonSetCommandService {
 
     /** Card 등록/동기화 시 호출. setId 기준으로 find-or-create */
     public PokemonSet findOrCreate(String setId, String setName, Series series) {
-        String trimmedId = setId != null ? setId.strip() : "";
+        String trimmedId = setId != null ? setId.strip() : null;
+        if (trimmedId == null || trimmedId.isBlank()) {
+            throw new IllegalArgumentException("setId must not be blank");
+        }
         return pokemonSetRepository.findBySetId(trimmedId)
                 .orElseGet(() -> {
                     try {

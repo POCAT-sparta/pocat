@@ -20,7 +20,10 @@ public class SeriesCommandService {
 
     /** Card 등록/동기화 시 호출. 이미 존재하면 그대로 반환 */
     public Series findOrCreate(String name) {
-        String trimmed = name != null ? name.strip() : "";
+        String trimmed = name != null ? name.strip() : null;
+        if (trimmed == null || trimmed.isBlank()) {
+            throw new IllegalArgumentException("series name must not be blank");
+        }
         return seriesRepository.findByName(trimmed)
                 .orElseGet(() -> {
                     try {
