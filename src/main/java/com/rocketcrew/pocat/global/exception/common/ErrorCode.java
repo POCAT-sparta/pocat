@@ -74,6 +74,7 @@ public enum ErrorCode {
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.FORBIDDEN, "Webhook 서명 검증에 실패했습니다."),
     WEBHOOK_EMPTY_BODY(HttpStatus.BAD_REQUEST, "Webhook 요청 본문이 비어 있습니다. 인프라 설정을 확인하세요."),
     PORTONE_NOT_INTEGRATED(HttpStatus.SERVICE_UNAVAILABLE, "PortOne 결제 연동이 완료되지 않았습니다."),
+    PORTONE_INVALID_PAID_AT(HttpStatus.BAD_GATEWAY, "PortOne 응답의 paidAt 형식이 올바르지 않습니다."),
     BILLING_PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "자동 결제가 정상적으로 진행되지 않았습니다."),
     PAYMENT_STATUS_NOT_PAID(HttpStatus.BAD_REQUEST, "PortOne 결제 상태가 PAID가 아닙니다."),
 

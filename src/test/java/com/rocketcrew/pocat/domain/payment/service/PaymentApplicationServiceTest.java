@@ -301,7 +301,7 @@ class PaymentApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("실패: PortOne 결제 실패 → handleBillingKeyPaymentFailure 호출 후 PAYMENT_STATUS_NOT_PAID")
+        @DisplayName("실패: PortOne 결제 실패 → persistBillingKeyFailure 호출 후 PAYMENT_STATUS_NOT_PAID")
         void fail_portOnePaymentFailed() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             User user = TestFixtures.aUserWithBillingKey();
@@ -312,14 +312,12 @@ class PaymentApplicationServiceTest {
             given(paymentCommandService.createPayment(order)).willReturn(payment);
             given(portOneClient.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
                     .willReturn(new PortOnePaymentResponse("FAILED", 10000L, null, null));
-            doThrow(new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID))
-                    .when(failureService).handleBillingKeyPaymentFailure(any(), any(), anyLong());
 
             assertThatThrownBy(() -> paymentApplicationService.autoPayment(1L))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 
-            verify(failureService).handleBillingKeyPaymentFailure(payment, order, 1L);
+            verify(failureService).persistBillingKeyFailure(payment, order, 1L);
         }
     }
 }
