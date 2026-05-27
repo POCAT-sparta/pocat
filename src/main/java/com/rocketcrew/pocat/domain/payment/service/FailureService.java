@@ -73,16 +73,16 @@ public class FailureService {
      */
     // TODO : 만료시간이 실제로 지났는지 검사를 해야함. expireAt 이 생기면 진행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(Long orderId) {
+    public void markFailed(Long orderId, String reason) {
         orderRepository.findById(orderId)
                 .filter(o -> o.getStatus() == OrderStatus.PAYMENT_PENDING)
                 .ifPresent(order -> {
                     order.failPayment();
-                    log.info("[OrderFailure] orderId={} → FAILED", orderId);
+                    log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
                     eventPublisher.publishEvent(new PaymentFailedEvent(
                             order.getOrderUid(),
                             order.getBuyerId(),
-                            "결제 시간 초과"
+                            reason
                     ));
                 });
     }

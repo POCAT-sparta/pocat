@@ -86,7 +86,7 @@ public class PaymentWebhookService {
             Long amount = portOneClientPayment.amount();
 
             if (!payment.getAmount().equals(amount)) {
-                failureService.markFailed(payment.getOrderId());
+                failureService.markFailed(payment.getOrderId(), "결제 금액 불일치");
                 failureService.cancelExpiry(payment.getOrderId());
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
@@ -96,7 +96,7 @@ public class PaymentWebhookService {
                     portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt()
             );
         } else {
-            failureService.markFailed(payment.getOrderId());
+            failureService.markFailed(payment.getOrderId(), "PG사 결제 실패");
             failureService.cancelExpiry(payment.getOrderId());
         }
     }
