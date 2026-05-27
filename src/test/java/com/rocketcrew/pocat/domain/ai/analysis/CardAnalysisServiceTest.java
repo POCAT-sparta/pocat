@@ -100,6 +100,9 @@ class CardAnalysisServiceTest {
                 .build();
         ReflectionTestUtils.setField(psa10Card, "id", 1L);
 
+        // wire self-reference so reanalyzeCard() → self.analyzeCard() works in unit test
+        ReflectionTestUtils.setField(cardAnalysisService, "self", cardAnalysisService);
+
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(chatClient.prompt(any(Prompt.class))).willReturn(requestSpec);
         given(requestSpec.call()).willReturn(callResponseSpec);
