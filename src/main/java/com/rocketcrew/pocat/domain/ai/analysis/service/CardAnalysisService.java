@@ -16,6 +16,8 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -44,6 +46,10 @@ public class CardAnalysisService {
     private final ObjectMapper objectMapper;
     private final CardAiAnalysisRepository cardAiAnalysisRepository;
 
+    @Lazy
+    @Autowired
+    private CardAnalysisService self;
+
     private static final String CACHE_KEY_PREFIX = "ai:analysis:card:";
     private static final long CACHE_TTL_HOURS = 24;
     private static final String FALLBACK_MODEL = "gemini-1.5-flash";
@@ -58,6 +64,7 @@ public class CardAnalysisService {
     @RateLimiter(name = "aiEndpoint", fallbackMethod = "analyzeCardRateLimitFallback")
     @CircuitBreaker(name = "aiService", fallbackMethod = "analyzeCardFallback")
     @Cacheable(value = "cardAnalysis", key = "#cardId", unless = "#result == null")
+    @Transactional
     public CardAnalysisResult analyzeCard(Long cardId) {
         log.info("Starting card analysis for cardId: {}", cardId);
 
@@ -142,7 +149,7 @@ public class CardAnalysisService {
         redisTemplate.delete(cacheKey);
 
         // 재분석 수행
-        return analyzeCard(cardId);
+        return self.analyzeCard(cardId);
     }
 
     private String serializeList(java.util.List<String> list) {
