@@ -2,7 +2,7 @@ package com.rocketcrew.pocat.domain.ai.rag;
 
 import com.rocketcrew.pocat.domain.ai.rag.event.CardEmbeddingEvent;
 import com.rocketcrew.pocat.domain.ai.rag.event.TradePostEmbeddingEvent;
-import com.rocketcrew.pocat.domain.ai.rag.listener.EmbeddingEventListener;
+import com.rocketcrew.pocat.domain.ai.rag.event.EmbeddingEventListener;
 import com.rocketcrew.pocat.domain.ai.rag.service.EmbeddingService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
