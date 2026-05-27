@@ -63,6 +63,11 @@ public class PaymentWebhookService {
             throw new PaymentException(ErrorCode.WEBHOOK_PARSE_FAILED, e);
         }
 
+        // objectMapper.readValue()는 JSON null 값에서 null을 반환할 수 있음
+        if (request == null) {
+            throw new PaymentException(ErrorCode.WEBHOOK_INVALID_PAYLOAD);
+        }
+
         // 결제 이벤트가 아닌 웹훅(빌링키 발급/삭제 등) — 200으로 정상 수신 처리
         if (request.data() == null || request.data().paymentId() == null) {
             log.debug("비결제 웹훅 수신 (빌링키 이벤트 등) — 200 반환");
