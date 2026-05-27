@@ -40,7 +40,7 @@ public class CardSearchTool {
                 } catch (IllegalArgumentException ignored) {}
             }
             List<Card> cards = cardRepository.findActiveCardsByNameContainingAndGrade(
-                    name, cardGrade, PageRequest.of(0, 10));
+                    name, cardGrade, maxPrice, PageRequest.of(0, 10));
 
             return cards.stream()
                     .map(card -> {
