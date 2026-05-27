@@ -32,7 +32,7 @@ public record PortOneRawResponse(
             return OffsetDateTime.parse(paidAt).toLocalDateTime();
         } catch (DateTimeParseException e) {
             log.error("PortOne paidAt 파싱 실패 - value: {}", paidAt, e);
-            throw new PaymentException(ErrorCode.PORTONE_INVALID_PAID_AT);
+            throw new PaymentException(ErrorCode.PORTONE_INVALID_PAID_AT, e);
         }
     }
 
