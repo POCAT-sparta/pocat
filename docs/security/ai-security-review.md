@@ -104,3 +104,25 @@ spring:
 ### 기각 (별도 이슈)
 - AiStreamController SSE subscription leak → 별도 PR
 - V1 FK constraints → V2 migration 필요
+
+## 3차 보안 검토 결과 (2026-05-27)
+
+### 수정 완료
+
+| 항목 | 조치 |
+|------|------|
+| AiStreamController 에러 이벤트 내부 예외 메시지 노출 | 고정 문자열로 대체, 상세 내용은 서버 로그에만 기록 |
+| RagService 사용자 쿼리 원문 로그 기록 (PII) | SHA-256 해시 + 길이만 기록 |
+| AiStreamController Disposable 누수 | sink.onCancel(disposable::dispose) 등록 |
+| CardAnalysisService fallback 손상 캐시 미삭제 | deserializeAnalysisResult null 반환 시 redisTemplate.delete 호출 |
+| CardAnalysisService 직렬화 예외 cause 체인 누락 | ServiceException(ErrorCode, e) 로 원인 전달 |
+| AiChatSessionService 만료 세션 unique key 충돌 가능 | INSERT 대신 기존 세션 재활성화 (reactivate 메서드) |
+| AiChatSessionService 메시지 역순 반환 | DESC 조회 후 Collections.reverse로 oldest→newest 순서 보장 |
+| BidTool @Tool description 실제 응답과 불일치 | 실제 반환 필드 기준으로 description 수정 |
+
+### 기각 (별도 이슈)
+
+| 항목 | 사유 |
+|------|------|
+| AiStreamController sessionId 세션 통합 | AiChatSessionService 주입 + 전체 세션 wiring 필요 — 단순 수정 아님 |
+| CardSearchTool maxPrice 필터 미적용 | Card 엔티티에 price 필드 없음, auction join 쿼리 신규 작성 필요 |
