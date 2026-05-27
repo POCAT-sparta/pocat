@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,16 +98,20 @@ public class DomainDataSeeder {
         pokemonCommandService.buildCache();
     }
 
-    /** POKEMON 카드 중 pokemon_id 미설정 카드에 pokemon 연결 — 페이지 단위 처리 */
+    /**
+     * POKEMON 카드 중 pokemon_id 미설정 카드에 pokemon 연결.
+     * 커서(keyset) 페이지네이션으로 처리 — pokemon_id를 채우면서 오프셋이 틀어지는 문제 방지.
+     */
     private void linkPokemonToCards() {
         final int PAGE_SIZE = 100;
-        int page = 0;
+        long lastId = 0L;
         int linked = 0;
         int total = 0;
-        Page<Card> result;
+        List<Card> batch;
         do {
-            result = cardRepository.findPokemonCardsWithNullPokemon(PageRequest.of(page++, PAGE_SIZE));
-            for (Card card : result.getContent()) {
+            batch = cardRepository.findPokemonCardsWithNullPokemonAfter(lastId, PageRequest.of(0, PAGE_SIZE));
+            for (Card card : batch) {
+                lastId = card.getId(); // 커서 전진 (미연결 카드도 포함 — 재처리 방지)
                 total++;
                 Optional<Pokemon> pokemon = pokemonCommandService.findOrCreateForCardName(card.getName());
                 if (pokemon.isPresent()) {
@@ -116,7 +119,7 @@ public class DomainDataSeeder {
                     linked++;
                 }
             }
-        } while (result.hasNext());
+        } while (!batch.isEmpty());
         log.info("[Seeder] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, total);
     }
 

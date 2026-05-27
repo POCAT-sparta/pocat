@@ -9,10 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -22,10 +22,10 @@ public class SeriesQueryService {
     private final SeriesRepository seriesRepository;
 
     /**
-     * 정규화된 한글·영문 시리즈 별칭 → 영문 시리즈명 인메모리 캐시.
+     * 정규화된 한글·영문 시리즈 별칭 → 영문 시리즈명 캐시 (volatile 참조 교체로 원자적 갱신).
      * DomainDataSeeder가 nameKo 갱신 후 rebuildCache()를 호출해 갱신한다.
      */
-    private final Map<String, String> translationCache = new ConcurrentHashMap<>();
+    private volatile Map<String, String> translationCache = Map.of();
 
     @PostConstruct
     public void buildCache() {
@@ -34,7 +34,7 @@ public class SeriesQueryService {
 
     /** DomainDataSeeder의 enrichSeriesNameKo() 완료 직후 호출해 캐시를 최신화한다. */
     public void rebuildCache() {
-        Map<String, String> fresh = new ConcurrentHashMap<>();
+        Map<String, String> fresh = new HashMap<>();
         seriesRepository.findAll().forEach(s -> {
             // 영문 이름 자체도 캐시에 등록 (영문 직접 입력 호환)
             fresh.put(normalize(s.getName()), s.getName());
@@ -43,8 +43,7 @@ public class SeriesQueryService {
                       .forEach(alias -> fresh.put(normalize(alias), s.getName()));
             }
         });
-        translationCache.clear();
-        translationCache.putAll(fresh);
+        translationCache = Map.copyOf(fresh); // 참조 교체로 원자적 갱신 — clear+putAll 사이 빈 캐시 노출 없음
     }
 
     public List<SeriesResponse> findAll() {
