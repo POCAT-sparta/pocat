@@ -25,6 +25,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
 
         List<Card> content = queryFactory
                 .selectFrom(card)
+                .leftJoin(card.series).fetchJoin()
+                .leftJoin(card.pokemonSet).fetchJoin()
                 .where(builder)
                 .orderBy(card.createdAt.desc(), card.id.desc())
                 .offset(pageable.getOffset())
@@ -34,6 +36,8 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
         Long total = queryFactory
                 .select(card.count())
                 .from(card)
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .where(builder)
                 .fetchOne();
 

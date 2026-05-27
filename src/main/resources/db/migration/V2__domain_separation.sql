@@ -72,9 +72,7 @@ ALTER TABLE cards
     ADD CONSTRAINT fk_cards_pokemon_set  FOREIGN KEY (pokemon_set_id) REFERENCES pokemon_sets(id),
     ADD CONSTRAINT fk_cards_pokemon      FOREIGN KEY (pokemon_id)     REFERENCES pokemon(id);
 
--- ⑦ 인덱스
-CREATE INDEX idx_cards_series_id      ON cards(series_id);
-CREATE INDEX idx_cards_pokemon_set_id ON cards(pokemon_set_id);
+-- ⑦ 인덱스 (InnoDB FK가 이미 자동 생성하므로 별도 생성 불필요)
 
 -- ⑧ 구 컬럼 삭제
 ALTER TABLE cards
