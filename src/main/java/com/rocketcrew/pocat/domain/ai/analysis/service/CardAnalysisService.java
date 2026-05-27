@@ -134,7 +134,8 @@ public class CardAnalysisService {
                 log.info("Returning cached result from fallback for cardId: {}", cardId);
                 return cached;
             }
-            log.warn("Corrupted cache in fallback for cardId: {}", cardId);
+            log.warn("Corrupted cache in fallback for cardId: {}, deleting entry", cardId);
+            redisTemplate.delete(cacheKey);
         }
 
         // Fallback 2: 기본 응답
@@ -199,7 +200,7 @@ public class CardAnalysisService {
             return objectMapper.writeValueAsString(result);
         } catch (Exception e) {
             log.warn("Failed to serialize analysis result: {}", e.getMessage());
-            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR);
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, e);
         }
     }
 

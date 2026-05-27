@@ -32,7 +32,14 @@ public class RagService {
      */
     public List<Document> search(String query) {
         try {
-            log.info("Searching RAG documents for query: {}", query);
+            try {
+                java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+                byte[] hash = md.digest(query != null ? query.getBytes(java.nio.charset.StandardCharsets.UTF_8) : new byte[0]);
+                String hexHash = java.util.HexFormat.of().formatHex(hash);
+                log.info("Searching RAG documents: queryHash={}, queryLen={}", hexHash, query != null ? query.length() : 0);
+            } catch (java.security.NoSuchAlgorithmException ignored) {
+                log.info("Searching RAG documents: queryLen={}", query != null ? query.length() : 0);
+            }
 
             // VectorStore 검색 (유사도 기반)
             List<Document> results = vectorStore.similaritySearch(
