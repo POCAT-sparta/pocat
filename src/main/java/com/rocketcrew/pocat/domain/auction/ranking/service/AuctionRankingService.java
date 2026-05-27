@@ -18,7 +18,6 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -84,7 +83,7 @@ public class AuctionRankingService {
                 .filter(auctionMap::containsKey)
                 .map(id -> {
                     Auction a = auctionMap.get(id);
-                    if (!isVisibleActiveAuction(a)) {
+                    if (a.getStatus() != AuctionStatus.ACTIVE) {
                         return null;
                     }
                     Card card = cardMap.get(a.getCardId());
@@ -96,7 +95,7 @@ public class AuctionRankingService {
 
     public void refreshRanking() {
         try {
-            List<Auction> activeAuctions = findVisibleActiveAuctions();
+            List<Auction> activeAuctions = auctionRepository.findAllByStatus(AuctionStatus.ACTIVE);
             if (activeAuctions.isEmpty()) {
                 redisTemplate.delete(RANKING_KEY);
                 log.debug("No active auctions — cleared stale ranking");
@@ -138,7 +137,7 @@ public class AuctionRankingService {
     }
 
     private List<SearchAuctionResponse> fallbackFromDb(int size) {
-        List<Auction> activeAuctions = findVisibleActiveAuctions();
+        List<Auction> activeAuctions = auctionRepository.findAllByStatus(AuctionStatus.ACTIVE);
         if (activeAuctions.isEmpty()) return Collections.emptyList();
 
         List<Long> ids = activeAuctions.stream().map(Auction::getId).toList();
@@ -206,24 +205,6 @@ public class AuctionRankingService {
                 auction.getEndedAt(),
                 auction.getCreatedAt()
         );
-    }
-
-    private List<Auction> findVisibleActiveAuctions() {
-        LocalDateTime now = LocalDateTime.now();
-        return auctionRepository.findAllByStatusAndStartedAtLessThanEqualAndEndedAtGreaterThan(
-                AuctionStatus.ACTIVE,
-                now,
-                now
-        );
-    }
-
-    private boolean isVisibleActiveAuction(Auction auction) {
-        LocalDateTime now = LocalDateTime.now();
-        return auction.getStatus() == AuctionStatus.ACTIVE
-                && auction.getStartedAt() != null
-                && auction.getEndedAt() != null
-                && !auction.getStartedAt().isAfter(now)
-                && auction.getEndedAt().isAfter(now);
     }
 
     private Map<Long, Long> toLongMap(List<AuctionCountProjection> projections) {

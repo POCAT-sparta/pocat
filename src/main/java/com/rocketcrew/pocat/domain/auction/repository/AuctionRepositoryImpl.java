@@ -25,7 +25,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -165,10 +164,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
             builder.and(auction.status.in(PUBLIC_LIST_STATUSES));
         }
 
-        if (defaultToPublicStatuses) {
-            builder.and(publicVisibilityCondition(condition.status(), auction));
-        }
-
         if (StringUtils.hasText(condition.keyword())) {
             String keyword = condition.keyword();
             builder.and(
@@ -191,26 +186,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
         }
         if (condition.category() != null) {
             builder.and(card.category.eq(condition.category()));
-        }
-
-        return builder;
-    }
-
-    private BooleanBuilder publicVisibilityCondition(AuctionStatus status, QAuction auction) {
-        BooleanBuilder builder = new BooleanBuilder();
-        LocalDateTime now = LocalDateTime.now();
-
-        if (status == AuctionStatus.ACTIVE) {
-            builder.and(auction.startedAt.loe(now));
-            builder.and(auction.endedAt.gt(now));
-            return builder;
-        }
-
-        if (status == null) {
-            builder.and(
-                    auction.status.ne(AuctionStatus.ACTIVE)
-                            .or(auction.startedAt.loe(now).and(auction.endedAt.gt(now)))
-            );
         }
 
         return builder;
