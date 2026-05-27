@@ -22,6 +22,24 @@ spring:
     bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
   elasticsearch:
     uris: ${ES_URI:http://localhost:9200}
+  ai:
+    openai:
+      api-key: ${GEMINI_API_KEY}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        options:
+          model: gemini-1.5-flash
+          temperature: 0.3
+          max-tokens: 1024
+      embedding:
+        options:
+          model: text-embedding-004
+    vectorstore:
+      elasticsearch:
+        index-name: pocat-ai-index
+        dimensions: 768
+        similarity: cosine
+        initialize-schema: true
 
 view:
   ip-secret: ${VIEW_IP_SECRET}
@@ -43,3 +61,12 @@ ranking:
     ttl-seconds: 70
     cache-size: 100
     max-response-size: 50
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      aiService:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
