@@ -8,17 +8,33 @@
 
 ## 1. 배경 및 목표
 
-현재 `domain/card`에 Series/Set/Pokemon 관련 코드가 모두 혼재되어 있음.
+### 핵심 문제: 한글명 수정 시마다 전체 ES 재인덱싱 필요
 
-- `Card` 엔티티가 `series`, `setId`, `setName`을 plain String으로 보유 → 정규화 없음
-- `SeriesNameDictionary`, `SetNameDictionary`, `PokemonNameDictionary` 세 YAML 기반 유틸이 card/util/ 에 위치
-- Series/Set/Pokemon 데이터를 독립적으로 관리(CRUD)하거나 조회할 수 없음
+현재 한글명(`nameKo`, `seriesKo`, `setNameKo`)은 YAML 파일에 하드코딩되어 있음.
 
-**목표**
-- Series, PokemonSet, Pokemon을 독립 JPA 엔티티 및 도메인으로 분리
-- Card는 세 도메인을 FK로 참조
-- 각 도메인에 Admin CRUD API 제공
-- 한글 이름(nameKo)을 DB에서 관리 → YAML 딕셔너리 의존 제거
+```
+한글명 추가/수정 흐름 (현재):
+  YAML 수정 → gradlew build → docker compose up --build
+  → DELETE /cards (Kibana) → 서버 재시작 → POST /es-migrate (23000건 전체 재인덱싱)
+```
+
+한글명 오타 하나 고치거나 새 확장팩 번역을 추가할 때마다 23000건 전체를 다시 인덱싱해야 함.
+
+### 해결 방향: 한글명을 DB에서 관리
+
+Series, PokemonSet, Pokemon의 `nameKo`를 DB 테이블로 분리하면:
+
+```
+한글명 추가/수정 흐름 (변경 후):
+  Admin API로 nameKo 업데이트 → 해당 카드만 ES 부분 재인덱싱
+```
+
+빌드 없이, 서버 재시작 없이, 전체 재인덱싱 없이 한글 데이터 관리 가능.
+
+### 목표
+- Series, PokemonSet, Pokemon 엔티티 분리 → `nameKo` DB 관리
+- Admin CRUD API로 한글명 실시간 수정
+- YAML 딕셔너리 의존 제거
 - ES 검색 동작(keyword 파라미터, 한/영 모두)은 기존과 동일하게 유지
 
 ---
@@ -251,5 +267,6 @@ cards.pokemon_id IS NULL인 POKEMON 카드에 대해:
 7. CardQueryService — Dictionary 호출 → 엔티티 조회로 교체
 8. CardEsMigrationService — Dictionary 호출 → 엔티티 조회로 교체
 9. Admin Controller 3개 (Series, PokemonSet, Pokemon)
+    - nameKo 수정 시 해당 카드만 ES 부분 재인덱싱 트리거
 10. 기존 Dictionary 클래스 삭제
-11. ES 인덱스 재생성 및 es-migrate 실행
+11. ES 인덱스 재생성 및 es-migrate 실행 (최초 1회)
