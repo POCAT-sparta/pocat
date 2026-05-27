@@ -5,6 +5,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
@@ -197,14 +199,29 @@ public final class TestFixtures {
 
     // ── Card ─────────────────────────────────────────────────────────
 
+    public static Series aSeries() {
+        Series s = Series.builder().name("Sword & Shield").build();
+        ReflectionTestUtils.setField(s, "id", 1L);
+        return s;
+    }
+
+    public static PokemonSet aPokemonSet() {
+        PokemonSet ps = PokemonSet.builder()
+                .setId("swsh5")
+                .name("Rebel Clash")
+                .series(aSeries())
+                .build();
+        ReflectionTestUtils.setField(ps, "id", 1L);
+        return ps;
+    }
+
     /** id=3L, name="피카츄", grade=PSA_10 */
     public static Card aCard() {
         Card card = Card.builder()
                 .userId(2L)
                 .name("피카츄")
-                .series("기본판")
-                .setId("base1")
-                .setName("기본 세트")
+                .series(aSeries())
+                .pokemonSet(aPokemonSet())
                 .cardNumber("58")
                 .rarity("Rare")
                 .category(CardCategory.POKEMON)

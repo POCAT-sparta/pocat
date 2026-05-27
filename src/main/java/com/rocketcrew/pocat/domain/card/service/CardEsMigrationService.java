@@ -45,10 +45,10 @@ public class CardEsMigrationService {
                     .map(card -> CardDocument.from(
                             card,
                             pokemonNameDictionary.findKoreanName(card.getName()),
-                            seriesNameDictionary.getKoreanText(card.getSeries()),
-                            setNameDictionary.getKoreanText(card.getSetName())
+                            seriesNameDictionary.getKoreanText(card.getSeries() != null ? card.getSeries().getName() : null),
+                            setNameDictionary.getKoreanText(card.getPokemonSet() != null ? card.getPokemonSet().getName() : null)
                     ))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
 
             if (!docs.isEmpty()) {
                 cardSearchRepository.saveAll(docs);

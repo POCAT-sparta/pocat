@@ -8,6 +8,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -110,9 +112,9 @@ public class CardDataInit implements ApplicationRunner {
                             .userId(userId)
                             .tcgdexId(tcgdexId)
                             .name(name)
-                            .series(seriesName)
-                            .setId(setId)
-                            .setName(setName)
+                            .series((Series) null)    // TODO: Task 8에서 교체
+                            .pokemonSet((PokemonSet) null) // TODO: Task 8에서 교체
+                            .pokemon(null)
                             .cardNumber(localId)
                             .rarity(rarity.isEmpty() ? "UNKNOWN" : rarity)
                             .category(category)

@@ -8,6 +8,9 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -119,9 +122,9 @@ public class CardSyncService {
                         .userId(adminUserId)
                         .tcgdexId(tcgdexId)
                         .name(name)
-                        .series(seriesName)
-                        .setId(setId)
-                        .setName(setName)
+                        .series(null)         // TODO: Task 8에서 SeriesCommandService.findOrCreate()로 교체
+                        .pokemonSet(null)     // TODO: Task 8에서 PokemonSetCommandService.findOrCreate()로 교체
+                        .pokemon(null)        // TODO: Task 8에서 PokemonCommandService.findOrCreateForCardName()로 교체
                         .cardNumber(localId)
                         .rarity(rarity.isEmpty() ? "UNKNOWN" : rarity)
                         .category(category)

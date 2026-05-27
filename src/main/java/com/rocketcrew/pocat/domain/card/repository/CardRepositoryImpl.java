@@ -49,16 +49,16 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
             String kw = condition.keyword().trim();
             builder.and(
                 card.name.containsIgnoreCase(kw)
-                    .or(card.series.containsIgnoreCase(kw))
-                    .or(card.setName.containsIgnoreCase(kw))
+                    .or(card.series.name.containsIgnoreCase(kw))
+                    .or(card.pokemonSet.name.containsIgnoreCase(kw))
             );
         }
         if (StringUtils.hasText(condition.series())) {
-            builder.and(card.series.equalsIgnoreCase(condition.series().trim()));
+            builder.and(card.series.name.equalsIgnoreCase(condition.series().trim()));
         }
         if (StringUtils.hasText(condition.setName())) {
             String normalizedSetName = condition.setName().trim();
-            builder.and(card.setName.equalsIgnoreCase(normalizedSetName));
+            builder.and(card.pokemonSet.name.equalsIgnoreCase(normalizedSetName));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));

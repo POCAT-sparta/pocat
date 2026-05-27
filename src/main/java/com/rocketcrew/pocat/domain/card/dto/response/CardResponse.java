@@ -5,6 +5,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 
 import java.time.LocalDateTime;
 
@@ -27,14 +29,16 @@ public record CardResponse(
         LocalDateTime updatedAt
 ) {
     public static CardResponse from(Card card) {
+        Series series = card.getSeries();
+        PokemonSet pokemonSet = card.getPokemonSet();
         return new CardResponse(
                 card.getId(),
                 card.getUserId(),
                 card.getTcgdexId(),
                 card.getName(),
-                card.getSeries(),
-                card.getSetId(),
-                card.getSetName(),
+                series != null ? series.getName() : null,
+                pokemonSet != null ? pokemonSet.getSetId() : null,
+                pokemonSet != null ? pokemonSet.getName() : null,
                 card.getCardNumber(),
                 card.getRarity(),
                 card.getCategory(),

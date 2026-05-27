@@ -8,9 +8,9 @@ import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
-import com.rocketcrew.pocat.domain.card.util.PokemonNameDictionary;
-import com.rocketcrew.pocat.domain.card.util.SeriesNameDictionary;
-import com.rocketcrew.pocat.domain.card.util.SetNameDictionary;
+import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +29,6 @@ public class CardCommandService {
 
     private final CardRepository cardRepository;
     private final CardSearchRepository cardSearchRepository;
-    private final PokemonNameDictionary pokemonNameDictionary;
-    private final SeriesNameDictionary seriesNameDictionary;
-    private final SetNameDictionary setNameDictionary;
 
     public CardResponse createCard(Long userId, CreateCardRequest request) {
         if (request.tcgdexId() != null && cardRepository.existsByTcgdexId(request.tcgdexId())) {
@@ -41,9 +38,9 @@ public class CardCommandService {
                 .userId(userId)
                 .tcgdexId(request.tcgdexId())
                 .name(request.name())
-                .series(request.series())
-                .setId(request.setId())
-                .setName(request.setName())
+                .series((Series) null)
+                .pokemonSet((PokemonSet) null)
+                .pokemon(null)
                 .cardNumber(request.cardNumber())
                 .rarity(request.rarity())
                 .category(request.category())
@@ -62,19 +59,9 @@ public class CardCommandService {
     public CardResponse updateCard(Long id, UpdateCardRequest request) {
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
-        card.update(
-                request.tcgdexId(),
-                request.name(),
-                request.series(),
-                request.setId(),
-                request.setName(),
-                request.cardNumber(),
-                request.rarity(),
-                request.category(),
-                request.grade(),
-                request.imageUrl(),
-                request.source()
-        );
+        card.update(request.tcgdexId(), request.name(), null, null,
+                request.cardNumber(), request.rarity(), request.category(),
+                request.grade(), request.imageUrl(), request.source());
         if (card.getStatus() == CardStatus.ACTIVE) {
             indexCard(card);
         }
@@ -118,9 +105,9 @@ public class CardCommandService {
 
     private void doIndexCard(Card card) {
         try {
-            String nameKo    = pokemonNameDictionary.findKoreanName(card.getName());
-            String seriesKo  = seriesNameDictionary.getKoreanText(card.getSeries());
-            String setNameKo = setNameDictionary.getKoreanText(card.getSetName());
+            String nameKo    = card.getPokemon() != null ? card.getPokemon().getNameKo() : null;
+            String seriesKo  = card.getSeries() != null ? card.getSeries().getNameKo() : null;
+            String setNameKo = card.getPokemonSet() != null ? card.getPokemonSet().getNameKo() : null;
             cardSearchRepository.save(CardDocument.from(card, nameKo, seriesKo, setNameKo));
         } catch (Exception e) {
             log.warn("[CardES] 인덱싱 실패 cardId={}: {}", card.getId(), e.getMessage());
