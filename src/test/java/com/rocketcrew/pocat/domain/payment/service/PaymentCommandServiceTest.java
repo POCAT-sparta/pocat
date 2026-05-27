@@ -10,7 +10,6 @@ import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
-import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -28,7 +27,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -58,7 +56,10 @@ class PaymentCommandServiceTest {
     private ObjectMapper objectMapper;
 
     @Mock
-    private PaymentFailureService paymentFailureService;
+    private FailureService failureService;
+
+    @Mock
+    private PaymentWebhookService paymentWebhookService;
 
     @Mock
     private SettlementCommandService settlementCommandService;
@@ -240,7 +241,7 @@ class PaymentCommandServiceTest {
             PortOnePaymentResponse portOneResponse = new PortOnePaymentResponse(
                     "FAILED", 10000L, null, null);
             given(portOneClient.getPayment("PAY-001")).willReturn(portOneResponse);
-            willDoNothing().given(paymentFailureService).markFailed(anyLong());
+            willDoNothing().given(failureService).markFailed(anyLong());
 
             assertThatThrownBy(() -> paymentCommandService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -260,7 +261,7 @@ class PaymentCommandServiceTest {
             PortOnePaymentResponse portOneResponse = new PortOnePaymentResponse(
                     "PAID", 5000L, "CARD", LocalDateTime.now()); // 금액 불일치
             given(portOneClient.getPayment("PAY-001")).willReturn(portOneResponse);
-            willDoNothing().given(paymentFailureService).markFailed(anyLong());
+            willDoNothing().given(failureService).markFailed(anyLong());
 
             assertThatThrownBy(() -> paymentCommandService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -282,7 +283,7 @@ class PaymentCommandServiceTest {
             PortOnePaymentResponse portOneResponse = new PortOnePaymentResponse(
                     "PAID", 15000L, "CARD", LocalDateTime.now()); // 주문금액(10000L)보다 큰 금액
             given(portOneClient.getPayment("PAY-001")).willReturn(portOneResponse);
-            willDoNothing().given(paymentFailureService).markFailed(anyLong());
+            willDoNothing().given(failureService).markFailed(anyLong());
 
             assertThatThrownBy(() -> paymentCommandService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -365,12 +366,12 @@ class PaymentCommandServiceTest {
                     "FAILED", 10000L, null, null);
             given(portOneClient.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
                     .willReturn(failResponse);
-            willDoNothing().given(paymentFailureService).markFailed(anyLong());
+            willDoNothing().given(failureService).markFailed(anyLong());
 
             PaymentResponse response = paymentCommandService.attemptBillingKeyPayment(1L);
 
             // markFailed 호출 후 현재 payment 상태(PENDING) 반환 (상태는 markFailed가 별도 트랜잭션에서 변경)
-            verify(paymentFailureService).markFailed(1L);
+            verify(failureService).markFailed(1L);
             assertThat(response).isNotNull();
         }
     }
@@ -384,7 +385,7 @@ class PaymentCommandServiceTest {
         @Test
         @DisplayName("실패: rawBody 가 null 이면 WEBHOOK_EMPTY_BODY 예외 발생")
         void fail_nullBody() {
-            assertThatThrownBy(() -> paymentCommandService.handleWebhook("sig", null))
+            assertThatThrownBy(() -> paymentWebhookService.handleWebhook("sig", null))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WEBHOOK_EMPTY_BODY);
         }
@@ -392,7 +393,7 @@ class PaymentCommandServiceTest {
         @Test
         @DisplayName("실패: rawBody 가 빈 배열이면 WEBHOOK_EMPTY_BODY 예외 발생")
         void fail_emptyBody() {
-            assertThatThrownBy(() -> paymentCommandService.handleWebhook("sig", new byte[0]))
+            assertThatThrownBy(() -> paymentWebhookService.handleWebhook("sig", new byte[0]))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.WEBHOOK_EMPTY_BODY);
         }
@@ -405,7 +406,7 @@ class PaymentCommandServiceTest {
                     com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest.class)))
                     .willReturn(mock(com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest.class));
 
-            assertThatThrownBy(() -> paymentCommandService.handleWebhook("sig", body))
+            assertThatThrownBy(() -> paymentWebhookService.handleWebhook("sig", body))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PORTONE_NOT_INTEGRATED);
         }

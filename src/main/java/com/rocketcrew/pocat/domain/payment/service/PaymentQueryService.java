@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
@@ -13,6 +14,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -37,12 +40,27 @@ public class PaymentQueryService {
         return PaymentResponse.from(payment);
     }
 
-    // ── 내부 헬퍼 ────────────────────────────────────────────────────
+    public PaymentResponse findByOrderId(Long orderId) {
+        return paymentRepository.findByOrderId(orderId)
+                .map(PaymentResponse::from)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+    }
 
-    private Payment findPaymentByUid(String paymentUid) {
+    public Optional<Payment> findByOrderIdAndStatus(Long orderId, PaymentStatus status) {
+        return paymentRepository.findByOrderIdAndStatus(orderId, status);
+    }
+
+    public Payment findPaymentByUid(String paymentUid) {
         return paymentRepository.findByPaymentUid(paymentUid)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
     }
+
+    public Payment findPaymentByUidWithLock(String paymentUid) {
+        return paymentRepository.findByPaymentUidWithLock(paymentUid)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+    }
+
+    // ── 내부 헬퍼 ────────────────────────────────────────────────────
 
     private Order findOrder(Long orderId) {
         return orderRepository.findById(orderId)

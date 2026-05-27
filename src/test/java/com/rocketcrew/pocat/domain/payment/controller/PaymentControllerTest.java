@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
+import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
@@ -35,7 +36,6 @@ import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -55,6 +55,9 @@ class PaymentControllerTest {
 
     @Mock
     private PaymentQueryService paymentQueryService;
+
+    @Mock
+    private PaymentWebhookService paymentWebhookService;
 
     private CustomUserDetails userDetails;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -204,7 +207,7 @@ class PaymentControllerTest {
         @DisplayName("현재 미구현: PortOne 미연동 시 503 반환 (PORTONE_NOT_INTEGRATED)")
         void success_200() throws Exception {
             willThrow(new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED))
-                    .given(paymentCommandService).handleWebhook(anyString(), any(byte[].class));
+                    .given(paymentWebhookService).handleWebhook(anyString(), any(byte[].class));
 
             // PORTONE_NOT_INTEGRATED = 503
             mockMvc.perform(post("/api/v1/payments/webhook")
@@ -219,7 +222,7 @@ class PaymentControllerTest {
         @DisplayName("실패: 400 — 빈 body (WEBHOOK_EMPTY_BODY)")
         void fail_400_emptyBody() throws Exception {
             willThrow(new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY))
-                    .given(paymentCommandService).handleWebhook(anyString(), any(byte[].class));
+                    .given(paymentWebhookService).handleWebhook(anyString(), any(byte[].class));
 
             mockMvc.perform(post("/api/v1/payments/webhook")
                             .header("X-PortOne-Signature", "test-sig")
