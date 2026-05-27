@@ -4,12 +4,14 @@ import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 @Entity
+@SQLDelete(sql = "UPDATE pokemon_sets SET deleted_at = NOW() WHERE id = ?")
 @Table(name = "pokemon_sets",
         uniqueConstraints = @UniqueConstraint(columnNames = "set_id"))
 public class PokemonSet extends BaseEntity {

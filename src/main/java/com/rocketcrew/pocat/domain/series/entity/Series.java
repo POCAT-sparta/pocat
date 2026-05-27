@@ -3,12 +3,14 @@ package com.rocketcrew.pocat.domain.series.entity;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 @AllArgsConstructor
 @Entity
+@SQLDelete(sql = "UPDATE series SET deleted_at = NOW() WHERE id = ?")
 @Table(name = "series",
         uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 public class Series extends BaseEntity {
