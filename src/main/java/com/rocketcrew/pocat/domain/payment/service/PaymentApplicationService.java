@@ -87,13 +87,16 @@ public class PaymentApplicationService {
                 payment.getPaymentUid(), billingKey, payment.getAmount()
         );
 
-        if (!"PAID".equals(response.status())) {
-            failureService.handleBillingKeyPaymentFailure(payment, order, orderId);
+        try {
+            if (!"PAID".equals(response.status())) {
+                failureService.handleBillingKeyPaymentFailure(payment, order, orderId);
+            }
+            paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
+            // TODO : 성공 이벤트 발행
+            return PaymentResponse.from(payment);
+        }catch (PaymentException e) {
+            throw e;
         }
-
-        paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
-        // TODO : 성공 이벤트 발행
-        return PaymentResponse.from(payment);
     }
 
     /**
