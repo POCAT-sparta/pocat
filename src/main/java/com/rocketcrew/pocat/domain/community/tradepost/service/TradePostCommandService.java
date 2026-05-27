@@ -50,6 +50,7 @@ public class TradePostCommandService {
             throw new TradePostException(ErrorCode.USER_FORBIDDEN);
         }
         tradePost.update(request.title(), request.content(), request.price(), request.thumbnail());
+        eventPublisher.publishEvent(new TradePostEmbeddingEvent(tradePost.getId(), tradePost.getContent()));
         return UpdateTradePostResponse.from(tradePost);
     }
 

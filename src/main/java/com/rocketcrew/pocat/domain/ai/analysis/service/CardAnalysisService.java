@@ -139,7 +139,7 @@ public class CardAnalysisService {
      */
     @RateLimiter(name = "aiEndpoint", fallbackMethod = "reanalyzeCardRateLimitFallback")
     @CircuitBreaker(name = "aiService", fallbackMethod = "analyzeCardFallback")
-    @CacheEvict(value = "cardAnalysis", key = "#cardId")
+    @CacheEvict(value = "cardAnalysis", key = "#cardId", beforeInvocation = true)
     @Transactional
     public CardAnalysisResult reanalyzeCard(Long cardId) {
         log.info("Forcing card reanalysis for cardId: {}", cardId);

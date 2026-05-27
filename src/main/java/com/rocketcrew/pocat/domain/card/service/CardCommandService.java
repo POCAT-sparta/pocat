@@ -96,6 +96,8 @@ public class CardCommandService {
 
         if (card.getStatus() == CardStatus.ACTIVE) {
             indexCard(card);
+            String cardText = card.getName() + " " + card.getGrade() + " " + card.getSeries();
+            eventPublisher.publishEvent(new CardEmbeddingEvent(card.getId(), cardText));
         }
         return CardResponse.from(card);
     }
@@ -112,11 +114,11 @@ public class CardCommandService {
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         card.approve();
         indexCard(card);
-        
+
         // Publish embedding event for RAG after card approval
         String cardText = card.getName() + " " + card.getGrade() + " " + card.getSeries();
         eventPublisher.publishEvent(new CardEmbeddingEvent(card.getId(), cardText));
-        
+
         return CardResponse.from(card);
     }
 
