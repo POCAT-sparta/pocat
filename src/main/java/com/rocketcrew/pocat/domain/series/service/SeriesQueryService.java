@@ -3,12 +3,16 @@ package com.rocketcrew.pocat.domain.series.service;
 import com.rocketcrew.pocat.domain.series.dto.response.SeriesResponse;
 import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.series.repository.SeriesRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +20,32 @@ import java.util.List;
 public class SeriesQueryService {
 
     private final SeriesRepository seriesRepository;
+
+    /**
+     * 정규화된 한글·영문 시리즈 별칭 → 영문 시리즈명 인메모리 캐시.
+     * DomainDataSeeder가 nameKo 갱신 후 rebuildCache()를 호출해 갱신한다.
+     */
+    private final Map<String, String> translationCache = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    public void buildCache() {
+        rebuildCache();
+    }
+
+    /** DomainDataSeeder의 enrichSeriesNameKo() 완료 직후 호출해 캐시를 최신화한다. */
+    public void rebuildCache() {
+        Map<String, String> fresh = new ConcurrentHashMap<>();
+        seriesRepository.findAll().forEach(s -> {
+            // 영문 이름 자체도 캐시에 등록 (영문 직접 입력 호환)
+            fresh.put(normalize(s.getName()), s.getName());
+            if (s.getNameKo() != null) {
+                Arrays.stream(s.getNameKo().split("\\s+"))
+                      .forEach(alias -> fresh.put(normalize(alias), s.getName()));
+            }
+        });
+        translationCache.clear();
+        translationCache.putAll(fresh);
+    }
 
     public List<SeriesResponse> findAll() {
         return seriesRepository.findAll().stream()
@@ -28,20 +58,12 @@ public class SeriesQueryService {
      */
     public String translate(String input) {
         if (input == null || input.isBlank()) return input;
-        // 영문 그대로 통과
-        if (seriesRepository.existsByName(input)) return input;
-        // 한글 → nameKo 공백 분리 별칭 매칭
-        String normalized = normalize(input);
-        return seriesRepository.findAll().stream()
-                .filter(s -> s.getNameKo() != null &&
-                             Arrays.stream(s.getNameKo().split("\\s+"))
-                                   .anyMatch(alias -> normalize(alias).equals(normalized)))
-                .findFirst()
-                .map(Series::getName)
-                .orElse(input);
+        if (translationCache.isEmpty()) rebuildCache();
+        String en = translationCache.get(normalize(input));
+        return en != null ? en : input;
     }
 
     private static String normalize(String s) {
-        return s.replaceAll("[^가-힣a-zA-Z0-9]", "");
+        return s.toLowerCase(Locale.ROOT).replaceAll("[^가-힣a-z0-9]", "");
     }
 }

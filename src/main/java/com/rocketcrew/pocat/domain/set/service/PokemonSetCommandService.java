@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.set.repository.PokemonSetRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PokemonSetException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +21,22 @@ public class PokemonSetCommandService {
 
     /** Card 등록/동기화 시 호출. setId 기준으로 find-or-create */
     public PokemonSet findOrCreate(String setId, String setName, Series series) {
-        return pokemonSetRepository.findBySetId(setId)
-                .orElseGet(() -> pokemonSetRepository.save(
-                        PokemonSet.builder()
-                                .setId(setId)
-                                .name(setName)
-                                .series(series)
-                                .build()));
+        String trimmedId = setId != null ? setId.strip() : "";
+        return pokemonSetRepository.findBySetId(trimmedId)
+                .orElseGet(() -> {
+                    try {
+                        return pokemonSetRepository.save(
+                                PokemonSet.builder()
+                                        .setId(trimmedId)
+                                        .name(setName != null ? setName.strip() : setName)
+                                        .series(series)
+                                        .build());
+                    } catch (DataIntegrityViolationException e) {
+                        // 동시 요청으로 먼저 INSERT된 경우 재조회
+                        return pokemonSetRepository.findBySetId(trimmedId)
+                                .orElseThrow(() -> new PokemonSetException(ErrorCode.POKEMON_SET_NOT_FOUND));
+                    }
+                });
     }
 
     public PokemonSetResponse create(UpsertPokemonSetRequest request, Series series) {

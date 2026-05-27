@@ -217,11 +217,18 @@ public final class TestFixtures {
 
     /** id=3L, name="피카츄", grade=PSA_10 */
     public static Card aCard() {
+        Series series = aSeries();
+        PokemonSet pokemonSet = PokemonSet.builder()
+                .setId("swsh5")
+                .name("Rebel Clash")
+                .series(series)   // aCard()와 동일한 series 인스턴스 공유
+                .build();
+        ReflectionTestUtils.setField(pokemonSet, "id", 1L);
         Card card = Card.builder()
                 .userId(2L)
                 .name("피카츄")
-                .series(aSeries())
-                .pokemonSet(aPokemonSet())
+                .series(series)
+                .pokemonSet(pokemonSet)
                 .cardNumber("58")
                 .rarity("Rare")
                 .category(CardCategory.POKEMON)

@@ -4,7 +4,7 @@
 
 **Goal:** `domain/card` 안에 섞여 있는 Series/Set/Pokemon을 독립 JPA 엔티티로 분리하고, 한글명(nameKo)을 DB에서 관리해 ES 재인덱싱 없이 Admin API로 수정 가능하게 한다.
 
-**Architecture:** Flyway V2로 신규 테이블 생성 + cards 테이블 스키마 교체(FK 컬럼 추가, 구 String 컬럼 DROP)를 원자적으로 수행한다. 그 전에 Series/PokemonSet/Pokemon 엔티티와 서비스를 먼저 작성해두고, 마지막에 Card 엔티티와 기존 서비스들을 한 번에 마이그레이션한다.
+**Architecture:** Flyway V3로 신규 테이블 생성 + cards 테이블 스키마 교체(FK 컬럼 추가, 구 String 컬럼 DROP)를 원자적으로 수행한다. 그 전에 Series/PokemonSet/Pokemon 엔티티와 서비스를 먼저 작성해두고, 마지막에 Card 엔티티와 기존 서비스들을 한 번에 마이그레이션한다.
 
 **Tech Stack:** Spring Boot 3, JPA/Hibernate (ddl-auto:update), Flyway, Elasticsearch (Spring Data ES), JUnit 5 + Mockito
 
@@ -39,7 +39,7 @@ domain/pokemon/dto/request/UpsertPokemonRequest.java
 domain/pokemon/dto/response/PokemonResponse.java
 domain/pokemon/controller/AdminPokemonController.java
 
-resources/db/migration/V2__domain_separation.sql
+resources/db/migration/V3__domain_separation.sql
 
 test/.../domain/series/service/SeriesCommandServiceTest.java
 test/.../domain/set/service/PokemonSetCommandServiceTest.java
@@ -1148,21 +1148,21 @@ git commit -m "feat: add DomainDataSeeder (ApplicationReadyEvent yaml → DB)"
 
 ---
 
-## Task 6: Flyway V2 + Card 엔티티 마이그레이션 (핵심 태스크)
+## Task 6: Flyway V3 + Card 엔티티 마이그레이션 (핵심 태스크)
 
 > ⚠️ 이 태스크는 DB 스키마를 변경한다. 시작 전 로컬 DB 백업 권장.  
-> **이 커밋 적용 후 앱을 재시작하면 Flyway V2가 실행되고 기존 cards 테이블이 변경된다.**
+> **이 커밋 적용 후 앱을 재시작하면 Flyway V3가 실행되고 기존 cards 테이블이 변경된다.**
 
 **Files:**
-- Create: `src/main/resources/db/migration/V2__domain_separation.sql`
+- Create: `src/main/resources/db/migration/V3__domain_separation.sql`
 - Modify: `src/main/java/com/rocketcrew/pocat/domain/card/entity/Card.java`
 - Modify: `src/main/java/com/rocketcrew/pocat/domain/card/dto/response/CardResponse.java`
 - Modify: `src/main/java/com/rocketcrew/pocat/domain/card/document/CardDocument.java`
 - Modify: `src/test/java/com/rocketcrew/pocat/support/TestFixtures.java`
 
-- [ ] **Step 1: Flyway V2 SQL 작성**
+- [ ] **Step 1: Flyway V3 SQL 작성**
 
-`src/main/resources/db/migration/V2__domain_separation.sql`:
+`src/main/resources/db/migration/V3__domain_separation.sql`:
 
 ```sql
 -- ① 신규 테이블 생성
@@ -1437,12 +1437,12 @@ Expected: BUILD SUCCESSFUL
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/resources/db/migration/V2__domain_separation.sql \
+git add src/main/resources/db/migration/V3__domain_separation.sql \
         src/main/java/com/rocketcrew/pocat/domain/card/entity/Card.java \
         src/main/java/com/rocketcrew/pocat/domain/card/dto/response/CardResponse.java \
         src/main/java/com/rocketcrew/pocat/domain/card/document/CardDocument.java \
         src/test/java/com/rocketcrew/pocat/support/TestFixtures.java
-git commit -m "feat: Flyway V2 + Card entity migration (String → @ManyToOne FK)"
+git commit -m "feat: Flyway V3 + Card entity migration (String → @ManyToOne FK)"
 ```
 
 ---
@@ -1901,9 +1901,8 @@ public class AdminPokemonSetController {
     public ResponseEntity<ApiResponseDto<PokemonSetResponse>> create(
             @Valid @RequestBody UpsertPokemonSetRequest request) {
         Series series = request.seriesId() != null
-                ? seriesCommandService.findOrCreate("")   // seriesId로 조회하는 게 맞으나 간략화
+                ? seriesCommandService.findById(request.seriesId())
                 : null;
-        // 실제로는 seriesRepository.findById(request.seriesId()) 로 조회
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.CREATED,
                 pokemonSetCommandService.create(request, series)));
     }
@@ -2062,7 +2061,7 @@ docker compose up --build
 ```
 
 재시작 시 자동으로:
-1. Flyway V2 실행 → 신규 테이블 생성, cards 스키마 마이그레이션
+1. Flyway V3 실행 → 신규 테이블 생성, cards 스키마 마이그레이션
 2. JPA ddl-auto:update → ES cards 인덱스 신규 생성 (ngram 설정 포함)
 3. DomainDataSeeder → Series/PokemonSet nameKo 채우기, Pokemon 시드, pokemon_id 연결
 

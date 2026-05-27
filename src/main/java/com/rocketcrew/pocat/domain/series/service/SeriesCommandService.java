@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.series.repository.SeriesRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.SeriesException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +20,17 @@ public class SeriesCommandService {
 
     /** Card 등록/동기화 시 호출. 이미 존재하면 그대로 반환 */
     public Series findOrCreate(String name) {
-        return seriesRepository.findByName(name)
-                .orElseGet(() -> seriesRepository.save(
-                        Series.builder().name(name).build()));
+        String trimmed = name != null ? name.strip() : "";
+        return seriesRepository.findByName(trimmed)
+                .orElseGet(() -> {
+                    try {
+                        return seriesRepository.save(Series.builder().name(trimmed).build());
+                    } catch (DataIntegrityViolationException e) {
+                        // 동시 요청으로 먼저 INSERT된 경우 재조회
+                        return seriesRepository.findByName(trimmed)
+                                .orElseThrow(() -> new SeriesException(ErrorCode.SERIES_NOT_FOUND));
+                    }
+                });
     }
 
     public SeriesResponse create(UpsertSeriesRequest request) {

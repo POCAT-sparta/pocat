@@ -3,14 +3,17 @@ package com.rocketcrew.pocat.domain.pokemon.service;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
-import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.series.repository.SeriesRepository;
+import com.rocketcrew.pocat.domain.series.service.SeriesQueryService;
 import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.set.repository.PokemonSetRepository;
+import com.rocketcrew.pocat.domain.set.service.PokemonSetQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.yaml.snakeyaml.Yaml;
@@ -27,12 +30,18 @@ public class DomainDataSeeder {
     private final PokemonSetRepository pokemonSetRepository;
     private final PokemonCommandService pokemonCommandService;
     private final CardRepository cardRepository;
+    private final SeriesQueryService seriesQueryService;
+    private final PokemonSetQueryService pokemonSetQueryService;
 
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seed() {
         enrichSeriesNameKo();
+        seriesQueryService.rebuildCache();
+
         enrichPokemonSetNameKo();
+        pokemonSetQueryService.rebuildCache();
+
         seedPokemon();
         linkPokemonToCards();
     }
@@ -90,18 +99,25 @@ public class DomainDataSeeder {
         pokemonCommandService.buildCache();
     }
 
-    /** POKEMON 카드 중 pokemon_id 미설정 카드에 pokemon 연결 */
+    /** POKEMON 카드 중 pokemon_id 미설정 카드에 pokemon 연결 — 페이지 단위 처리 */
     private void linkPokemonToCards() {
-        List<Card> cards = cardRepository.findPokemonCardsWithNullPokemon();
+        final int PAGE_SIZE = 100;
+        int page = 0;
         int linked = 0;
-        for (Card card : cards) {
-            Optional<Pokemon> pokemon = pokemonCommandService.findOrCreateForCardName(card.getName());
-            if (pokemon.isPresent()) {
-                card.linkPokemon(pokemon.get());
-                linked++;
+        int total = 0;
+        Page<Card> result;
+        do {
+            result = cardRepository.findPokemonCardsWithNullPokemon(PageRequest.of(page++, PAGE_SIZE));
+            for (Card card : result.getContent()) {
+                total++;
+                Optional<Pokemon> pokemon = pokemonCommandService.findOrCreateForCardName(card.getName());
+                if (pokemon.isPresent()) {
+                    card.linkPokemon(pokemon.get());
+                    linked++;
+                }
             }
-        }
-        log.info("[Seeder] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, cards.size());
+        } while (result.hasNext());
+        log.info("[Seeder] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, total);
     }
 
     /**

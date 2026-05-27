@@ -161,7 +161,7 @@ pokemon-names.yml → Pokemon 테이블 INSERT
   (POKEMON category이고 pokemon_id IS NULL인 카드만)
 ```
 
-series/set 시드 데이터는 Flyway V2에서 처리 (아래 섹션 참조).
+series/set 시드 데이터는 Flyway V3에서 처리 (아래 섹션 참조).
 
 ### 4-3. Admin CRUD API
 
@@ -185,7 +185,7 @@ DELETE /api/v1/admin/pokemon/{id}
 
 Flyway가 JPA보다 먼저 실행되므로 Flyway 스크립트가 새 테이블 생성부터 컬럼 교체까지 전담.
 
-### Flyway V2__domain_separation.sql
+### Flyway V3__domain_separation.sql (실제 파일명)
 
 ```
 ① CREATE TABLE series (id, name UNIQUE, name_ko, created_at, updated_at)
@@ -223,7 +223,7 @@ cards.pokemon_id IS NULL인 POKEMON 카드에 대해:
 
 | 담당 | 역할 |
 |------|------|
-| Flyway V2 | 테이블 생성, series/set 시드, FK 컬럼 추가/이관, 구 컬럼 DROP |
+| Flyway V3 | 테이블 생성, series/set 시드, FK 컬럼 추가/이관, 구 컬럼 DROP |
 | Java 시더 | pokemon 시드 + cards.pokemon_id 채우기 |
 | JPA ddl-auto:update | 엔티티 변경사항 보조 |
 
@@ -258,7 +258,7 @@ cards.pokemon_id IS NULL인 POKEMON 카드에 대해:
 
 ## 7. 구현 순서
 
-1. Flyway V2 SQL 작성 (series/set 테이블 + 데이터 이관)
+1. Flyway V3 SQL 작성 (series/set 테이블 + 데이터 이관)
 2. Series, PokemonSet, Pokemon 엔티티 + 리포지토리 생성
 3. Card 엔티티에서 string 컬럼 제거, FK 컬럼 추가
 4. SeriesCommandService, PokemonSetCommandService (find-or-create 포함)
