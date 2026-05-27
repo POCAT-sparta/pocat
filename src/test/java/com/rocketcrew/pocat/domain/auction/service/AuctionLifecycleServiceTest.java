@@ -101,6 +101,33 @@ class AuctionLifecycleServiceTest {
         }));
     }
 
+    @Test
+    @DisplayName("경매 종료 시 낙찰자가 없으면 NO_BIDDER로 전환하고 낙찰자 없는 종료 이벤트를 발행한다")
+    void closeExpiredAuction_marksNoBidderWhenHighestBidderIsNull() {
+        // given
+        Auction auction = buildExpiredActiveAuctionWithoutBidder(1L);
+
+        given(auctionRepository.findById(1L)).willReturn(Optional.of(auction));
+        given(auctionBidRepository.findAllByAuctionId(1L)).willReturn(List.of());
+
+        // when
+        boolean result = service.closeExpiredAuction(1L);
+
+        // then
+        assertThat(result).isTrue();
+        assertThat(auction.getStatus()).isEqualTo(AuctionStatus.NO_BIDDER);
+        verify(eventPublisher).publishEvent(ArgumentMatchers.<Object>argThat(event -> {
+            if (!(event instanceof AuctionEndedEvent endedEvent)) {
+                return false;
+            }
+            return endedEvent.getAuctionId().equals(1L)
+                    && endedEvent.getWinnerId() == null
+                    && endedEvent.getSellerId().equals(100L)
+                    && endedEvent.getLoserIds().isEmpty()
+                    && endedEvent.getFinalPrice() == null;
+        }));
+    }
+
     private Auction buildExpiredActiveAuction(Long id, Long highestBidderId) {
         Auction auction = Auction.builder()
                 .cardId(1L)
@@ -110,6 +137,21 @@ class AuctionLifecycleServiceTest {
                 .description("설명")
                 .startingPrice(1000L)
                 .highestPrice(5000L)
+                .status(AuctionStatus.ACTIVE)
+                .startedAt(LocalDateTime.now().minusDays(3))
+                .endedAt(LocalDateTime.now().minusSeconds(1))
+                .build();
+        ReflectionTestUtils.setField(auction, "id", id);
+        return auction;
+    }
+
+    private Auction buildExpiredActiveAuctionWithoutBidder(Long id) {
+        Auction auction = Auction.builder()
+                .cardId(1L)
+                .sellerId(100L)
+                .title("테스트 경매")
+                .description("설명")
+                .startingPrice(1000L)
                 .status(AuctionStatus.ACTIVE)
                 .startedAt(LocalDateTime.now().minusDays(3))
                 .endedAt(LocalDateTime.now().minusSeconds(1))
