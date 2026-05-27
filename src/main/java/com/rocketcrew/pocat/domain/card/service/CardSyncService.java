@@ -9,8 +9,11 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
+import com.rocketcrew.pocat.domain.pokemon.service.PokemonCommandService;
 import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.series.service.SeriesCommandService;
 import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
+import com.rocketcrew.pocat.domain.set.service.PokemonSetCommandService;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +43,9 @@ public class CardSyncService {
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final SeriesCommandService seriesCommandService;
+    private final PokemonSetCommandService pokemonSetCommandService;
+    private final PokemonCommandService pokemonCommandService;
 
     /**
      * 매주 일요일 자정에 전체 세트를 자동 동기화한다.
@@ -118,13 +124,19 @@ public class CardSyncService {
                 CardCategory category = parseCategory(cardRoot.path("category").asText(""));
                 CardGrade grade = GRADES[(offset + synced) % GRADES.length];
 
+                Series seriesEntity = seriesCommandService.findOrCreate(seriesName);
+                PokemonSet pokemonSetEntity = pokemonSetCommandService.findOrCreate(setId, setName, seriesEntity);
+                Pokemon pokemonEntity = (category == CardCategory.POKEMON)
+                        ? pokemonCommandService.findOrCreateForCardName(name).orElse(null)
+                        : null;
+
                 Card card = Card.builder()
                         .userId(adminUserId)
                         .tcgdexId(tcgdexId)
                         .name(name)
-                        .series(null)         // TODO: Task 8에서 SeriesCommandService.findOrCreate()로 교체
-                        .pokemonSet(null)     // TODO: Task 8에서 PokemonSetCommandService.findOrCreate()로 교체
-                        .pokemon(null)        // TODO: Task 8에서 PokemonCommandService.findOrCreateForCardName()로 교체
+                        .series(seriesEntity)
+                        .pokemonSet(pokemonSetEntity)
+                        .pokemon(pokemonEntity)
                         .cardNumber(localId)
                         .rarity(rarity.isEmpty() ? "UNKNOWN" : rarity)
                         .category(category)
