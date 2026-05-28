@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+import com.rocketcrew.pocat.global.exception.domain.OrderException;
 
 /**
  * Redis keyspace expired 이벤트를 수신하여 TTL이 만료된 PENDING 결제를 FAILED 처리한다.
@@ -39,10 +40,12 @@ public class PaymentExpiryEventListener implements MessageListener {
         }
         try {
             failureService.markFailed(orderId, PaymentErrorReason.PAYMENT_EXPIRED);
-        } catch (Exception e) {
-            log.warn("[PaymentExpiry] markFailed 실패 orderId={} reason={}", orderId, e.getMessage());
-        } finally {
             failureService.cancelExpiry(orderId);
+        } catch (OrderException e) {
+            log.warn("[PaymentExpiry] 이미 처리된 주문 orderId={} reason={}", orderId, e.getMessage());
+            failureService.cancelExpiry(orderId);
+        } catch (Exception e) {
+            log.error("[PaymentExpiry] 처리 실패 — shadow 키 보존 orderId={}", orderId, e);
         }
     }
 }
