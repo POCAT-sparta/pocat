@@ -210,4 +210,26 @@ public class KafkaConfig {
     @Bean public NewTopic notificationTopic() {
         return TopicBuilder.name("notification").partitions(3).replicas(3).build();
     }
+    @Bean public NewTopic paymentDltTopic() {
+        return TopicBuilder.name("payment-dlt").partitions(3).replicas(3).build();
+    }
+    @Bean public NewTopic refundDltTopic() {
+        return TopicBuilder.name("refund-dlt").partitions(3).replicas(3).build();
+    }
+    @Bean public NewTopic settlementDltTopic() {
+        return TopicBuilder.name("settlement-dlt").partitions(3).replicas(3).build();
+    }
+    @Bean public NewTopic orderDltTopic() {
+        return TopicBuilder.name("order-dlt").partitions(3).replicas(3).build();
+    }
+    @Bean public NewTopic auctionDltTopic() {
+        return TopicBuilder.name("auction-dlt").partitions(3).replicas(3).build();
+    }
+    @Bean public NewTopic bidDltTopic() {
+        return TopicBuilder.name("bid-dlt").partitions(3).replicas(3).build();
+    }
+    @Bean public NewTopic notificationDltTopic() {
+        return TopicBuilder.name("notification-dlt").partitions(3).replicas(3).build();
+    }
+
 }

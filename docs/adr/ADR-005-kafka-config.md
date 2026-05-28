@@ -35,7 +35,7 @@ POCAT은 경매, 입찰, 주문, 결제, 환불, 정산, 알림 등 다양한 �
 | 항목 | 일반 | 금전 |
 |------|------|------|
 | `acks` | `1` (리더 확인) | `all` (전체 ISR 확인) |
-| `retries` | 1 | 1 |
+| `retries` | 1 (Outbox 패턴이 재발행 담당) | 1 (Outbox 패턴이 재발행 담당) |
 | `retry.backoff.ms` | 500 | 500 |
 | `enable.idempotence` | - | `true` |
 | 직렬화 | StringSerializer | StringSerializer |

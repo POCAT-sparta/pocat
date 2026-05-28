@@ -6,7 +6,7 @@ import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.event.PaymentWindowExpiredEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
-import com.rocketcrew.pocat.global.event.outbox.OutboxRepository;
+import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;

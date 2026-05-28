@@ -1,5 +1,6 @@
-package com.rocketcrew.pocat.global.event.outbox;
+package com.rocketcrew.pocat.global.outbox.entity;
 
+import com.rocketcrew.pocat.global.outbox.enums.OutboxStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -75,11 +76,13 @@ public class OutboxEvent {
         this.processedAt = LocalDateTime.now();
     }
 
-    public void incrementRetry(int maxRetry) {
+    public void markPendingForRetry() {
         this.retryCount++;
-        if (this.retryCount >= maxRetry) {
+        if (this.retryCount >= 5) {
             this.status = OutboxStatus.FAILED;
             this.processedAt = LocalDateTime.now();
+        } else {
+            this.status = OutboxStatus.PENDING; // 재시도용 PENDING 복원
         }
     }
 }

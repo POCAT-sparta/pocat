@@ -78,6 +78,7 @@ public class OrderEventConsumer {
             );
         } catch (Exception e) {
             log.error("자동결제 요청 실패: orderUid={}", event.getOrderUid(), e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -138,6 +139,7 @@ public class OrderEventConsumer {
             settlementCommandService.createSettlement(event.getOrderUid());
         } catch (Exception e) {
             log.error("정산 생성 실패: orderUid={}", event.getOrderUid(), e);
+            throw new RuntimeException(e);
         }
     }
 }

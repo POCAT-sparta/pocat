@@ -27,13 +27,15 @@ public class OrderCommandService {
     private final OrderRepository orderRepository;
     private final CardRepository cardRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final PaymentCommandService paymentCommandService;
     private final PaymentApplicationService paymentApplicationService;
 
     // 경매 낙찰 주문 생성 — rank=1 Order 저장 후 order.created 이벤트 발행
     // Payment 도메인이 이벤트를 컨슘해 자동결제 처리
     public void createOrderFromAuction(Long auctionId, Long cardId, Long sellerId,
                                        Long winnerId, Long finalPrice) {
+        if (orderRepository.findByAuctionIdAndBidderRank(auctionId, 1).isPresent()) {
+            return; // 중복 소비 방지
+        }
         Order order = orderRepository.save(
                 Order.fromAuction(auctionId, cardId, sellerId, winnerId, finalPrice, 1));
         eventPublisher.publishEvent(new OrderCreatedEvent(

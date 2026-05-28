@@ -5,7 +5,7 @@ import com.rocketcrew.pocat.domain.refund.event.RefundApprovedEvent;
 import com.rocketcrew.pocat.domain.refund.event.RefundRejectedEvent;
 import com.rocketcrew.pocat.domain.refund.event.RefundRequestedEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
-import com.rocketcrew.pocat.global.event.outbox.OutboxRepository;
+import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;

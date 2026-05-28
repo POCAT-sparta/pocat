@@ -50,6 +50,7 @@ public class RefundEventConsumer {
             );
         } catch (Exception e) {
             log.error("환불 요청 알림 실패: refundId={}", event.getRefundId(), e);
+            throw new RuntimeException(e);
         }
     }
 

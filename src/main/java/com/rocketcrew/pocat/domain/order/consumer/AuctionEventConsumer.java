@@ -51,6 +51,7 @@ public class AuctionEventConsumer {
                 );
             } catch (Exception e) {
                 log.error("낙찰 주문 생성 실패: auctionId={}", event.getAuctionId(), e);
+                throw new RuntimeException(e);
             }
         }
 

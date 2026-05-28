@@ -6,7 +6,7 @@ import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderDeliveryCompletedEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderDeliveryStartedEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
-import com.rocketcrew.pocat.global.event.outbox.OutboxRepository;
+import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 

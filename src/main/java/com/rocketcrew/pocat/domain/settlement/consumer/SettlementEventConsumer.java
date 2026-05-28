@@ -66,6 +66,7 @@ public class SettlementEventConsumer {
             );
         } catch (Exception e) {
             log.error("정산 완료 알림 실패: settlementUid={}", event.getSettlementUid(), e);
+            throw new RuntimeException(e);
         }
     }
 }
