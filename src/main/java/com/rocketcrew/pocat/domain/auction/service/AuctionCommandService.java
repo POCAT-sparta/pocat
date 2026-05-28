@@ -58,6 +58,7 @@ public class AuctionCommandService {
     private final EntityManager entityManager;
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuctionEsIndexService auctionEsIndexService;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
         Card card = cardQueryService.validateRegistrableForAuction(request.cardId());
@@ -127,6 +128,15 @@ public class AuctionCommandService {
                         .filter(recipientId -> !recipientId.equals(latestAuction.getSellerId()))
                         .toList()
         ));
+
+        // ACTIVE 또는 ENDED 상태에서 취소될 경우 ES 인덱스에서 삭제
+        final Long cancelledId = latestAuction.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                auctionEsIndexService.delete(cancelledId);
+            }
+        });
 
         return AdminCancelAuctionResponse.from(latestAuction);
     }
