@@ -59,7 +59,7 @@ class FailureServiceTest {
 
             failureService.markFailed(1L, PaymentErrorReason.PAYMENT_EXPIRED);
 
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.PAYMENT_FAILED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.AUTO_PAYMENT_FAILED);
         }
 
         @Test

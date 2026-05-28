@@ -92,13 +92,13 @@ public class FailureService {
             order.failPayment();
             log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
             DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
-                            order.getOrderUid(),
-                            order.getBuyerId(),
-                            order.getSellerId()
-                    );
-                    outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
-                    eventPublisher.publishEvent(event);
-                });
+                    order.getOrderUid(),
+                    order.getBuyerId(),
+                    order.getSellerId()
+            );
+            outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+            eventPublisher.publishEvent(event);
+        }
     }
 
     /**

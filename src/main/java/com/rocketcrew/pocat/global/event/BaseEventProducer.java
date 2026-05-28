@@ -17,6 +17,14 @@ public abstract class BaseEventProducer {
     private final ObjectMapper objectMapper;
     private final OutboxRepository outboxRepository;
 
+    /**
+     * outboxId 없이 Kafka만 발행하는 편의 오버로드 (아웃박스 상태 업데이트 불필요한 경우).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void send(String topic, String key, BaseEvent event) {
+        send(topic, key, null, event);
+    }
+
     // REQUIRES_NEW를 사용하여 이미 커밋된 메인 트랜잭션과 별개로 아웃박스 상태를 업데이트합니다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected void send(
@@ -33,11 +41,13 @@ public abstract class BaseEventProducer {
 
             log.info("Kafka 발행 성공: topic={}, eventType={}", topic, event.getEventType()
             );
-            // 2. 아웃박스 상태를 SENT로 변경 (성공 시에만)
-            outboxRepository.findById(outboxId).ifPresent(outboxEvent -> {
-                outboxEvent.markSent(); //
-                outboxRepository.save(outboxEvent);
-            });
+            // 2. 아웃박스 상태를 SENT로 변경 (outboxId가 있는 경우에만)
+            if (outboxId != null) {
+                outboxRepository.findById(outboxId).ifPresent(outboxEvent -> {
+                    outboxEvent.markSent();
+                    outboxRepository.save(outboxEvent);
+                });
+            }
         } catch (Exception e) {
             log.error("Kafka 발행 실패: topic={}, eventType={}", topic, event.getEventType(), e);
             // 예외시 스케줄러가 처리할 수 있도록 예외던지지 않기.
