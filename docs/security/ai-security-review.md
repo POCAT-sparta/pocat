@@ -140,3 +140,20 @@ spring:
 | domain/ai/session/ 고아 패키지 | 4개 파일 삭제 (서비스에서 미참조 확인 후) |
 | V1 Flyway 미완 FK 제약 | V2__ai_tables_fk.sql 추가 (ai_chat_sessions, ai_chat_messages, card_ai_analysis) |
 | V1 고아 단수형 테이블 | ai_chat_session, ai_chat_message DROP (엔티티는 복수형 사용) |
+
+## #116 인프라 안정화 보안 검토 (2026-05-27)
+
+### 수정 완료
+
+| 항목 | 조치 |
+|------|------|
+| AiStreamController SSE 입력 검증 누락 | @Validated + @NotBlank @Size(max=2000) 추가 |
+| AiAssistantService catch 내부 오류 노출 | ServiceException(INTERNAL_SERVER_ERROR)으로 대체 |
+| EmbeddingEventListener @Async executor | SecurityContext 불필요 의도 명시 주석 추가 |
+
+### 기각
+
+| 항목 | 사유 |
+|------|------|
+| Kafka bootstrap-servers default 제거 | 개발 편의 유지, prod 환경에서는 KAFKA_BOOTSTRAP_SERVERS env 필수 |
+| ddl-auto: validate 전환 | Core 테이블(cards, users, auctions) Flyway 마이그레이션 미완 — 별도 이슈 처리 |

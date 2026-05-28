@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.card.service;
 
+import com.rocketcrew.pocat.domain.ai.rag.event.CardEmbeddingEvent;
 import com.rocketcrew.pocat.domain.card.document.CardDocument;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
@@ -19,6 +20,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ public class CardCommandService {
     private final SeriesCommandService seriesCommandService;
     private final PokemonSetCommandService pokemonSetCommandService;
     private final PokemonCommandService pokemonCommandService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CardResponse createCard(Long userId, CreateCardRequest request) {
         if (request.tcgdexId() != null && cardRepository.existsByTcgdexId(request.tcgdexId())) {
@@ -93,6 +96,8 @@ public class CardCommandService {
 
         if (card.getStatus() == CardStatus.ACTIVE) {
             indexCard(card);
+            String cardText = card.getName() + " " + card.getGrade() + " " + card.getSeries();
+            eventPublisher.publishEvent(new CardEmbeddingEvent(card.getId(), cardText));
         }
         return CardResponse.from(card);
     }
@@ -109,6 +114,11 @@ public class CardCommandService {
                 .orElseThrow(() -> new CardException(ErrorCode.CARD_NOT_FOUND));
         card.approve();
         indexCard(card);
+
+        // Publish embedding event for RAG after card approval
+        String cardText = card.getName() + " " + card.getGrade() + " " + card.getSeries();
+        eventPublisher.publishEvent(new CardEmbeddingEvent(card.getId(), cardText));
+
         return CardResponse.from(card);
     }
 

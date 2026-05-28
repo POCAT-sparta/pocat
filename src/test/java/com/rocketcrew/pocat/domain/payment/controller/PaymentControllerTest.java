@@ -5,7 +5,7 @@ import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
-import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
+import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -51,7 +51,7 @@ class PaymentControllerTest {
     private PaymentController paymentController;
 
     @Mock
-    private PaymentCommandService paymentCommandService;
+    private PaymentApplicationService paymentApplicationService;
 
     @Mock
     private PaymentQueryService paymentQueryService;
@@ -109,7 +109,7 @@ class PaymentControllerTest {
         @DisplayName("성공: 201 CREATED 와 함께 결제 레코드를 반환한다")
         void success_201() throws Exception {
             CreatePaymentRequest request = new CreatePaymentRequest(1L);
-            given(paymentCommandService.createPayment(eq(1L), any(CreatePaymentRequest.class)))
+            given(paymentApplicationService.generatePayment(eq(1L), any(CreatePaymentRequest.class)))
                     .willReturn(samplePaymentResponse());
 
             mockMvc.perform(post("/api/v1/payments")
@@ -125,7 +125,7 @@ class PaymentControllerTest {
         @DisplayName("실패: 409 — 주문 상태가 PAYMENT_FAILED 아님")
         void fail_409_orderNotFailed() throws Exception {
             CreatePaymentRequest request = new CreatePaymentRequest(1L);
-            given(paymentCommandService.createPayment(eq(1L), any(CreatePaymentRequest.class)))
+            given(paymentApplicationService.generatePayment(eq(1L), any(CreatePaymentRequest.class)))
                     .willThrow(new PaymentException(ErrorCode.PAYMENT_ORDER_NOT_FAILED));
 
             mockMvc.perform(post("/api/v1/payments")
@@ -148,7 +148,7 @@ class PaymentControllerTest {
             PaymentResponse completed = new PaymentResponse(
                     "PAY-001", 1L, 10000L, PaymentType.PG_DIRECT,
                     "CARD", PaymentStatus.COMPLETED, LocalDateTime.now(), LocalDateTime.now());
-            given(paymentCommandService.confirmPayment(1L, "PAY-001")).willReturn(completed);
+            given(paymentApplicationService.confirmPayment(1L, "PAY-001")).willReturn(completed);
 
             mockMvc.perform(patch("/api/v1/payments/PAY-001"))
                     .andExpect(status().isOk())
@@ -159,7 +159,7 @@ class PaymentControllerTest {
         @Test
         @DisplayName("실패: 403 — 구매자 불일치")
         void fail_403_buyerMismatch() throws Exception {
-            given(paymentCommandService.confirmPayment(1L, "PAY-001"))
+            given(paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .willThrow(new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH));
 
             mockMvc.perform(patch("/api/v1/payments/PAY-001"))
@@ -242,7 +242,7 @@ class PaymentControllerTest {
                             .content("{}".getBytes()))
                     .andExpect(status().isBadRequest());
 
-            verifyNoInteractions(paymentCommandService);
+            verifyNoInteractions(paymentApplicationService);
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.rocketcrew.pocat.domain.ai.analysis;
 
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
+import com.rocketcrew.pocat.domain.ai.analysis.entity.CardAiAnalysis;
+import com.rocketcrew.pocat.domain.ai.analysis.repository.CardAiAnalysisRepository;
 import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisService;
 import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
@@ -10,6 +12,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,15 +31,18 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.lang.reflect.Method;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,6 +64,9 @@ class CardAnalysisServiceTest {
 
     @Mock
     private AiUsageMetrics aiUsageMetrics;
+
+    @Mock
+    private CardAiAnalysisRepository cardAiAnalysisRepository;
 
     @Mock
     private StringRedisTemplate redisTemplate;
@@ -91,6 +100,9 @@ class CardAnalysisServiceTest {
                 .status(CardStatus.ACTIVE)
                 .build();
         ReflectionTestUtils.setField(psa10Card, "id", 1L);
+
+        // wire self-reference so reanalyzeCard() → self.analyzeCard() works in unit test
+        ReflectionTestUtils.setField(cardAnalysisService, "self", cardAnalysisService);
 
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(chatClient.prompt(any(Prompt.class))).willReturn(requestSpec);
@@ -178,6 +190,49 @@ class CardAnalysisServiceTest {
             // then
             verify(redisTemplate).delete("ai:analysis:card:1");
             assertThat(result).isNotNull();
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // CardAiAnalysis 영속화 + RateLimiter (infra-fix #116)
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("CardAiAnalysis 영속화 / RateLimiter (#116)")
+    class PersistenceAndRateLimiter {
+
+        @Test
+        @DisplayName("analyzeCard 성공 시 cardAiAnalysisRepository.save()가 호출되어야 한다")
+        void analyzeCard_persistsToCardAiAnalysis() {
+            // given
+            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
+            given(valueOperations.get(anyString())).willReturn(null);
+            given(promptTemplateService.getPrompt("PSA_10")).willReturn(
+                    "카드 분석: {cardContext}\n{format}");
+            String llmJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
+                    + "\"summary\":\"최상급\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
+                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
+                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
+            given(callResponseSpec.content()).willReturn(llmJson);
+            given(cardAiAnalysisRepository.save(any(CardAiAnalysis.class)))
+                    .willAnswer(inv -> inv.getArgument(0));
+
+            // when
+            cardAnalysisService.analyzeCard(1L);
+
+            // then: FAILS until CardAnalysisService is updated to call cardAiAnalysisRepository.save()
+            verify(cardAiAnalysisRepository).save(any(CardAiAnalysis.class));
+        }
+
+        @Test
+        @DisplayName("analyzeCard() 메서드에 @RateLimiter 어노테이션이 선언되어 있어야 한다")
+        void analyzeCard_isAnnotatedWithRateLimiter() throws NoSuchMethodException {
+            Method m = CardAnalysisService.class.getMethod("analyzeCard", Long.class);
+            io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =
+                    m.getAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
+            assertThat(rl)
+                    .as("analyzeCard() must be annotated with @RateLimiter")
+                    .isNotNull();
+            assertThat(rl.name()).isEqualTo("aiEndpoint");
         }
     }
 }
