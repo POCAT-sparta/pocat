@@ -26,9 +26,14 @@ public record CardResponse(
         CardSource source,
         CardStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        ActiveAuctionSummary activeAuction
 ) {
     public static CardResponse from(Card card) {
+        return from(card, null);
+    }
+
+    public static CardResponse from(Card card, ActiveAuctionSummary activeAuction) {
         Series series = card.getSeries();
         PokemonSet pokemonSet = card.getPokemonSet();
         return new CardResponse(
@@ -47,7 +52,15 @@ public record CardResponse(
                 card.getSource(),
                 card.getStatus(),
                 card.getCreatedAt(),
-                card.getUpdatedAt()
+                card.getUpdatedAt(),
+                activeAuction
         );
+    }
+
+    /** ES 응답에 activeAuction을 붙일 때 사용 */
+    public CardResponse withActiveAuction(ActiveAuctionSummary activeAuction) {
+        return new CardResponse(id, userId, tcgdexId, name, series, setId, setName,
+                cardNumber, rarity, category, grade, imageUrl, source, status,
+                createdAt, updatedAt, activeAuction);
     }
 }

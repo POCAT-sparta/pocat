@@ -8,8 +8,12 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.auction.entity.Auction;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.card.document.CardDocument;
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
+import com.rocketcrew.pocat.domain.card.dto.response.ActiveAuctionSummary;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
@@ -53,6 +57,7 @@ public class CardQueryService {
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
     private final CardRepository cardRepository;
+    private final AuctionRepository auctionRepository;
     private final OrderQueryService orderQueryService;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
@@ -110,9 +115,25 @@ public class CardQueryService {
         NativeQuery query = queryBuilder.build();
 
         SearchHits<CardDocument> hits = elasticsearchOperations.search(query, CardDocument.class);
-        List<CardResponse> content = hits.stream()
+        List<CardDocument> documents = hits.stream()
                 .map(SearchHit::getContent)
-                .map(CardDocument::toResponse)
+                .toList();
+
+        // 진행 중인 경매(ACTIVE)를 카드 ID 단위로 배치 조회 → 단일 쿼리
+        Map<Long, ActiveAuctionSummary> activeAuctionMap = Collections.emptyMap();
+        if (!documents.isEmpty()) {
+            List<Long> cardIds = documents.stream()
+                    .map(doc -> Long.parseLong(doc.getId()))
+                    .toList();
+            activeAuctionMap = auctionRepository.findByCardIdInAndStatus(cardIds, AuctionStatus.ACTIVE)
+                    .stream()
+                    .collect(Collectors.toMap(Auction::getCardId, ActiveAuctionSummary::from,
+                            (existing, replacement) -> existing)); // 동일 카드에 ACTIVE 경매가 둘 이상이면 첫 번째 사용
+        }
+
+        final Map<Long, ActiveAuctionSummary> auctionMap = activeAuctionMap;
+        List<CardResponse> content = documents.stream()
+                .map(doc -> doc.toResponse().withActiveAuction(auctionMap.get(Long.parseLong(doc.getId()))))
                 .toList();
 
         return new PageImpl<>(content, pageable, hits.getTotalHits());
@@ -123,7 +144,11 @@ public class CardQueryService {
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_FOUND);
         }
-        return CardResponse.from(card);
+        List<Auction> activeAuctions = auctionRepository.findByCardIdAndStatus(id, AuctionStatus.ACTIVE);
+        ActiveAuctionSummary activeAuction = activeAuctions.isEmpty()
+                ? null
+                : ActiveAuctionSummary.from(activeAuctions.get(0));
+        return CardResponse.from(card, activeAuction);
     }
 
     public Card getCardEntity(Long id) {

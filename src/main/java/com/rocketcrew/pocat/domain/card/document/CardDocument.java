@@ -141,7 +141,8 @@ public class CardDocument {
                 source != null ? CardSource.valueOf(source) : null,
                 status != null ? CardStatus.valueOf(status) : null,
                 createdAt,
-                updatedAt
+                updatedAt,
+                null  // activeAuction — 카드 목록에서는 CardQueryService가 별도로 주입
         );
     }
 }

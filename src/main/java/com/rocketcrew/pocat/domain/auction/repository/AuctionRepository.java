@@ -38,6 +38,8 @@ public interface AuctionRepository extends JpaRepository<Auction, Long>, Auction
 
     List<Auction> findByCardIdAndStatus(Long cardId, AuctionStatus status);
 
+    List<Auction> findByCardIdInAndStatus(List<Long> cardIds, AuctionStatus status);
+
     @Query("SELECT a FROM Auction a WHERE a.cardId = :cardId AND a.status = :status AND a.endedAt >= :cutoffDate ORDER BY a.endedAt DESC")
     List<Auction> findCompletedByCardIdSince(@Param("cardId") Long cardId, @Param("status") AuctionStatus status, @Param("cutoffDate") LocalDateTime cutoffDate, Pageable pageable);
 }
