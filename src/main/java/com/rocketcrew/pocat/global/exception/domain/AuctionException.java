@@ -8,4 +8,8 @@ public class AuctionException extends ServiceException {
     public AuctionException(ErrorCode errorCode) {
         super(errorCode);
     }
+
+    public AuctionException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode, cause);
+    }
 }

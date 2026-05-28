@@ -8,4 +8,8 @@ public class BidException extends ServiceException {
     public BidException(ErrorCode errorCode) {
         super(errorCode);
     }
+
+    public BidException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode, cause);
+    }
 }

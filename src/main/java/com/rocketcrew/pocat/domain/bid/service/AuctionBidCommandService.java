@@ -197,7 +197,7 @@ public class AuctionBidCommandService {
             return lock.tryLock(BID_LOCK_WAIT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new BidException(ErrorCode.BID_LOCK_FAILED);
+            throw new BidException(ErrorCode.BID_LOCK_FAILED, e);
         }
     }
 

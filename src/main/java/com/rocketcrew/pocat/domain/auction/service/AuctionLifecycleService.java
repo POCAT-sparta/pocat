@@ -171,7 +171,7 @@ public class AuctionLifecycleService {
             return lock;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
+            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED, e);
         }
     }
 
