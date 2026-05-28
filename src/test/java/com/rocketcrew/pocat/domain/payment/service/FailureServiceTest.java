@@ -54,7 +54,7 @@ class FailureServiceTest {
             given(paymentRepository.findById(1L)).willReturn(Optional.of(payment));
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
 
-            failureService.markFailed(1L);
+            failureService.markFailed(1L, "PAYMENT_EXPIRED");
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PAYMENT_FAILED);
@@ -65,7 +65,7 @@ class FailureServiceTest {
         void fail_paymentNotFound() {
             given(paymentRepository.findById(99L)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> failureService.markFailed(99L))
+            assertThatThrownBy(() -> failureService.markFailed(99L, "PAYMENT_EXPIRED"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_NOT_FOUND);
         }
@@ -79,7 +79,7 @@ class FailureServiceTest {
             given(orderRepository.findById(1L)).willReturn(Optional.empty());
 
             // PaymentFailureService 는 주문 미발견 시 PaymentException(ORDER_NOT_FOUND) 를 던진다
-            assertThatThrownBy(() -> failureService.markFailed(1L))
+            assertThatThrownBy(() -> failureService.markFailed(1L, "PAYMENT_EXPIRED"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_NOT_FOUND);
         }

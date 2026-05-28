@@ -30,6 +30,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentWebhookService")
@@ -146,7 +148,7 @@ class PaymentWebhookServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
 
-            verify(failureService).markFailed(1L);
+            verify(failureService).markFailed(eq(1L), anyString());
             verify(failureService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }
@@ -163,7 +165,7 @@ class PaymentWebhookServiceTest {
 
             paymentWebhookService.handleWebhook("valid-sig", body);
 
-            verify(failureService).markFailed(1L);
+            verify(failureService).markFailed(eq(1L), anyString());
             verify(failureService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }

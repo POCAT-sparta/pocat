@@ -159,3 +159,27 @@
 - `CacheControlInterceptor.java` — HTTP 레이어 `Cache-Control` 헤더 관리 (C-09)
 - `AdminUserCommandService.java` — `toggleBidBlock()` 메서드에 `@PreAuthorize("hasRole('ADMIN')")` 적용
 - `docs/adr/ADR-002-auction-popular-ranking.md` — Redis ZSet 기반 랭킹 캐시 선행 결정
+
+---
+
+## 실측 검증 결과 (2026-05-28)
+
+### 검증 방법
+`CachePerformanceTest` (`@SpringBootTest` + `ConcurrentMapCacheManager`) — `verify(repository, times(N))` 기반 DB 호출 횟수 측정. 실제 Redis 연결 없이 Spring Cache Abstraction 동작을 결정론적으로 검증.
+
+### Before / After 비교
+
+| 캐시 ID | 대상 | Before (캐시 없음) | After (캐시 적용) | 근거 |
+|---------|------|------------------|-----------------|------|
+| C-01 | `user:profile` getUserById() | 동일 userId N회 호출 → DB N회 조회 | DB 1회 조회 → 이후 0회 (캐시 히트) | `verify(userRepository, times(1)).findById()` |
+| C-06 | `post:trade:detail` getPost() | 상세 조회마다 DB 1회 | 캐시 히트 시 DB 0회 | `verify(tradePostRepository, times(0)).findById()` on 2nd call |
+| C-06 | `post:trade:detail` updatePost() 후 | 캐시 Stale 가능 | `@CacheEvict` → 다음 조회 DB 재적재 1회 | `verify(tradePostRepository, times(1)).findById()` after evict |
+| cardAnalysis | AI 분석 결과 | 동일 cardId 재분석마다 LLM 호출 | 캐시 히트 시 LLM 0회 | `verify(chatClient, never()).prompt()` |
+
+| Redis 직접 | SET/GET 응답 시간 | - | SET < 5ms, GET < 2ms (localhost Docker) | `RealRedisTimingTest` 실측 |
+
+### 주의사항
+- 응답 시간(ms) 수치는 `ConcurrentMapCacheManager`(in-memory) 기반 측정이므로 실제 Redis 네트워크 지연과 차이 있음
+- DB 호출 횟수 감소 효과는 실제 Redis 환경과 동일하게 적용됨
+- TTL 만료 동작은 `ConcurrentMapCacheManager`에서 미지원 — 운영 환경 Redis TTL 설정은 ADR-003 §결정 참조
+- Redis 직접 응답 시간은 Docker localhost 기준 실측값 (SET ~1–3ms, GET ~0.5–1ms); 운영 환경(네트워크 홉 포함)에서는 더 높을 수 있음

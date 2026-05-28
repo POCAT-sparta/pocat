@@ -1,4 +1,15 @@
 spring:
+  flyway:
+    enabled: false
+  elasticsearch:
+    uris: http://localhost:9200
+  ai:
+    openai:
+      api-key: "test-key-disabled"
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        options:
+          model: gemini-1.5-flash
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
     driver-class-name: org.h2.Driver
@@ -24,3 +35,7 @@ jwt:
 
 view:
   ip-secret: test-ip-secret-key
+
+portone:
+  secret: test-portone-secret
+  webhook-secret: test-webhook-secret

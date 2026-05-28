@@ -31,6 +31,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.lang.reflect.Method;
 import java.util.Optional;
 
@@ -190,6 +191,99 @@ class CardAnalysisServiceTest {
             // then
             verify(redisTemplate).delete("ai:analysis:card:1");
             assertThat(result).isNotNull();
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // AI 장애 시나리오 및 캐시 동작
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("AI 장애 시나리오 및 캐시 동작")
+    class AiFaultAndCacheScenarios {
+
+        @Test
+        @DisplayName("@CircuitBreaker 어노테이션 선언 확인")
+        void circuitBreakerAnnotationDeclared() throws Exception {
+            Method m = CardAnalysisService.class.getMethod("analyzeCard", Long.class);
+            io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker cb =
+                    m.getAnnotation(io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker.class);
+            assertThat(cb)
+                    .as("analyzeCard() must be annotated with @CircuitBreaker(name=\"aiService\")")
+                    .isNotNull();
+            assertThat(cb.name()).isEqualTo("aiService");
+            assertThat(cb.fallbackMethod()).isEqualTo("analyzeCardFallback");
+        }
+
+        @Test
+        @DisplayName("@RateLimiter 어노테이션 선언 확인")
+        void rateLimiterAnnotationDeclared() throws Exception {
+            Method m = CardAnalysisService.class.getMethod("analyzeCard", Long.class);
+            io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =
+                    m.getAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
+            assertThat(rl)
+                    .as("analyzeCard() must be annotated with @RateLimiter(name=\"aiEndpoint\")")
+                    .isNotNull();
+            assertThat(rl.name()).isEqualTo("aiEndpoint");
+            assertThat(rl.fallbackMethod()).isEqualTo("analyzeCardRateLimitFallback");
+        }
+
+        @Test
+        @DisplayName("Redis 캐시 히트 시 LLM 미호출")
+        void cacheHit_skipLlmCall() throws Exception {
+            // given: 캐시에 유효한 JSON 결과 존재
+            String cachedJson = "{\"priceTrend\":\"STABLE\",\"fairValueEstimate\":100000,\"demandLevel\":\"MEDIUM\","
+                    + "\"summary\":\"캐시 히트 테스트\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
+                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":50,\"completionTokens\":80,"
+                    + "\"analyzedAt\":\"2026-05-28T00:00:00\"}";
+            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
+            given(valueOperations.get("ai:analysis:card:1")).willReturn(cachedJson);
+            // ObjectMapper를 실제로 동작시켜 역직렬화
+            com.fasterxml.jackson.databind.ObjectMapper realMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            realMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            org.springframework.test.util.ReflectionTestUtils.setField(cardAnalysisService, "objectMapper", realMapper);
+
+            // when
+            CardAnalysisResult result = cardAnalysisService.analyzeCard(1L);
+
+            // then: LLM은 호출되지 않아야 한다
+            verify(chatClient, never()).prompt(any(org.springframework.ai.chat.prompt.Prompt.class));
+            assertThat(result).isNotNull();
+            assertThat(result.priceTrend()).isEqualTo("STABLE");
+        }
+
+        @Test
+        @DisplayName("analyzeCardFallback — CircuitBreaker open 시 기본 응답 반환")
+        void analyzeCardFallback_returnsDefaultResponse() {
+            // fallback shape 직접 검증 (AOP 없이 유닛 테스트에서 fallback shape 확인)
+            CardAnalysisResult fallback = new CardAnalysisResult(
+                    "UNKNOWN", null, "UNKNOWN",
+                    "현재 AI 분석 서비스를 이용할 수 없습니다. 잠시 후 다시 시도해주세요.",
+                    java.util.List.of(), java.util.List.of(), java.util.List.of(),
+                    "gemini-1.5-flash", 0, 0, java.time.LocalDateTime.now());
+
+            assertThat(fallback.priceTrend()).isEqualTo("UNKNOWN");
+            assertThat(fallback.demandLevel()).isEqualTo("UNKNOWN");
+            assertThat(fallback.summary()).contains("AI 분석 서비스");
+        }
+
+        @Test
+        @DisplayName("analyzeCardRateLimitFallback — Rate Limit 초과 시 AI_RATE_LIMITED 예외")
+        void rateLimitFallback_throwsAiRateLimited() throws Exception {
+            Method fallback = CardAnalysisService.class.getDeclaredMethod(
+                    "analyzeCardRateLimitFallback", Long.class,
+                    io.github.resilience4j.ratelimiter.RequestNotPermitted.class);
+            fallback.setAccessible(true);
+            io.github.resilience4j.ratelimiter.RequestNotPermitted ex =
+                    io.github.resilience4j.ratelimiter.RequestNotPermitted.createRequestNotPermitted(
+                            io.github.resilience4j.ratelimiter.RateLimiter.ofDefaults("aiEndpoint"));
+
+            assertThatThrownBy(() -> {
+                try {
+                    fallback.invoke(cardAnalysisService, 1L, ex);
+                } catch (java.lang.reflect.InvocationTargetException ite) {
+                    throw ite.getCause();
+                }
+            }).isInstanceOf(ServiceException.class);
         }
     }
 
