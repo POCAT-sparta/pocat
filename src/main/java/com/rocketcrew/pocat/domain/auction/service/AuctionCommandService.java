@@ -129,7 +129,7 @@ public class AuctionCommandService {
                         .toList()
         ));
 
-        // ACTIVE 또는 ENDED 상태에서 취소될 경우 ES 인덱스에서 삭제
+        // ACTIVE 상태에서 취소될 경우 ES 인덱스에서 삭제 (ENDED/NO_BIDDER는 validateCancellable에서 차단됨)
         final Long cancelledId = latestAuction.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

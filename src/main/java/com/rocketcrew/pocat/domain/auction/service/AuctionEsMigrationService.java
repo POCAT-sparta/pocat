@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +46,7 @@ public class AuctionEsMigrationService {
         Page<Auction> batch;
 
         do {
-            Pageable pageable = PageRequest.of(pageNum++, BATCH_SIZE);
+            Pageable pageable = PageRequest.of(pageNum++, BATCH_SIZE, Sort.by(Sort.Direction.ASC, "id"));
             batch = auctionRepository.findByStatusIn(INDEXABLE_STATUSES, pageable);
 
             List<Auction> auctions = batch.getContent();

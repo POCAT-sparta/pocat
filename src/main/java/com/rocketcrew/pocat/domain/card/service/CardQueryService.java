@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -127,8 +128,12 @@ public class CardQueryService {
                     .toList();
             activeAuctionMap = auctionRepository.findByCardIdInAndStatus(cardIds, AuctionStatus.ACTIVE)
                     .stream()
+                    // 동일 카드에 ACTIVE 경매가 둘 이상이면 startedAt DESC → id DESC 기준 최신 경매 선택
+                    .sorted(Comparator.comparing(Auction::getStartedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+                            .thenComparingLong(Auction::getId)
+                            .reversed())
                     .collect(Collectors.toMap(Auction::getCardId, ActiveAuctionSummary::from,
-                            (existing, replacement) -> existing)); // 동일 카드에 ACTIVE 경매가 둘 이상이면 첫 번째 사용
+                            (existing, replacement) -> existing));
         }
 
         final Map<Long, ActiveAuctionSummary> auctionMap = activeAuctionMap;
@@ -145,9 +150,12 @@ public class CardQueryService {
             throw new CardException(ErrorCode.CARD_NOT_FOUND);
         }
         List<Auction> activeAuctions = auctionRepository.findByCardIdAndStatus(id, AuctionStatus.ACTIVE);
-        ActiveAuctionSummary activeAuction = activeAuctions.isEmpty()
-                ? null
-                : ActiveAuctionSummary.from(activeAuctions.get(0));
+        // 동일 카드에 ACTIVE 경매가 둘 이상이면 startedAt DESC → id DESC 기준 최신 경매 선택
+        ActiveAuctionSummary activeAuction = activeAuctions.stream()
+                .max(Comparator.comparing(Auction::getStartedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparingLong(Auction::getId))
+                .map(ActiveAuctionSummary::from)
+                .orElse(null);
         return CardResponse.from(card, activeAuction);
     }
 

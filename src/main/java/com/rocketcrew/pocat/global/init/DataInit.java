@@ -21,6 +21,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -45,6 +48,9 @@ public class DataInit implements ApplicationRunner {
         List<User> users = seedUsers();
         if (cardRepository.count() == 0) {
             seedCardsAndAuctions(users);
+        } else if (auctionRepository.count() == 0) {
+            // 카드가 이미 있는 경우(예: LFS 시드) 기존 카드로 경매만 시드
+            seedAuctionsFromExistingCards(users);
         }
     }
 
@@ -149,5 +155,35 @@ public class DataInit implements ApplicationRunner {
                 .build());
 
         log.info("[DataInit] 카드 3장, 경매 3건 시드 완료 (판매자: {})", seller.getEmail());
+    }
+
+    private void seedAuctionsFromExistingCards(List<User> users) {
+        User seller = users.get(1); // user1
+        List<Card> cards = cardRepository
+                .findAll(PageRequest.of(0, 3, Sort.by(Sort.Direction.ASC, "id")))
+                .getContent();
+
+        if (cards.isEmpty()) {
+            log.info("[DataInit] 시드용 카드 없음, 경매 시드 건너뜁니다.");
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (int i = 0; i < cards.size(); i++) {
+            Card card = cards.get(i);
+            auctionRepository.save(Auction.builder()
+                    .cardId(card.getId())
+                    .sellerId(seller.getId())
+                    .title(card.getName() + " 경매")
+                    .description("테스트 경매입니다.")
+                    .startingPrice(5_000L)
+                    .buyoutPrice(50_000L)
+                    .status(AuctionStatus.ACTIVE)
+                    .startedAt(now)
+                    .endedAt(now.plusDays(3L + i * 2L))
+                    .build());
+        }
+        log.info("[DataInit] 기존 카드 {}장으로 경매 {}건 시드 완료 (판매자: {})",
+                cards.size(), cards.size(), seller.getEmail());
     }
 }
