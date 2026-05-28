@@ -6,9 +6,7 @@ import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.event.AuctionBuyoutCompletedEvent;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
-import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
-import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
@@ -21,15 +19,11 @@ import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.BidException;
 import com.rocketcrew.pocat.global.event.BaseEvent;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -38,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class AuctionBuyoutService {
 
     private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
@@ -46,82 +39,76 @@ public class AuctionBuyoutService {
     private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionRepository auctionRepository;
-    private final AuctionBidRepository auctionBidRepository;
     private final OrderCommandService orderCommandService;
     private final OrderQueryService orderQueryService;
     private final UserQueryService userQueryService;
-    private final EntityManager entityManager;
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxEventWriter;
+    private final AuctionBuyoutTransactionService buyoutTransactionService;
 
     public BuyoutAuctionResponse buyout(Long buyerId, Long auctionId) {
         User buyer = userQueryService.getUserEntity(buyerId);
-        Auction auction = findAuction(auctionId);
-
-        validateBuyoutAvailable(auction);
-        validateBuyer(buyer, auction);
-
-        RLock lock = redissonClient.getLock(AUCTION_LOCK_KEY_PREFIX + auctionId);
-        if (!acquireLock(lock)) {
-            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
-        }
-        releaseLockAfterTransaction(lock);
-
-        entityManager.detach(auction);
-        Auction latestAuction = findAuction(auctionId);
-
-        validateBuyoutAvailable(latestAuction);
-        validateBuyer(buyer, latestAuction);
-
-        Long buyoutPrice = latestAuction.getBuyoutPrice();
-        latestAuction.markPaymentPending();
+        BuyoutReservation reservation = reserveBuyoutWithLock(auctionId, buyer);
 
         PaymentResponse paymentResponse;
         try {
             paymentResponse = orderCommandService.createOrderFromBuyout(
-                    latestAuction.getId(),
-                    latestAuction.getCardId(),
-                    latestAuction.getSellerId(),
+                    reservation.auctionId(),
+                    reservation.cardId(),
+                    reservation.sellerId(),
                     buyerId,
-                    buyoutPrice
+                    reservation.buyoutPrice()
             );
         } catch (RuntimeException e) {
-            latestAuction.restoreActiveFromPaymentPending();
+            buyoutTransactionService.restoreAuctionAfterPaymentFailure(auctionId);
             throw e;
         }
 
         Order order = orderQueryService.findByOrderid(paymentResponse.orderId());
 
         if (order.getStatus() != OrderStatus.PAYMENT_COMPLETED) {
-            latestAuction.restoreActiveFromPaymentPending();
+            buyoutTransactionService.restoreAuctionAfterPaymentFailure(auctionId);
             throw new AuctionException(ErrorCode.AUCTION_INVALID_STATUS_TRANSITION);
         }
 
-        Long previousHighestBidderId = latestAuction.getHighestBidderId();
-        AuctionBid buyoutBid = auctionBidRepository.save(AuctionBid.builder()
-                .auctionId(latestAuction.getId())
-                .userId(buyerId)
-                .bidPrice(buyoutPrice)
-                .status(BidStatus.LEADING)
-                .build());
-        buyoutBid.markWon();
+        BuyoutCompletion completion = buyoutTransactionService.completeBuyout(
+                reservation,
+                buyerId,
+                order,
+                this::publishBidOutbidEventIfNeeded,
+                this::publishBuyoutCompletedEvent
+        );
 
-        markExistingBidsLost(latestAuction, buyerId);
-        latestAuction.updateHighestBid(buyoutPrice, buyerId);
-        latestAuction.endAfterPaymentPending();
-        publishBidOutbidEventIfNeeded(latestAuction.getId(), previousHighestBidderId, buyoutPrice);
-        publishBuyoutCompletedEvent(latestAuction, order, buyerId, previousHighestBidderId);
-
-        return BuyoutAuctionResponse.of(latestAuction, buyoutBid, order, paymentResponse);
+        return BuyoutAuctionResponse.of(completion.auction(), completion.buyoutBid(), order, paymentResponse);
     }
 
-    private Auction findAuction(Long auctionId) {
+    private BuyoutReservation reserveBuyoutWithLock(Long auctionId, User buyer) {
+        RLock lock = redissonClient.getLock(AUCTION_LOCK_KEY_PREFIX + auctionId);
+        if (!acquireLock(lock)) {
+            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
+        }
+
+        try {
+            return buyoutTransactionService.reserveBuyout(
+                    auctionId,
+                    buyer,
+                    this::validateBuyoutAvailable,
+                    this::validateBuyer
+            );
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
+    Auction findAuction(Long auctionId) {
         return auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
     }
 
-    private void validateBuyoutAvailable(Auction auction) {
+    void validateBuyoutAvailable(Auction auction) {
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
@@ -139,7 +126,7 @@ public class AuctionBuyoutService {
         }
     }
 
-    private void validateBuyer(User buyer, Auction auction) {
+    void validateBuyer(User buyer, Auction auction) {
         if (buyer.isBidBlocked()) {
             throw new BidException(ErrorCode.BID_BLOCKED_USER);
         }
@@ -151,22 +138,8 @@ public class AuctionBuyoutService {
         }
     }
 
-    private void markExistingBidsLost(Auction auction, Long buyoutBuyerId) {
-        for (AuctionBid bid : auctionBidRepository.findAllByAuctionId(auction.getId())) {
-            if (bid.getUserId().equals(buyoutBuyerId)) {
-                continue;
-            }
-            if (bid.getStatus() == BidStatus.LEADING) {
-                bid.markOutbid();
-                bid.markLost();
-            } else if (bid.getStatus() == BidStatus.OUTBID) {
-                bid.markLost();
-            }
-        }
-    }
-
-    private void publishBuyoutCompletedEvent(Auction auction, Order order,
-                                             Long buyerId, Long previousHighestBidderId) {
+    void publishBuyoutCompletedEvent(Auction auction, Order order,
+                                     Long buyerId, Long previousHighestBidderId) {
         publishAuctionEvent(auction.getId(), new AuctionBuyoutCompletedEvent(
                 auction.getId(),
                 order.getId(),
@@ -184,8 +157,8 @@ public class AuctionBuyoutService {
         eventPublisher.publishEvent(event);
     }
 
-    private void publishBidOutbidEventIfNeeded(Long auctionId, Long previousHighestBidderId,
-                                               Long currentHighestPrice) {
+    void publishBidOutbidEventIfNeeded(Long auctionId, Long previousHighestBidderId,
+                                       Long currentHighestPrice) {
         if (previousHighestBidderId == null) {
             return;
         }
@@ -208,16 +181,5 @@ public class AuctionBuyoutService {
             Thread.currentThread().interrupt();
             throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
         }
-    }
-
-    private void releaseLockAfterTransaction(RLock lock) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCompletion(int status) {
-                if (lock.isHeldByCurrentThread()) {
-                    lock.unlock();
-                }
-            }
-        });
     }
 }
