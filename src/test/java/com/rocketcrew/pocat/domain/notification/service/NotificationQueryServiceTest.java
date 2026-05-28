@@ -73,7 +73,8 @@ class NotificationQueryServiceTest {
             NotificationListResponse response = notificationQueryService.getNotifications(1L, null);
 
             assertThat(response.hasNext()).isTrue();
-            assertThat(response.nextCursor()).isNotNull();
+            // 21개 중 마지막(21번째) 항목의 ID가 nextCursor가 됨. (응답 데이터는 20개)
+            assertThat(response.nextCursor()).isEqualTo(2L);
             assertThat(response.content()).hasSize(20);
         }
 

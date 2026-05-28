@@ -114,7 +114,9 @@ class ChatControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.chatId").value(100L))
+                    .andExpect(jsonPath("$.data.postId").value(5L));
         }
 
         @Test
@@ -157,7 +159,9 @@ class ChatControllerTest {
 
             mockMvc.perform(get("/api/v1/chats/me"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data[0].chatId").value(100L))
+                    .andExpect(jsonPath("$.data[0].postTitle").value("거래 게시글"));
         }
     }
 
@@ -173,7 +177,9 @@ class ChatControllerTest {
 
             mockMvc.perform(get("/api/v1/chats/100/messages"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content[0].senderId").value(2L))
+                    .andExpect(jsonPath("$.data.content[0].message").value("안녕하세요"));
         }
 
         @Test

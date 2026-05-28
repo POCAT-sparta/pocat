@@ -110,7 +110,9 @@ class TradePostControllerTest {
 
             mockMvc.perform(get("/api/v1/posts/trade"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content[0].id").value(10L))
+                    .andExpect(jsonPath("$.data.content[0].title").value("거래 제목"));
         }
     }
 
@@ -126,7 +128,8 @@ class TradePostControllerTest {
 
             mockMvc.perform(get("/api/v1/posts/trade/me"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content[0].id").value(10L));
         }
     }
 
@@ -142,7 +145,10 @@ class TradePostControllerTest {
 
             mockMvc.perform(get("/api/v1/posts/trade/10"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(10L))
+                    .andExpect(jsonPath("$.data.title").value("거래 제목"))
+                    .andExpect(jsonPath("$.data.content").value("내용"));
         }
 
         @Test
@@ -173,7 +179,9 @@ class TradePostControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(10L))
+                    .andExpect(jsonPath("$.data.title").value("거래 제목"));
         }
     }
 
@@ -193,7 +201,10 @@ class TradePostControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.id").value(10L))
+                    .andExpect(jsonPath("$.data.title").value("수정 제목"))
+                    .andExpect(jsonPath("$.data.price").value(20000L));
         }
 
         @Test

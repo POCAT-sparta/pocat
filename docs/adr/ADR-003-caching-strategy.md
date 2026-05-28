@@ -175,8 +175,7 @@
 | C-06 | `post:trade:detail` getPost() | 상세 조회마다 DB 1회 | 캐시 히트 시 DB 0회 | `verify(tradePostRepository, times(0)).findById()` on 2nd call |
 | C-06 | `post:trade:detail` updatePost() 후 | 캐시 Stale 가능 | `@CacheEvict` → 다음 조회 DB 재적재 1회 | `verify(tradePostRepository, times(1)).findById()` after evict |
 | cardAnalysis | AI 분석 결과 | 동일 cardId 재분석마다 LLM 호출 | 캐시 히트 시 LLM 0회 | `verify(chatClient, never()).prompt()` |
-
-| Redis 직접 | SET/GET 응답 시간 | - | SET < 5ms, GET < 2ms (localhost Docker) | `RealRedisTimingTest` 실측 |
+| (인프라) | Redis 직접 응답 시간 | - | SET < 5ms, GET < 2ms (localhost Docker) | `RealRedisTimingTest` 실측 |
 
 ### 주의사항
 - 응답 시간(ms) 수치는 `ConcurrentMapCacheManager`(in-memory) 기반 측정이므로 실제 Redis 네트워크 지연과 차이 있음

@@ -2,7 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
 import com.rocketcrew.pocat.domain.payment.client.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
@@ -43,7 +43,7 @@ class PaymentApplicationServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private PaymentCommandService paymentCommandService;
     @Mock private PaymentQueryService paymentQueryService;
-    @Mock private OrderRepository orderRepository;
+    @Mock private OrderQueryService orderQueryService;
 
     // ── generatePayment ────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ class PaymentApplicationServiceTest {
             CreatePaymentRequest request = new CreatePaymentRequest(1L);
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(paymentQueryService.findByOrderIdAndStatus(1L, PaymentStatus.PENDING))
                     .willReturn(Optional.empty());
             given(paymentCommandService.createPayment(order)).willReturn(saved);
@@ -72,7 +72,8 @@ class PaymentApplicationServiceTest {
         @Test
         @DisplayName("실패: 주문 없음 → ORDER_NOT_FOUND")
         void fail_orderNotFound() {
-            given(orderRepository.findById(99L)).willReturn(Optional.empty());
+            given(orderQueryService.findByOrderIdWithLock(99L))
+                    .willThrow(new PaymentException(ErrorCode.ORDER_NOT_FOUND));
 
             assertThatThrownBy(() -> paymentApplicationService.generatePayment(1L, new CreatePaymentRequest(99L)))
                     .isInstanceOf(PaymentException.class)
@@ -83,7 +84,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: 구매자 불일치 → PAYMENT_BUYER_MISMATCH")
         void fail_buyerMismatch() {
             Order order = TestFixtures.aPaymentFailedOrder(); // buyerId=1L
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
 
             assertThatThrownBy(() -> paymentApplicationService.generatePayment(99L, new CreatePaymentRequest(1L)))
                     .isInstanceOf(PaymentException.class)
@@ -94,7 +95,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: 주문 상태가 PAYMENT_FAILED 아님 → PAYMENT_ORDER_NOT_FAILED")
         void fail_orderNotPaymentFailed() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
 
             assertThatThrownBy(() -> paymentApplicationService.generatePayment(1L, new CreatePaymentRequest(1L)))
                     .isInstanceOf(PaymentException.class)
@@ -105,7 +106,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: 결제 가능 시간(1시간) 초과 → PAYMENT_WINDOW_EXPIRED")
         void fail_windowExpired() {
             Order order = TestFixtures.anExpiredPaymentFailedOrder();
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
 
             assertThatThrownBy(() -> paymentApplicationService.generatePayment(1L, new CreatePaymentRequest(1L)))
                     .isInstanceOf(PaymentException.class)
@@ -118,7 +119,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.aPaymentFailedOrder();
             Payment existing = TestFixtures.aPayment(PaymentStatus.PENDING);
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(paymentQueryService.findByOrderIdAndStatus(1L, PaymentStatus.PENDING))
                     .willReturn(Optional.of(existing));
 
@@ -143,7 +144,7 @@ class PaymentApplicationServiceTest {
             LocalDateTime paidAt = LocalDateTime.now();
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClient.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse("PAID", 10000L, "CARD", paidAt));
@@ -171,7 +172,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED); // buyerId=1L
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(99L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -185,7 +186,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
 
             PaymentResponse response = paymentApplicationService.confirmPayment(1L, "PAY-001");
 
@@ -201,7 +202,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClient.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse("FAILED", 10000L, null, null));
@@ -218,7 +219,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClient.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse("PAID", 5000L, "CARD", LocalDateTime.now()));
@@ -235,7 +236,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClient.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse("PAID", 15000L, "CARD", LocalDateTime.now()));
@@ -260,7 +261,7 @@ class PaymentApplicationServiceTest {
             Payment payment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
             LocalDateTime paidAt = LocalDateTime.now();
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(paymentCommandService.createPayment(order)).willReturn(payment);
             given(portOneClient.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
@@ -276,7 +277,7 @@ class PaymentApplicationServiceTest {
         void idempotent_alreadyCompleted() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED);
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findByOrderId(1L)).willReturn(
                     PaymentResponse.from(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED)));
 
@@ -292,7 +293,7 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             User user = TestFixtures.aUser(); // billingKey=null
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
             assertThatThrownBy(() -> paymentApplicationService.autoPayment(1L))
@@ -307,7 +308,7 @@ class PaymentApplicationServiceTest {
             User user = TestFixtures.aUserWithBillingKey();
             Payment payment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(paymentCommandService.createPayment(order)).willReturn(payment);
             given(portOneClient.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))

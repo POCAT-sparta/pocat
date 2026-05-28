@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.OrderException;
+
 /**
  * 결제 실패 상태를 독립 트랜잭션으로 저장하는 서비스.
  * REQUIRES_NEW로 커밋하면 호출부 트랜잭션 롤백과 무관하게 실패 상태가 유지된다.
@@ -73,18 +77,19 @@ public class FailureService {
      */
     // TODO : 만료시간이 실제로 지났는지 검사를 해야함. expireAt 이 생기면 진행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(Long orderId, String reason) {
-        orderRepository.findById(orderId)
-                .filter(o -> o.getStatus() == OrderStatus.PAYMENT_PENDING)
-                .ifPresent(order -> {
-                    order.failPayment();
-                    log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
-                    eventPublisher.publishEvent(new PaymentFailedEvent(
-                            order.getOrderUid(),
-                            order.getBuyerId(),
-                            reason
-                    ));
-                });
+    public void markFailed(Long orderId, PaymentErrorReason reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+            order.failPayment();
+            log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
+            eventPublisher.publishEvent(new PaymentFailedEvent(
+                    order.getOrderUid(),
+                    order.getBuyerId(),
+                    reason.getDescription()
+            ));
+        }
     }
 
     /**

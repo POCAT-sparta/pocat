@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 
+import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+
 /**
  * Redis keyspace expired 이벤트를 수신하여 TTL이 만료된 PENDING 결제를 FAILED 처리한다.
  * Redis에 "notify-keyspace-events Ex" 설정이 필요하다.
@@ -30,7 +32,7 @@ public class PaymentExpiryEventListener implements MessageListener {
         String orderIdStr = expiredKey.substring(FailureService.PAYMENT_EXPIRY_KEY_PREFIX.length());
         try {
             Long orderId = Long.parseLong(orderIdStr);
-            failureService.markFailed(orderId, "결제 시간 초과");
+            failureService.markFailed(orderId, PaymentErrorReason.PAYMENT_EXPIRED);
             failureService.cancelExpiry(orderId);
         } catch (NumberFormatException e) {
             log.warn("[PaymentExpiry] 파싱 불가 key={}", expiredKey);

@@ -12,6 +12,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
@@ -283,7 +284,8 @@ class CardAnalysisServiceTest {
                 } catch (java.lang.reflect.InvocationTargetException ite) {
                     throw ite.getCause();
                 }
-            }).isInstanceOf(ServiceException.class);
+            }).isInstanceOf(ServiceException.class)
+            .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AI_RATE_LIMITED);
         }
     }
 

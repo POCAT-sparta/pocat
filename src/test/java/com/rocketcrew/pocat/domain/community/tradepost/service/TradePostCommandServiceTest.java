@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -29,8 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -77,7 +77,12 @@ class TradePostCommandServiceTest {
             assertThat(response).isNotNull();
             assertThat(response.title()).isEqualTo("거래 게시글");
             verify(tradePostRepository).save(any(TradePost.class));
-            verify(eventPublisher).publishEvent(any(TradePostEmbeddingEvent.class));
+
+            ArgumentCaptor<TradePostEmbeddingEvent> eventCaptor = ArgumentCaptor.forClass(TradePostEmbeddingEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            TradePostEmbeddingEvent capturedEvent = eventCaptor.getValue();
+            assertThat(capturedEvent.postId()).isEqualTo(10L);
+            assertThat(capturedEvent.content()).contains("내용");
         }
     }
 
@@ -95,7 +100,9 @@ class TradePostCommandServiceTest {
             UpdateTradePostResponse response = tradePostCommandService.updatePost(10L, 1L, request);
 
             assertThat(response).isNotNull();
-            verify(eventPublisher).publishEvent(any(TradePostEmbeddingEvent.class));
+            ArgumentCaptor<TradePostEmbeddingEvent> eventCaptor = ArgumentCaptor.forClass(TradePostEmbeddingEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue().postId()).isEqualTo(10L);
         }
 
         @Test

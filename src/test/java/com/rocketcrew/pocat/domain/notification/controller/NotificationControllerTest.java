@@ -95,7 +95,9 @@ class NotificationControllerTest {
 
             mockMvc.perform(get("/api/notifications"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.content[0].notificationId").value(10L))
+                    .andExpect(jsonPath("$.data.content[0].type").value("BID_OUTBID"));
         }
     }
 
@@ -110,7 +112,9 @@ class NotificationControllerTest {
 
             mockMvc.perform(put("/api/notifications/10/read"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true));
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.notificationId").value(10L))
+                    .andExpect(jsonPath("$.data.type").value("BID_OUTBID"));
         }
 
         @Test
