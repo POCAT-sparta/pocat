@@ -30,8 +30,9 @@ CREATE TABLE IF NOT EXISTS ai_chat_messages (
 );
 
 -- Add FK constraints (Hibernate ddl-auto does not add FKs automatically)
-ALTER TABLE ai_chat_sessions
-    ADD CONSTRAINT fk_ai_chat_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- Note: FK to users is intentionally omitted here.
+-- users table is managed by Hibernate (ddl-auto:update) which runs AFTER Flyway,
+-- so the users table does not yet exist when this migration executes on a fresh DB.
 
 ALTER TABLE ai_chat_messages
     ADD CONSTRAINT fk_ai_chat_messages_session FOREIGN KEY (ai_chat_session_id) REFERENCES ai_chat_sessions(id) ON DELETE CASCADE;

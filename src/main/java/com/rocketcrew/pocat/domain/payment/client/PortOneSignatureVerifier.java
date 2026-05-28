@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.payment.client;
 
 import com.rocketcrew.pocat.global.config.PortOneProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
@@ -11,6 +12,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HexFormat;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PortOneSignatureVerifier {
@@ -36,6 +38,8 @@ public class PortOneSignatureVerifier {
                             computed.getBytes(StandardCharsets.UTF_8)
                     ));
         } catch (Exception e) {
+            // 설정 오류(webhookSecret 빈 값 등)이면 운영에서 즉시 인지할 수 있도록 error 로그
+            log.error("웹훅 서명 검증 중 예외 발생 — PortOne webhookSecret 설정을 확인하세요.", e);
             return false;
         }
     }

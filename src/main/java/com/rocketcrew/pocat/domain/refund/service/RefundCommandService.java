@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.refund.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
@@ -24,13 +25,16 @@ import com.rocketcrew.pocat.global.exception.domain.RefundException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -41,39 +45,42 @@ public class RefundCommandService {
     private final PaymentRepository paymentRepository;
     private final SettlementRepository settlementRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PortOneClient portOneClient;
 
     // 환불 요청 가능한 주문 상태
     private static final Set<OrderStatus> REFUNDABLE_STATUSES =
             EnumSet.of(OrderStatus.PAYMENT_COMPLETED, OrderStatus.SHIPPING, OrderStatus.ORDER_COMPLETED);
 
+    // 중복 환불 차단 대상 상태 (활성 환불이 있으면 새로 만들지 않음)
+    private static final List<RefundStatus> ACTIVE_REFUND_STATUSES = List.of(
+            RefundStatus.REQUESTED,
+            RefundStatus.PROCESSING,
+            RefundStatus.FAILED_RETRYABLE,
+            RefundStatus.COMPLETED
+    );
+
     /**
      * 7.1 환불 요청
      * - 결제 완료된 주문만 가능 (PAYMENT_COMPLETED / SHIPPING / COMPLETED)
-     * - 동일 주문에 REQUESTED·COMPLETED 환불이 이미 있으면 중복 요청 차단
+     * - 동일 주문에 활성 환불이 이미 있으면 중복 요청 차단
      * - 환불 금액은 payments.amount 전액 자동 적용 (클라이언트 금액 신뢰 금지)
      */
     public RefundResponse createRefund(Long buyerId, CreateRefundRequest request) {
-        // 비관적 락으로 동일 주문에 대한 동시 환불 요청 직렬화
         Order order = orderRepository.findByIdWithLock(request.orderId())
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
-        // 요청자 = 주문 구매자 검증
         if (!order.getBuyerId().equals(buyerId)) {
             throw new RefundException(ErrorCode.REFUND_BUYER_MISMATCH);
         }
 
-        // 환불 가능 주문 상태 검증
         if (!REFUNDABLE_STATUSES.contains(order.getStatus())) {
             throw new RefundException(ErrorCode.REFUND_INVALID_ORDER_STATUS);
         }
 
-        // 중복 환불 방지: 이미 REQUESTED 또는 COMPLETED 환불 존재 시 차단
-        if (refundRepository.existsByOrderIdAndStatusIn(
-                request.orderId(), List.of(RefundStatus.REQUESTED, RefundStatus.COMPLETED))) {
+        if (refundRepository.existsByOrderIdAndStatusIn(request.orderId(), ACTIVE_REFUND_STATUSES)) {
             throw new RefundException(ErrorCode.REFUND_ALREADY_EXISTS);
         }
 
-        // 환불 금액 = 결제 금액 전액 (서버에서 자동 확정)
         Payment payment = paymentRepository.findByOrderIdAndStatus(request.orderId(), PaymentStatus.COMPLETED)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -93,10 +100,11 @@ public class RefundCommandService {
 
     /**
      * 7.4 환불 승인 (ADMIN)
-     * - refunds.status → COMPLETED
-     * - payments.status → REFUNDED
-     * - orders.status → REFUNDED
-     * 실제 금액 이체는 관리자가 별도 수동 처리 (PortOne 부분환불 미구현)
+     * PROCESSING 마킹 → PortOne 취소 API 호출 → 성공 시 COMPLETED / 실패 시 FAILED_RETRYABLE.
+     * 실패 시 스케줄러가 지수 백오프로 자동 재시도한다.
+     *
+     * 주의: PortOne 취소 성공 후 DB 트랜잭션 실패 시, 재시도하면 PortOne에 중복 취소 요청이 발생할 수 있다.
+     * 추후 PortOne 멱등성 키(idempotency key) 적용을 권장한다.
      */
     public RefundResponse approveRefund(Long refundId) {
         Refund refund = findRefund(refundId);
@@ -105,24 +113,89 @@ public class RefundCommandService {
         Order order = findOrder(refund.getOrderId());
         Payment payment = paymentRepository.findById(refund.getPaymentId())
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
-
         Settlement settlement = settlementRepository.findByOrderId(refund.getOrderId())
                 .orElseThrow(() -> new SettlementException(ErrorCode.SETTLEMENT_NOT_FOUND));
 
-        refund.approve();
+        refund.markProcessing();
+
+        try {
+            portOneClient.cancelPayment(payment.getPaymentUid(), refund.getAmount(), refund.getReason());
+        } catch (Exception e) {
+            handleRetryFailure(refund, e.getMessage());
+            log.warn("환불 승인 중 PortOne 취소 실패 — 자동 재시도 예정. refundId={}, paymentUid={}",
+                    refundId, payment.getPaymentUid(), e);
+            throw new RefundException(ErrorCode.REFUND_PORTONE_FAILED);
+        }
+
+        refund.markCompleted();
         payment.refund();
         order.refund();
         settlement.refund();
 
         eventPublisher.publishEvent(new RefundApprovedEvent(
                 refund.getId(), order.getOrderUid(), order.getBuyerId(), order.getSellerId()));
+        log.info("환불 승인 완료. refundId={}, paymentUid={}, amount={}",
+                refundId, payment.getPaymentUid(), refund.getAmount());
+
         return RefundResponse.from(refund);
     }
 
     /**
+     * 7.4-R 환불 재시도 (스케줄러 호출)
+     * FAILED_RETRYABLE 상태의 환불을 재시도하여 PortOne 취소를 재시도한다.
+     * 최대 횟수 초과 시 FAILED_FINAL로 전환 → 관리자 수동 처리 필요.
+     */
+    public void retryRefund(Long refundId) {
+        Refund refund = refundRepository.findByIdWithLock(refundId)
+                .orElseThrow(() -> new RefundException(ErrorCode.REFUND_NOT_FOUND));
+
+        // FAILED_RETRYABLE: 정상 재시도 경로
+        // PROCESSING: approveRefund에서 PortOne 취소 성공 후 DB 실패로 방치된 경로
+        if (refund.getStatus() != RefundStatus.FAILED_RETRYABLE
+                && refund.getStatus() != RefundStatus.PROCESSING) {
+            log.info("재시도 대상 상태 아님. refundId={}, status={}", refundId, refund.getStatus());
+            return;
+        }
+
+        // FAILED_RETRYABLE은 nextRetryAt 도래 여부 확인 (PROCESSING은 즉시 재시도)
+        if (refund.getStatus() == RefundStatus.FAILED_RETRYABLE
+                && !refund.isRetryDue(LocalDateTime.now())) {
+            log.info("아직 재시도 시간 아님. refundId={}, nextRetryAt={}", refundId, refund.getNextRetryAt());
+            return;
+        }
+
+        // 동시 처리 직렬화를 위해 관련 엔티티도 비관적 락 획득
+        Payment payment = paymentRepository.findByIdWithLock(refund.getPaymentId())
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+        Order order = orderRepository.findByIdWithLock(refund.getOrderId())
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        Settlement settlement = settlementRepository.findByOrderIdWithLock(refund.getOrderId())
+                .orElseThrow(() -> new SettlementException(ErrorCode.SETTLEMENT_NOT_FOUND));
+
+        refund.markProcessing();
+
+        log.info("환불 재시도 시작. refundId={}, paymentUid={}, retryCount={}",
+                refundId, payment.getPaymentUid(), refund.getRetryCount());
+
+        try {
+            portOneClient.cancelPayment(payment.getPaymentUid(), refund.getAmount(), refund.getReason());
+        } catch (Exception e) {
+            handleRetryFailure(refund, e.getMessage());
+            log.warn("환불 재시도 실패. refundId={}, paymentUid={}, retryCount={}",
+                    refundId, payment.getPaymentUid(), refund.getRetryCount(), e);
+            return;
+        }
+
+        refund.markCompleted();
+        payment.refund();
+        order.refund();
+        settlement.refund();
+
+        log.info("환불 재시도 성공. refundId={}, paymentUid={}", refundId, payment.getPaymentUid());
+    }
+
+    /**
      * 7.5 환불 거절 (ADMIN)
-     * - refunds.status → REJECTED
-     * - orders.status는 기존 상태 유지
      */
     public RefundResponse rejectRefund(Long refundId, RejectRefundRequest request) {
         Refund refund = findRefund(refundId);
@@ -137,8 +210,19 @@ public class RefundCommandService {
 
     // ── 내부 헬퍼 ────────────────────────────────────────────────────
 
+    private void handleRetryFailure(Refund refund, String reason) {
+        int currentCount = refund.getRetryCount();
+        if (RefundRetryPolicy.isAutoRetryExhausted(currentCount)) {
+            refund.markFinalFailure(reason);
+            log.error("환불 자동 재시도 한도 초과 — 수동 처리 필요. refundId={}, retryCount={}",
+                    refund.getId(), currentCount);
+        } else {
+            LocalDateTime nextRetryAt = RefundRetryPolicy.calculateNextRetryAt(currentCount, LocalDateTime.now());
+            refund.markRetryableFailure(reason, nextRetryAt);
+        }
+    }
+
     private Refund findRefund(Long refundId) {
-        // 비관적 락으로 승인·거절 동시 처리 시 상태 불일치 방지
         return refundRepository.findByIdWithLock(refundId)
                 .orElseThrow(() -> new RefundException(ErrorCode.REFUND_NOT_FOUND));
     }

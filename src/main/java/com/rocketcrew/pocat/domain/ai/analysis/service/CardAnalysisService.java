@@ -2,6 +2,8 @@ package com.rocketcrew.pocat.domain.ai.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
+import com.rocketcrew.pocat.domain.ai.analysis.entity.CardAiAnalysis;
+import com.rocketcrew.pocat.domain.ai.analysis.repository.CardAiAnalysisRepository;
 import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -10,8 +12,12 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -38,6 +44,11 @@ public class CardAnalysisService {
     private final AiUsageMetrics aiUsageMetrics;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final CardAiAnalysisRepository cardAiAnalysisRepository;
+
+    @Lazy
+    @Autowired
+    private CardAnalysisService self;
 
     private static final String CACHE_KEY_PREFIX = "ai:analysis:card:";
     private static final long CACHE_TTL_HOURS = 24;
@@ -50,8 +61,10 @@ public class CardAnalysisService {
      * @param cardId 카드 ID
      * @return 분석 결과
      */
+    @RateLimiter(name = "aiEndpoint", fallbackMethod = "analyzeCardRateLimitFallback")
     @CircuitBreaker(name = "aiService", fallbackMethod = "analyzeCardFallback")
     @Cacheable(value = "cardAnalysis", key = "#cardId", unless = "#result == null")
+    @Transactional
     public CardAnalysisResult analyzeCard(Long cardId) {
         log.info("Starting card analysis for cardId: {}", cardId);
 
@@ -85,6 +98,25 @@ public class CardAnalysisService {
         String serializedResult = serializeAnalysisResult(result);
         redisTemplate.opsForValue().set(cacheKey, serializedResult, CACHE_TTL_HOURS, TimeUnit.HOURS);
 
+        // DB 영속화
+        try {
+            cardAiAnalysisRepository.save(CardAiAnalysis.builder()
+                    .cardId(cardId)
+                    .priceTrend(result.priceTrend() != null ? result.priceTrend() : "UNKNOWN")
+                    .fairValueEstimate(result.fairValueEstimate())
+                    .demandLevel(result.demandLevel() != null ? result.demandLevel() : "UNKNOWN")
+                    .summary(result.summary())
+                    .highlights(serializeList(result.highlights()))
+                    .riskFactors(serializeList(result.riskFactors()))
+                    .keywords(serializeList(result.keywords()))
+                    .analysisModel(result.analysisModel() != null ? result.analysisModel() : FALLBACK_MODEL)
+                    .promptTokens(result.promptTokens())
+                    .completionTokens(result.completionTokens())
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to persist CardAiAnalysis for cardId={}: {}", cardId, e.getMessage());
+        }
+
         // 메트릭 기록
         if (result.promptTokens() != null && result.completionTokens() != null) {
             aiUsageMetrics.recordUsage(
@@ -105,8 +137,9 @@ public class CardAnalysisService {
      * @param cardId 카드 ID
      * @return 새로운 분석 결과
      */
+    @RateLimiter(name = "aiEndpoint", fallbackMethod = "reanalyzeCardRateLimitFallback")
     @CircuitBreaker(name = "aiService", fallbackMethod = "analyzeCardFallback")
-    @CacheEvict(value = "cardAnalysis", key = "#cardId")
+    @CacheEvict(value = "cardAnalysis", key = "#cardId", beforeInvocation = true)
     @Transactional
     public CardAnalysisResult reanalyzeCard(Long cardId) {
         log.info("Forcing card reanalysis for cardId: {}", cardId);
@@ -116,7 +149,16 @@ public class CardAnalysisService {
         redisTemplate.delete(cacheKey);
 
         // 재분석 수행
-        return analyzeCard(cardId);
+        return self.analyzeCard(cardId);
+    }
+
+    private String serializeList(java.util.List<String> list) {
+        if (list == null || list.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -188,8 +230,8 @@ public class CardAnalysisService {
                 "카드 이름: %s\n등급: %s\n시리즈: %s\n세트: %s\nURL: %s\n레어도: %s",
                 card.getName(),
                 card.getGrade().toString(),
-                card.getSeries(),
-                card.getSetName(),
+                card.getSeries() != null ? card.getSeries().getName() : "N/A",
+                card.getPokemonSet() != null ? card.getPokemonSet().getName() : "N/A",
                 card.getImageUrl() != null ? card.getImageUrl() : "N/A",
                 card.getRarity()
         );
@@ -211,5 +253,15 @@ public class CardAnalysisService {
             log.warn("Failed to deserialize cached result, returning null: {}", e.getMessage());
             return null;
         }
+    }
+
+    private CardAnalysisResult analyzeCardRateLimitFallback(Long cardId, RequestNotPermitted ex) {
+        log.warn("Rate limit exceeded for analyzeCard cardId={}", cardId);
+        throw new ServiceException(ErrorCode.AI_RATE_LIMITED);
+    }
+
+    private CardAnalysisResult reanalyzeCardRateLimitFallback(Long cardId, RequestNotPermitted ex) {
+        log.warn("Rate limit exceeded for reanalyzeCard cardId={}", cardId);
+        throw new ServiceException(ErrorCode.AI_RATE_LIMITED);
     }
 }

@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.community.tradepost.service;
 
+import com.rocketcrew.pocat.domain.ai.rag.event.TradePostEmbeddingEvent;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.CreateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.UpdateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.CreateTradePost;
@@ -12,6 +13,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TradePostCommandService {
 
     private final TradePostRepository tradePostRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CreateTradePost createPost(Long userId, CreateTradePostRequest request) {
         TradePost tradePost = TradePost.builder()
@@ -31,7 +34,12 @@ public class TradePostCommandService {
                 .thumbnail(request.thumbnail())
                 .viewCount(0)
                 .build();
-        return CreateTradePost.from(tradePostRepository.save(tradePost));
+        tradePost = tradePostRepository.save(tradePost);
+        
+        // Publish embedding event for RAG after trade post creation
+        eventPublisher.publishEvent(new TradePostEmbeddingEvent(tradePost.getId(), tradePost.getContent()));
+        
+        return CreateTradePost.from(tradePost);
     }
 
     @CacheEvict(value = CacheNames.POST_TRADE_DETAIL, key = "#id")
@@ -42,6 +50,7 @@ public class TradePostCommandService {
             throw new TradePostException(ErrorCode.USER_FORBIDDEN);
         }
         tradePost.update(request.title(), request.content(), request.price(), request.thumbnail());
+        eventPublisher.publishEvent(new TradePostEmbeddingEvent(tradePost.getId(), tradePost.getContent()));
         return UpdateTradePostResponse.from(tradePost);
     }
 

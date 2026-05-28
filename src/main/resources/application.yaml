@@ -6,22 +6,31 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
   kafka:
-    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9093,localhost:9094}
   elasticsearch:
     uris: ${ES_URI:http://localhost:9200}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   ai:
     openai:
       api-key: ${GEMINI_API_KEY}
@@ -62,6 +71,14 @@ ranking:
     cache-size: 100
     max-response-size: 50
 
+management:
+  health:
+    elasticsearch:
+      # spring-boot-actuator 3.5.x 가 elasticsearch-java 8.17+ API(activeShardsPercentAsNumber)를 호출하는데
+      # spring-ai 1.0.0 과의 호환 버전(8.16.x)에는 해당 메서드가 없어 헬스체크가 NoSuchMethodError로 터짐.
+      # ES 연결 자체는 정상 동작하므로 액추에이터 헬스 지표만 비활성화.
+      enabled: false
+
 resilience4j:
   circuitbreaker:
     instances:
@@ -70,3 +87,9 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 30s
         permittedNumberOfCallsInHalfOpenState: 3
+  ratelimiter:
+    instances:
+      aiEndpoint:
+        limitForPeriod: 10
+        limitRefreshPeriod: 60s
+        timeoutDuration: 0s

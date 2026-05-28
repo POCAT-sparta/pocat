@@ -94,6 +94,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.createdAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .orderBy(orderSpecifiers(pageable, auction, usePublicStatusOrder))
@@ -105,6 +107,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .select(auction.count())
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .fetchOne();
@@ -132,6 +136,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.endedAt))
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .orderBy(orderSpecifiers(pageable, auction))
@@ -143,6 +149,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .select(auction.count())
                 .from(auction)
                 .join(card).on(card.id.eq(auction.cardId))
+                .leftJoin(card.series)
+                .leftJoin(card.pokemonSet)
                 .leftJoin(seller).on(seller.id.eq(auction.sellerId))
                 .where(where)
                 .fetchOne();
@@ -168,18 +176,18 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
             String keyword = condition.keyword();
             builder.and(
                     card.name.containsIgnoreCase(keyword)
-                            .or(card.series.containsIgnoreCase(keyword))
-                            .or(card.setName.containsIgnoreCase(keyword))
-                            .or(card.setId.containsIgnoreCase(keyword))
+                            .or(card.series.name.containsIgnoreCase(keyword))
+                            .or(card.pokemonSet.name.containsIgnoreCase(keyword))
+                            .or(card.pokemonSet.setId.containsIgnoreCase(keyword))
                             .or(card.cardNumber.containsIgnoreCase(keyword))
                             .or(auction.title.containsIgnoreCase(keyword))
             );
         }
         if (StringUtils.hasText(condition.series())) {
-            builder.and(card.series.containsIgnoreCase(condition.series()));
+            builder.and(card.series.name.containsIgnoreCase(condition.series()));
         }
         if (StringUtils.hasText(condition.setName())) {
-            builder.and(card.setName.containsIgnoreCase(condition.setName()));
+            builder.and(card.pokemonSet.name.containsIgnoreCase(condition.setName()));
         }
         if (condition.grade() != null) {
             builder.and(card.grade.eq(condition.grade()));

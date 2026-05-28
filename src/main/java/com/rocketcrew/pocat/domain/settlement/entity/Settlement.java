@@ -55,6 +55,12 @@ public class Settlement extends BaseEntity {
     }
 
     public void refund() {
+        if (this.status == SettlementStatus.REFUNDED) {
+            return; // 멱등: 이미 환불된 정산은 스킵
+        }
+        if (this.status != SettlementStatus.PENDING && this.status != SettlementStatus.COMPLETED) {
+            throw new SettlementException(ErrorCode.SETTLEMENT_CANNOT_REFUND);
+        }
         this.status = SettlementStatus.REFUNDED;
     }
 }
