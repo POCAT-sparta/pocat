@@ -70,7 +70,8 @@ public class SecurityConfig {
                                 "/api/v1/posts/free/**",
                                 "/api/v1/posts/trade/**",
                                 "/api/v1/comments/**").permitAll()
-                        // PortOne 서버가 직접 호출하는 Webhook — JWT 인증 없음, 서명 검증으로 보호
+                        // PortOne 서버가 직접 호출하는 Webhook — JWT 인증 없음
+                        // X-PortOne-Signature HMAC-SHA256 서명 검증은 PortOneSignatureVerifier에서 완전 구현됨
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

@@ -8,6 +8,17 @@ group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 description = 'POCAT'
 
+// spring-ai-elasticsearch-store:1.0.0 은 elasticsearch-java ~8.15.x API 기준으로 컴파일됨.
+// Spring Boot 3.5.x + Spring AI BOM이 8.17+ 버전을 끌어와 DenseVectorProperty$Builder.similarity(String) 제거 →
+// dependencySubstitution 으로 강제 교체 (force 는 BOM strict constraint 에 막힘).
+configurations.all {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module('co.elastic.clients:elasticsearch-java'))
+            .using(module('co.elastic.clients:elasticsearch-java:8.16.0'))
+            .because('8.16.0 has both similarity(String) (spring-ai 1.0.0) and activeShardsPercentAsNumber() (actuator 3.5.x)')
+    }
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -37,6 +48,8 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'com.h2database:h2'
@@ -65,6 +78,10 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    // Flyway
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
 }
 
 tasks.named('test') {

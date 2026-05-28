@@ -30,7 +30,8 @@ public class PaymentExpiryEventListener implements MessageListener {
         String orderIdStr = expiredKey.substring(FailureService.PAYMENT_EXPIRY_KEY_PREFIX.length());
         try {
             Long orderId = Long.parseLong(orderIdStr);
-            failureService.markFailed(orderId);
+            failureService.markFailed(orderId, "결제 시간 초과");
+            failureService.cancelExpiry(orderId);
         } catch (NumberFormatException e) {
             log.warn("[PaymentExpiry] 파싱 불가 key={}", expiredKey);
         }
