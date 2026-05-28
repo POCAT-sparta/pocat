@@ -16,6 +16,9 @@ public interface AuctionBidRepository extends JpaRepository<AuctionBid, Long>, A
     // 경매 종료 시 해당 경매의 모든 입찰 상태를 WON/LOST로 정리하기 위해 조회한다.
     List<AuctionBid> findAllByAuctionId(Long auctionId);
 
+    // 즉시구매 결제 완료 시 OUTBID 상태인 입찰자를 LOST로 일괄 처리하기 위해 조회한다.
+    List<AuctionBid> findAllByAuctionIdAndStatus(Long auctionId, BidStatus status);
+
     Optional<AuctionBid> findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
             Long auctionId,
             Long userId,

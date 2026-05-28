@@ -7,15 +7,19 @@ import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+
+import static com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 @Slf4j
 @Service
@@ -26,10 +30,10 @@ public class PaymentCommandService {
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
     private final PaymentRepository paymentRepository;
-    private final SettlementCommandService settlementCommandService;
     private final FailureService failureService;
     private final StringRedisTemplate redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventWriter outboxEventWriter;
 
     public Payment createPayment(Order order) {
         Payment payment = Payment.builder()
@@ -42,20 +46,22 @@ public class PaymentCommandService {
 
         return paymentRepository.save(payment);
     }
-
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completePayment(Payment payment, Order order, String paymentMethod, LocalDateTime paidAt) {
         payment.complete(paymentMethod, paidAt);
         order.completePayment();
-        settlementCommandService.createSettlement(order.getOrderUid());
         evictAvgPriceCache(order.getCardId());
 
         failureService.cancelExpiry(payment.getOrderId());
-        eventPublisher.publishEvent(new PaymentCompletedEvent(
+
+        PaymentCompletedEvent event = new PaymentCompletedEvent(
                 order.getOrderUid(),
                 order.getBuyerId(),
                 order.getSellerId(),
                 order.getFinalPrice()
-        ));
+        );
+        outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+        eventPublisher.publishEvent(event);
     }
 
     private String generatePaymentUid() {

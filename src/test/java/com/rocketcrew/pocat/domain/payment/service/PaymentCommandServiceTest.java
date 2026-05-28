@@ -48,7 +48,7 @@ class PaymentCommandServiceTest {
         @Test
         @DisplayName("성공: PG_DIRECT PENDING 결제를 저장하고 반환한다")
         void success() {
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
             given(paymentRepository.save(any(Payment.class))).willReturn(saved);
 

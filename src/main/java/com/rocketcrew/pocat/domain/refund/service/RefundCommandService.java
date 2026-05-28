@@ -18,9 +18,13 @@ import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.domain.refund.event.RefundApprovedEvent;
+import com.rocketcrew.pocat.domain.refund.event.RefundRejectedEvent;
+import com.rocketcrew.pocat.domain.refund.event.RefundRequestedEvent;
 import com.rocketcrew.pocat.global.exception.domain.RefundException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +44,7 @@ public class RefundCommandService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final SettlementRepository settlementRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final PortOneClient portOneClient;
 
     // 환불 요청 가능한 주문 상태
@@ -87,7 +92,10 @@ public class RefundCommandService {
                 .status(RefundStatus.REQUESTED)
                 .build();
 
-        return RefundResponse.from(refundRepository.save(refund));
+        Refund saved = refundRepository.save(refund);
+        eventPublisher.publishEvent(new RefundRequestedEvent(
+                saved.getId(), order.getOrderUid(), order.getBuyerId()));
+        return RefundResponse.from(saved);
     }
 
     /**
@@ -124,6 +132,8 @@ public class RefundCommandService {
         order.refund();
         settlement.refund();
 
+        eventPublisher.publishEvent(new RefundApprovedEvent(
+                refund.getId(), order.getOrderUid(), order.getBuyerId(), order.getSellerId()));
         log.info("환불 승인 완료. refundId={}, paymentUid={}, amount={}",
                 refundId, payment.getPaymentUid(), refund.getAmount());
 
@@ -191,8 +201,10 @@ public class RefundCommandService {
         Refund refund = findRefund(refundId);
         validateRefundRequested(refund);
 
+        Order order = findOrder(refund.getOrderId());
         refund.reject(request.rejectReason());
-
+        eventPublisher.publishEvent(new RefundRejectedEvent(
+                refund.getId(), order.getOrderUid(), order.getBuyerId(), request.rejectReason()));
         return RefundResponse.from(refund);
     }
 
