@@ -141,6 +141,7 @@ public class AuctionController {
         CancelAuctionResponse response = auctionCommandService.cancelAuction(userDetails.getUserId(), auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
+    // 즉시 구매
     @PostMapping("/v1/auctions/{auctionId}/buyout")
     public ResponseEntity<ApiResponseDto<BuyoutAuctionResponse>> buyoutAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -158,7 +159,7 @@ public class AuctionController {
         InspectAuctionResponse response = auctionCommandService.inspectAuction(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
-    // 경매 취소
+    // 관리자 경매 취소
     @PatchMapping("/v1/admin/auctions/{auctionId}/cancel")
     public ResponseEntity<ApiResponseDto<AdminCancelAuctionResponse>> adminCancelAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
