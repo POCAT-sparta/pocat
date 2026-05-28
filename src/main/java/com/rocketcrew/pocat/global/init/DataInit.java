@@ -160,8 +160,11 @@ public class DataInit implements ApplicationRunner {
     private void seedAuctionsFromExistingCards(List<User> users) {
         User seller = users.get(1); // user1
         List<Card> cards = cardRepository
-                .findAll(PageRequest.of(0, 3, Sort.by(Sort.Direction.ASC, "id")))
-                .getContent();
+                .findAll(PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id")))
+                .stream()
+                .filter(c -> c.getStatus() == CardStatus.ACTIVE)
+                .limit(3)
+                .toList();
 
         if (cards.isEmpty()) {
             log.info("[DataInit] 시드용 카드 없음, 경매 시드 건너뜁니다.");
