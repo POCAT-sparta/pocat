@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.order.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
@@ -14,6 +15,9 @@ import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.outbox.entity.OutboxEvent;
+import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -28,6 +32,9 @@ public class OrderCommandService {
     private final CardRepository cardRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentApplicationService paymentApplicationService;
+    private final OutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
+    private final OutboxEventWriter outboxEventWriter;
 
     // 경매 낙찰 주문 생성 — rank=1 Order 저장 후 order.created 이벤트 발행
     // Payment 도메인이 이벤트를 컨슘해 자동결제 처리
@@ -38,8 +45,15 @@ public class OrderCommandService {
         }
         Order order = orderRepository.save(
                 Order.fromAuction(auctionId, cardId, sellerId, winnerId, finalPrice, 1));
-        eventPublisher.publishEvent(new OrderCreatedEvent(
-                order.getOrderUid(), order.getBuyerId(), order.getSellerId(), order.getFinalPrice()));
+
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                order.getOrderUid(),
+                order.getBuyerId(),
+                order.getSellerId(),
+                order.getFinalPrice()
+        );
+        outboxEventWriter.write("order", order.getOrderUid(), event);
+        eventPublisher.publishEvent(event);
     }
 
     // 즉시구매 주문 생성 — AUTO_PAYMENT_FAILED 전환 후 PG 결제 레코드 생성, 호출부에서 paymentUid로 결제창 오픈

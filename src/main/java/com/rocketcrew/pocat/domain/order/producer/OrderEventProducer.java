@@ -23,21 +23,21 @@ public class OrderEventProducer extends BaseEventProducer {
 
     // 주문 생성
     public void sendOrderCreated(OrderCreatedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
     }
 
     // 주문 취소
     public void sendOrderCancelled(OrderCancelledEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
     }
 
     // 배송 시작
     public void sendDeliveryStarted(OrderDeliveryStartedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
     }
 
     // 배송 완료
     public void sendDeliveryCompleted(OrderDeliveryCompletedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
     }
 }

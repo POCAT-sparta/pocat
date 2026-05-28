@@ -85,4 +85,9 @@ public class OutboxEvent {
             this.status = OutboxStatus.PENDING; // 재시도용 PENDING 복원
         }
     }
+
+    // OutboxEvent.java 엔티티 내부에 추가
+    public void changeStatusToProcessing() {
+        this.status = OutboxStatus.PROCESSING;
+    }
 }

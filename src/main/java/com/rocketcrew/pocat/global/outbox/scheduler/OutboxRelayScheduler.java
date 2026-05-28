@@ -22,68 +22,31 @@ public class OutboxRelayScheduler {
     private final OutboxRepository outboxRepository;
     private final KafkaTemplate<String, String> generalTemplate;
     private final KafkaTemplate<String, String> financialTemplate;
+    private final OutboxProcessor outboxProcessor;
 
     public OutboxRelayScheduler(
             OutboxRepository outboxRepository,
+            OutboxProcessor outboxProcessor,
             @Qualifier("kafkaTemplate") KafkaTemplate<String, String> generalTemplate,
             @Qualifier("paymentKafkaTemplate") KafkaTemplate<String, String> financialTemplate) {
         this.outboxRepository = outboxRepository;
+        this.outboxProcessor = outboxProcessor;
         this.generalTemplate = generalTemplate;
         this.financialTemplate = financialTemplate;
     }
 
-    @Scheduled(fixedDelay = 30_000)
+    @Scheduled(fixedDelay = 5000)
     public void relay() {
         List<OutboxEvent> pendingEvents = outboxRepository
                 .findTop100ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
 
         for (OutboxEvent event : pendingEvents) {
-            publishIfClaimed(event);
+            if (Thread.currentThread().isInterrupted()) {
+                break;
+            }
+            // 분리된 프로세서에 처리를 위임 (각각 독립된 트랜잭션)
+            outboxProcessor.processEvent(event, resolveTemplate(event.getTopic()));
         }
-    }
-
-    private void publishIfClaimed(OutboxEvent event) {
-
-        // 1. 조건부 UPDATE로 선점 (다중 서버 중복 발행 방지)
-        int updated = outboxRepository.markProcessingIfPending(
-                event.getId(),
-                OutboxStatus.PENDING,
-                OutboxStatus.PROCESSING
-        );
-
-        if (updated == 0) {
-            // 다른 서버가 먼저 선점 → 스킵
-            log.debug("이미 다른 서버가 선점: id={}", event.getId());
-            return;
-        }
-
-        try {
-            // 2. Kafka 발행 (동기 대기)
-            resolveTemplate(event.getTopic())
-                    .send(event.getTopic(), event.getPartitionKey(), event.getPayload())
-                    .get(5, TimeUnit.SECONDS);
-
-            // 3. 발행 성공 → SENT
-            event.markSent();
-            log.info("릴레이 성공: id={}, topic={}, eventType={}",
-                    event.getId(), event.getTopic(), event.getEventType());
-
-        } catch (InterruptedException e) {
-            // 4. 인터럽트 → 플래그 복원 후 루프 종료
-            Thread.currentThread().interrupt();
-            log.warn("릴레이 인터럽트: id={}", event.getId());
-            event.markPendingForRetry(); // PENDING 복원
-            outboxRepository.save(event);
-            return;
-
-        } catch (Exception e) {
-            // 5. 발행 실패 → 재시도 or FAILED
-            event.markPendingForRetry();
-            log.error("릴레이 실패: id={}, retryCount={}",
-                    event.getId(), event.getRetryCount(), e);
-        }
-
-        outboxRepository.save(event);
     }
 
     private KafkaTemplate<String, String> resolveTemplate(String topic) {
