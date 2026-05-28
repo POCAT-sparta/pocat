@@ -432,7 +432,7 @@ class AuctionControllerTest {
         void success() throws Exception {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
             AdminCancelAuctionResponse resp = new AdminCancelAuctionResponse(1L, AuctionStatus.CANCELLED, "정책 위반");
-            given(commandService.cancelAuction(anyLong(), anyLong(), any())).willReturn(resp);
+            given(commandService.adminCancelAuction(anyLong(), anyLong(), any())).willReturn(resp);
 
             mockMvc.perform(patch("/api/v1/admin/auctions/1/cancel")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -446,7 +446,7 @@ class AuctionControllerTest {
         @DisplayName("실패: 취소 불가 상태 → 409")
         void failCannotCancel() throws Exception {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
-            given(commandService.cancelAuction(anyLong(), anyLong(), any()))
+            given(commandService.adminCancelAuction(anyLong(), anyLong(), any()))
                     .willThrow(new AuctionException(ErrorCode.AUCTION_CANNOT_CANCEL));
 
             mockMvc.perform(patch("/api/v1/admin/auctions/1/cancel")
