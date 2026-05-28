@@ -25,6 +25,8 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,6 +41,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -59,6 +62,7 @@ public class AuctionCommandService {
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
     private final AuctionEsIndexService auctionEsIndexService;
+    private final OutboxEventWriter outboxEventWriter;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
         Card card = cardQueryService.validateRegistrableForAuction(request.cardId());
@@ -97,7 +101,7 @@ public class AuctionCommandService {
         return CancelAuctionResponse.from(auction);
     }
 
-    public AdminCancelAuctionResponse cancelAuction(Long adminId, Long id, AdminCancelAuctionRequest request) {
+    public AdminCancelAuctionResponse adminCancelAuction(Long adminId, Long id, AdminCancelAuctionRequest request) {
         Auction auction = auctionRepository.findById(id)
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
         validateAdminCancelReason(request.reason());
@@ -119,7 +123,7 @@ public class AuctionCommandService {
         String cancelReason = request.reason().trim();
         latestAuction.cancelByAdmin(cancelReason);
 
-        eventPublisher.publishEvent(new AuctionCancelledEvent(
+        publishAuctionCancelledEvent(
                 latestAuction.getId(),
                 latestAuction.getSellerId(),
                 adminId,
@@ -127,7 +131,7 @@ public class AuctionCommandService {
                 recipientIds.stream()
                         .filter(recipientId -> !recipientId.equals(latestAuction.getSellerId()))
                         .toList()
-        ));
+        );
 
         // ACTIVE 상태에서 취소될 경우 ES 인덱스에서 삭제 (ENDED/NO_BIDDER는 validateCancellable에서 차단됨)
         final Long cancelledId = latestAuction.getId();
@@ -162,12 +166,12 @@ public class AuctionCommandService {
             LocalDateTime inspectedAt = LocalDateTime.now(AUCTION_ZONE);
             latestAuction.approve(adminId, inspectedAt);
 
-            eventPublisher.publishEvent(new AuctionInspectionPassedEvent(
+            publishAuctionInspectionPassedEvent(
                     latestAuction.getId(),
                     latestAuction.getSellerId(),
                     latestAuction.getTitle(),
                     inspectedAt
-            ));
+            );
             return InspectAuctionResponse.from(latestAuction);
         }
 
@@ -176,13 +180,49 @@ public class AuctionCommandService {
         String rejectReason = request.reason().trim();
         latestAuction.reject(adminId, inspectedAt, rejectReason);
 
-        eventPublisher.publishEvent(new AuctionInspectionFailedEvent(
+        publishAuctionInspectionFailedEvent(
                 latestAuction.getId(),
                 latestAuction.getSellerId(),
                 latestAuction.getTitle(),
                 rejectReason
-        ));
+        );
         return InspectAuctionResponse.from(latestAuction);
+    }
+
+    private void publishAuctionInspectionPassedEvent(Long auctionId, Long sellerId,
+                                                     String auctionTitle, LocalDateTime approvedAt) {
+        publishAuctionEvent(auctionId, new AuctionInspectionPassedEvent(
+                auctionId,
+                sellerId,
+                auctionTitle,
+                approvedAt
+        ));
+    }
+
+    private void publishAuctionInspectionFailedEvent(Long auctionId, Long sellerId,
+                                                     String auctionTitle, String failedReason) {
+        publishAuctionEvent(auctionId, new AuctionInspectionFailedEvent(
+                auctionId,
+                sellerId,
+                auctionTitle,
+                failedReason
+        ));
+    }
+
+    private void publishAuctionCancelledEvent(Long auctionId, Long sellerId, Long cancelledBy,
+                                              String reason, List<Long> bidderIds) {
+        publishAuctionEvent(auctionId, new AuctionCancelledEvent(
+                auctionId,
+                sellerId,
+                cancelledBy,
+                reason,
+                bidderIds
+        ));
+    }
+
+    private void publishAuctionEvent(Long auctionId, BaseEvent event) {
+        outboxEventWriter.write("auction", String.valueOf(auctionId), event);
+        eventPublisher.publishEvent(event);
     }
 
     private void validateSeller(Auction auction, Long sellerId) {

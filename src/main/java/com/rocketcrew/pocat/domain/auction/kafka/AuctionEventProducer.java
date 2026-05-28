@@ -20,26 +20,30 @@ public class AuctionEventProducer extends BaseEventProducer {
 
     // 검수 통과
     public void sendInspectionPassed(AuctionInspectionPassedEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 
     // 검수 실패
     public void sendInspectionFailed(AuctionInspectionFailedEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 
     // 경매 활성화
     public void sendActivated(AuctionActivatedEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 
     // 경매 취소
     public void sendCancelled(AuctionCancelledEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 
     // 경매 종료
     public void sendEnded(AuctionEndedEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
+    }
+
+    public void sendBuyoutCompleted(AuctionBuyoutCompletedEvent event) {
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 }

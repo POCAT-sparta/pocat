@@ -10,6 +10,8 @@ import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -39,6 +41,7 @@ public class AuctionLifecycleService {
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
     private final AuctionEsIndexService auctionEsIndexService;
+    private final OutboxEventWriter outboxEventWriter;
 
     // 검수 승인된 경매를 현재 시각 기준으로 ACTIVE 상태로 전환하고 종료 이벤트 예약용 정보를 확정한다.
     public boolean activateApprovedAuction(Long auctionId) {
@@ -64,11 +67,11 @@ public class AuctionLifecycleService {
             }
         });
 
-        eventPublisher.publishEvent(new AuctionActivatedEvent(
+        publishAuctionActivatedEvent(
                 latestAuction.getId(),
                 latestAuction.getSellerId(),
                 latestAuction.getEndedAt()
-        ));
+        );
         return true;
     }
 
@@ -86,7 +89,7 @@ public class AuctionLifecycleService {
         List<AuctionBid> bids = auctionBidRepository.findAllByAuctionId(auctionId);
         if (latestAuction.getHighestBidderId() == null) {
             latestAuction.markNoBidder();
-            publishEndedEvent(latestAuction, List.of());
+            publishAuctionEndedEvent(latestAuction, List.of());
             final Long noAuctionId = latestAuction.getId();
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -105,7 +108,7 @@ public class AuctionLifecycleService {
 
         markBidResults(bids, latestAuction.getHighestBidderId());
         latestAuction.end();
-        publishEndedEvent(latestAuction, loserIds);
+        publishAuctionEndedEvent(latestAuction, loserIds);
         final Long endedAuctionId = latestAuction.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -135,14 +138,27 @@ public class AuctionLifecycleService {
     }
 
     // 경매 종료 후속 처리를 Kafka consumer가 수행할 수 있도록 도메인 이벤트를 발행한다.
-    private void publishEndedEvent(Auction auction, List<Long> loserIds) {
-        eventPublisher.publishEvent(new AuctionEndedEvent(
+    private void publishAuctionActivatedEvent(Long auctionId, Long sellerId, LocalDateTime endedAt) {
+        publishAuctionEvent(auctionId, new AuctionActivatedEvent(
+                auctionId,
+                sellerId,
+                endedAt
+        ));
+    }
+
+    private void publishAuctionEndedEvent(Auction auction, List<Long> loserIds) {
+        publishAuctionEvent(auction.getId(), new AuctionEndedEvent(
                 auction.getId(),
                 auction.getHighestBidderId(),
                 auction.getSellerId(),
                 loserIds,
                 auction.getHighestPrice()
         ));
+    }
+
+    private void publishAuctionEvent(Long auctionId, BaseEvent event) {
+        outboxEventWriter.write("auction", String.valueOf(auctionId), event);
+        eventPublisher.publishEvent(event);
     }
 
     // 같은 경매를 Redis 리스너와 스케줄러가 동시에 처리하지 못하도록 분산 락을 획득한다.
