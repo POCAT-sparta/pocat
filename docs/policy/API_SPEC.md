@@ -2950,4 +2950,216 @@ DISCONNECT /ws/notification
 
 ---
 
+---
+
+## 15. Rate Limiting 및 보안 응답 (#133)
+
+> 이슈 #133 — 플랫폼 전역 동시성 제어 및 Rate Limiting 구현 + AdminCardController 인가 누락 수정  
+> 아래는 각 엔드포인트에 추가된 신규 에러 응답이다. 기존 응답은 각 섹션을 참고한다.
+
+### 공통 에러 코드
+
+| 에러 코드 | HTTP 상태 | 설명 |
+|---|---|---|
+| `RATE_LIMIT_EXCEEDED` | `429 Too Many Requests` | 요청 횟수 제한 초과 |
+| `WEBHOOK_IP_FORBIDDEN` | `403 Forbidden` | Webhook 허용 IP 외 요청 |
+| `LIKE_LOCK_FAILED` | `409 Conflict` | 찜 분산락 획득 실패 (동시 요청 충돌) |
+| `LIKE_DUPLICATE` | `409 Conflict` | 찜 중복 삽입 감지 |
+
+---
+
+### 15.1 POST /api/v1/auth/signup — 신규 에러 응답
+
+- **제한**: IP 기준 5회/분
+
+**429 Too Many Requests**
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `RATE_LIMIT_EXCEEDED` |
+| 제한 기준 | 요청 IP |
+| 윈도우 | 1분 / 5회 |
+
+---
+
+### 15.2 POST /api/v1/auth/reissue — 신규 에러 응답
+
+- **제한**: IP 기준 5회/분
+
+**429 Too Many Requests**
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `RATE_LIMIT_EXCEEDED` |
+| 제한 기준 | 요청 IP |
+| 윈도우 | 1분 / 5회 |
+
+---
+
+### 15.3 POST /api/v1/posts/free — 신규 에러 응답
+
+- **제한**: 인증된 사용자 기준 5회/분
+
+**429 Too Many Requests**
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `RATE_LIMIT_EXCEEDED` |
+| 제한 기준 | userId |
+| 윈도우 | 1분 / 5회 |
+
+---
+
+### 15.4 POST /api/v1/posts/trade — 신규 에러 응답
+
+- **제한**: 인증된 사용자 기준 5회/분
+
+**429 Too Many Requests**
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `RATE_LIMIT_EXCEEDED` |
+| 제한 기준 | userId |
+| 윈도우 | 1분 / 5회 |
+
+---
+
+### 15.5 POST /api/v1/comments — 신규 에러 응답
+
+- **제한**: 인증된 사용자 기준 5회/분 (자유게시판 댓글)
+
+**429 Too Many Requests**
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `RATE_LIMIT_EXCEEDED` |
+| 제한 기준 | userId |
+| 윈도우 | 1분 / 5회 |
+
+---
+
+### 15.6 GET /api/v1/auctions (검색) — 신규 에러 응답
+
+- **제한**: 인증된 사용자 기준 30회/분
+
+**429 Too Many Requests**
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청 횟수 제한을 초과했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `RATE_LIMIT_EXCEEDED` |
+| 제한 기준 | userId |
+| 윈도우 | 1분 / 30회 |
+
+> 비인증(PUBLIC) 요청에는 Rate Limit이 적용되지 않는다.
+
+---
+
+### 15.7 POST /api/v1/payments/webhook — 신규 에러 응답
+
+- **보안**: PortOne 허용 IP 화이트리스트 검증 (`PORTONE_ALLOWED_IPS` 환경변수)
+
+**403 Forbidden** (허용 IP 외 요청)
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "허용되지 않은 IP에서의 요청입니다."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `WEBHOOK_IP_FORBIDDEN` |
+| 검증 방식 | 요청 IP vs 환경변수 허용 목록 |
+| 처리 우선순위 | 서명 검증 이전 단계에서 IP 먼저 차단 |
+
+---
+
+### 15.8 POST /api/v1/likes — 신규 에러 응답
+
+분산락 및 중복 삽입 방어 로직 추가로 인한 신규 에러 케이스 (기존 섹션 14.1 참고).
+
+**409 Conflict** (분산락 획득 실패)
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "요청이 충돌했습니다. 잠시 후 다시 시도해 주세요."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `LIKE_LOCK_FAILED` |
+| 발생 조건 | 동일 사용자가 동일 경매에 동시 요청 시 락 획득 실패 |
+| 분산락 키 | `like:lock:{userId}:{auctionId}` |
+| tryLock 전략 | 대기 없이 즉시 실패 (0s wait) |
+
+**409 Conflict** (중복 삽입 감지)
+
+```json
+{
+  "status": "ERROR",
+  "data": null,
+  "message": "이미 처리된 요청입니다."
+}
+```
+
+| 필드 | 값 |
+|---|---|
+| 에러 코드 | `LIKE_DUPLICATE` |
+| 발생 조건 | 분산락 통과 후 DB INSERT 시 중복 감지 (최후 방어선) |
+
+---
+
 *© 2026 POCAT Team — 7조 로켓단*

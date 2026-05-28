@@ -118,6 +118,16 @@ public enum ErrorCode {
     NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 알림에 대한 접근 권한이 없습니다."),
     NOTIFICATION_SERIALIZE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "알림 직렬화에 실패했습니다."),
 
+    // Like
+    LIKE_LOCK_FAILED(HttpStatus.CONFLICT, "다른 좋아요 처리가 진행 중입니다. 잠시 후 다시 시도해주세요."),
+    LIKE_DUPLICATE(HttpStatus.CONFLICT, "이미 처리된 좋아요 요청입니다."),
+
+    // Rate Limit
+    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+
+    // Webhook
+    WEBHOOK_IP_FORBIDDEN(HttpStatus.FORBIDDEN, "허용되지 않은 IP에서의 Webhook 요청입니다."),
+
     // Chat
     CHAT_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),
     CHAT_FORBIDDEN(HttpStatus.FORBIDDEN, "채팅방 접근 권한이 없습니다."),
