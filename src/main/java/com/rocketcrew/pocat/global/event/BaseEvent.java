@@ -8,10 +8,21 @@ import java.time.LocalDateTime;
 public abstract class BaseEvent {
 
     private final String eventType;
+    private Long outboxId;
     private final LocalDateTime occurredAt;
 
-    protected BaseEvent(String eventType) {
+    protected BaseEvent(String eventType, Long outboxId) {
         this.eventType = eventType;
+        this.outboxId = outboxId;
         this.occurredAt = LocalDateTime.now();
+    }
+
+    // outboxId 세팅
+    public void bindOutboxId(Long outboxId) {
+        if (this.outboxId != null) {
+            // 이미 ID가 세팅되어 있다면 변경을 막는 방어 코드도 넣을 수 있습니다.
+            throw new IllegalStateException("이미 아웃박스 ID가 할당된 이벤트입니다.");
+        }
+        this.outboxId = outboxId;
     }
 }
