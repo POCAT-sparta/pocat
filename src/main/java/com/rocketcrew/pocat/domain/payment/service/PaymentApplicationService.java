@@ -9,14 +9,11 @@ import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
-import com.rocketcrew.pocat.domain.payment.event.DirectPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
-import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
-import com.rocketcrew.pocat.global.outbox.service.OutboxQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-
-import static com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 @Slf4j
 @Service
@@ -39,8 +34,6 @@ public class PaymentApplicationService {
     private final PaymentCommandService paymentCommandService;
     private final PaymentQueryService paymentQueryService;
     private final OrderQueryService orderQueryService;
-    private final OutboxEventWriter outboxEventWriter;
-    private final OutboxQueryService outboxQueryService;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -62,15 +55,6 @@ public class PaymentApplicationService {
 
         // 자동결제 실패 시각(updatedAt) 기준 1시간 초과 여부
         if (order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
-            DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
-                    order.getOrderUid(),
-                    order.getBuyerId(),
-                    order.getSellerId()
-            );
-            boolean existEvent = outboxQueryService.checkIfOutboxExists(PAYMENT_TOPIC, event);
-            if(!existEvent) {
-                outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
-            }
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
         }
 
