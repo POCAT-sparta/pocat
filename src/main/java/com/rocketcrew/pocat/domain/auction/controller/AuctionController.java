@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.auction.dto.request.UpdateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AdminCancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
+import com.rocketcrew.pocat.domain.auction.dto.response.BuyoutAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CancelAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.CreateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.InspectAuctionResponse;
@@ -14,6 +15,7 @@ import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.UpdateAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.ranking.service.AuctionRankingService;
+import com.rocketcrew.pocat.domain.auction.service.AuctionBuyoutService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionCommandService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionQueryService;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
@@ -47,6 +49,7 @@ public class AuctionController {
 
     private final AuctionQueryService auctionQueryService;
     private final AuctionCommandService auctionCommandService;
+    private final AuctionBuyoutService auctionBuyoutService;
     private final AuctionRankingService auctionRankingService;
 
     // 인기 경매 조회
@@ -138,6 +141,14 @@ public class AuctionController {
         CancelAuctionResponse response = auctionCommandService.cancelAuction(userDetails.getUserId(), auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
+    @PostMapping("/v1/auctions/{auctionId}/buyout")
+    public ResponseEntity<ApiResponseDto<BuyoutAuctionResponse>> buyoutAuction(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long auctionId) {
+        BuyoutAuctionResponse response = auctionBuyoutService.buyout(userDetails.getUserId(), auctionId);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
     // 경매 검수
     @PatchMapping("/v1/admin/auctions/{auctionId}/inspection")
     public ResponseEntity<ApiResponseDto<InspectAuctionResponse>> inspectAuction(
@@ -153,7 +164,7 @@ public class AuctionController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,
             @Valid @RequestBody AdminCancelAuctionRequest request) {
-        AdminCancelAuctionResponse response = auctionCommandService.cancelAuction(userDetails.getUserId(), auctionId, request);
+        AdminCancelAuctionResponse response = auctionCommandService.adminCancelAuction(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 }
