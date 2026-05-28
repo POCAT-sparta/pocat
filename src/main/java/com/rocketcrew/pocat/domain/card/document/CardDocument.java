@@ -6,6 +6,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -97,16 +99,18 @@ public class CardDocument {
     }
 
     public static CardDocument from(Card card, String nameKo, String seriesKo, String setNameKo) {
+        Series series = card.getSeries();
+        PokemonSet pokemonSet = card.getPokemonSet();
         return CardDocument.builder()
                 .id(String.valueOf(card.getId()))
                 .userId(card.getUserId())
                 .tcgdexId(card.getTcgdexId())
                 .name(card.getName())
                 .nameKo(nameKo)
-                .series(card.getSeries())
+                .series(series != null ? series.getName() : null)
                 .seriesKo(seriesKo)
-                .setId(card.getSetId())
-                .setName(card.getSetName())
+                .setId(pokemonSet != null ? pokemonSet.getSetId() : null)
+                .setName(pokemonSet != null ? pokemonSet.getName() : null)
                 .setNameKo(setNameKo)
                 .cardNumber(card.getCardNumber())
                 .rarity(card.getRarity())

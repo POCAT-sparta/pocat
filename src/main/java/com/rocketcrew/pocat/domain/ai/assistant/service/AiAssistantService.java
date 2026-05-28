@@ -7,14 +7,19 @@ import com.rocketcrew.pocat.domain.ai.assistant.tools.BidTool;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.CardSearchTool;
 import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +53,8 @@ public class AiAssistantService {
      * @param request 채팅 요청
      * @return 채팅 응답
      */
+    @RateLimiter(name = "aiEndpoint", fallbackMethod = "chatRateLimitFallback")
+    @CircuitBreaker(name = "aiService", fallbackMethod = "chatFallback")
     @Transactional
     public AiChatResponse chat(Long userId, AiChatRequest request) {
         log.info("Processing chat for userId: {}, msgLen={}", userId, request.message() != null ? request.message().length() : 0);
@@ -70,35 +77,50 @@ public class AiAssistantService {
             // 5. ChatClient 호출 (Tool Calling + RAG)
             String historyContext = recentHistory.isEmpty() ? "" :
                     "\n\n대화 이력:\n" + String.join("\n", recentHistory);
-            String response = chatClient.prompt()
+            ChatResponse chatResponse = chatClient.prompt()
                     .system("당신은 POCAT 카드 거래 플랫폼 어시스턴트입니다. 사용자가 카드, 경매, 입찰에 관한 질문을 할 때 정확하고 도움이 되는 정보를 제공하세요.\n"
                             + "다음의 RAG 컨텍스트를 활용하여 답변하세요:\n" + ragContext + historyContext)
                     .user(request.message())
                     .tools(cardSearchTool, auctionTool, bidTool)
                     .call()
-                    .content();
+                    .chatResponse();
+            String response = chatResponse.getResult().getOutput().getText();
+            var usage = chatResponse.getMetadata().getUsage();
+            int promptTokens = (usage != null && usage.getPromptTokens() != null) ? usage.getPromptTokens().intValue() : 0;
+            int completionTokens = (usage != null && usage.getCompletionTokens() != null) ? usage.getCompletionTokens().intValue() : 0;
 
             // 6. 메시지 저장
             sessionService.addMessage(chatSessionId, "user", request.message(), 0);
             sessionService.addMessage(chatSessionId, "assistant", response, 0);
 
             // 7. 메트릭 기록
-            aiUsageMetrics.recordUsage(0, 0, 0L, MODEL_NAME);
+            aiUsageMetrics.recordUsage(promptTokens, completionTokens, 0L, MODEL_NAME);
 
             // 8. 응답 반환
             return new AiChatResponse(
                     response,
                     sessionId,
                     List.of("CardSearchTool", "AuctionTool", "BidTool"),
-                    0,
-                    0
+                    promptTokens,
+                    completionTokens
             );
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
             log.error("Chat processing failed for userId: {}", userId, e);
             aiUsageMetrics.recordError("CHAT_FAILED", MODEL_NAME);
-            throw new RuntimeException("채팅 처리 중 오류 발생: " + e.getMessage(), e);
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, e);
         }
+    }
+
+    private AiChatResponse chatFallback(Long userId, AiChatRequest request, Throwable t) {
+        log.warn("Circuit breaker open for chat userId={}: {}", userId, t.getMessage());
+        aiUsageMetrics.recordError("CIRCUIT_OPEN", MODEL_NAME);
+        throw new ServiceException(ErrorCode.AI_SERVICE_UNAVAILABLE);
+    }
+
+    private AiChatResponse chatRateLimitFallback(Long userId, AiChatRequest request, RequestNotPermitted ex) {
+        log.warn("Rate limit exceeded for chat userId={}", userId);
+        throw new ServiceException(ErrorCode.AI_RATE_LIMITED);
     }
 }

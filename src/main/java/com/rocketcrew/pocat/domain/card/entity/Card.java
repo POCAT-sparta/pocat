@@ -4,6 +4,9 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
+import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
+import com.rocketcrew.pocat.domain.series.entity.Series;
+import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,14 +44,17 @@ public class Card extends BaseEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "series", length = 100, nullable = false)
-    private String series;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "series_id")
+    private Series series;
 
-    @Column(name = "set_id", length = 50, nullable = false)
-    private String setId;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "pokemon_set_id")
+    private PokemonSet pokemonSet;
 
-    @Column(name = "set_name", length = 100, nullable = false)
-    private String setName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pokemon_id")
+    private Pokemon pokemon;
 
     @Column(name = "card_number", length = 20, nullable = false)
     private String cardNumber;
@@ -97,19 +103,22 @@ public class Card extends BaseEntity {
         this.rejectReason = rejectReason;
     }
 
-    public void update(String tcgdexId, String name, String series, String setId, String setName,
+    public void update(String tcgdexId, String name, Series series, PokemonSet pokemonSet,
                        String cardNumber, String rarity, CardCategory category, CardGrade grade,
                        String imageUrl, CardSource source) {
         if (tcgdexId != null) this.tcgdexId = tcgdexId;
         if (name != null && !name.isBlank()) this.name = name;
-        if (series != null && !series.isBlank()) this.series = series;
-        if (setId != null && !setId.isBlank()) this.setId = setId;
-        if (setName != null && !setName.isBlank()) this.setName = setName;
+        if (series != null) this.series = series;
+        if (pokemonSet != null) this.pokemonSet = pokemonSet;
         if (cardNumber != null && !cardNumber.isBlank()) this.cardNumber = cardNumber;
         if (rarity != null && !rarity.isBlank()) this.rarity = rarity;
         if (category != null) this.category = category;
         if (grade != null) this.grade = grade;
         if (imageUrl != null) this.imageUrl = imageUrl;
         if (source != null) this.source = source;
+    }
+
+    public void linkPokemon(Pokemon pokemon) {
+        this.pokemon = pokemon;
     }
 }

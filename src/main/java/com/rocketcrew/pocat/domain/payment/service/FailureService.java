@@ -4,8 +4,10 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,18 +26,25 @@ import java.time.LocalDateTime;
 public class FailureService {
 
     static final String PAYMENT_EXPIRY_KEY_PREFIX = "order:expire";
+    static final String PAYMENT_SHADOW_KEY_PREFIX = "order:shadow";
 
     private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // TODO : 실패 시 왜 실패했는지 받을 수 있어야 함 PORTONE API 확인 필요.
     // TODO : LocalDateTime.now().plusHours(24) -> order.getExpireAt 으로 변경해야 함: 승현님 작업 완료후 진행
-    // TODO : 실패 이벤트 발행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void persistBillingKeyFailure(Payment payment, Order order, Long orderId) {
         payment.fail();
         order.failPayment();
         scheduleExpiry(orderId, LocalDateTime.now().plusHours(24));
+
+        eventPublisher.publishEvent(new PaymentFailedEvent(
+                order.getOrderUid(),
+                order.getBuyerId(),
+                "자동결제 실패"
+        ));
     }
 
     /**
@@ -50,6 +59,11 @@ public class FailureService {
                 String.valueOf(orderId),
                 ttl
         );
+        markAsProcessing(orderId);
+    }
+
+    private void markAsProcessing(Long orderId) {
+        redisTemplate.opsForValue().setIfAbsent(PAYMENT_SHADOW_KEY_PREFIX + orderId, String.valueOf(orderId));
     }
 
     /**
@@ -59,20 +73,26 @@ public class FailureService {
      */
     // TODO : 만료시간이 실제로 지났는지 검사를 해야함. expireAt 이 생기면 진행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(Long orderId) {
+    public void markFailed(Long orderId, String reason) {
         orderRepository.findById(orderId)
                 .filter(o -> o.getStatus() == OrderStatus.PAYMENT_PENDING)
-                .ifPresent(p -> {
-                    p.failPayment();
-                    log.info("[OrderFailure] orderId={} → FAILED", orderId);
+                .ifPresent(order -> {
+                    order.failPayment();
+                    log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
+                    eventPublisher.publishEvent(new PaymentFailedEvent(
+                            order.getOrderUid(),
+                            order.getBuyerId(),
+                            reason
+                    ));
                 });
     }
-
-    /**
-     * 결제가 성공적으로 완료되거나 이미 즉시 실패 처리될 때 Redis 만료 키를 정리한다.
+     * 결제가 성공적으로 완료되거나 이미 즉시 실패 처리될 때 Redis 키를 정리한다.
+     * TTL 만료 경로(onMessage)에서는 TTL키가 이미 사라진 상태이므로 shadow키만 추가 삭제한다.
      */
     public void cancelExpiry(Long orderId) {
         redisTemplate.delete(PAYMENT_EXPIRY_KEY_PREFIX + orderId);
+        redisTemplate.delete(PAYMENT_SHADOW_KEY_PREFIX + orderId);
+
     }
 
 }
