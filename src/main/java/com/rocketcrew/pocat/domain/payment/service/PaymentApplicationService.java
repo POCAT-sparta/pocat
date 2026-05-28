@@ -9,11 +9,14 @@ import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
+import com.rocketcrew.pocat.domain.payment.event.DirectPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
+import com.rocketcrew.pocat.global.outbox.service.OutboxQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+
+import static com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 @Slf4j
 @Service
@@ -34,6 +39,8 @@ public class PaymentApplicationService {
     private final PaymentCommandService paymentCommandService;
     private final PaymentQueryService paymentQueryService;
     private final OrderQueryService orderQueryService;
+    private final OutboxEventWriter outboxEventWriter;
+    private final OutboxQueryService outboxQueryService;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -48,12 +55,22 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
         }
 
-        if (order.getStatus() != OrderStatus.PAYMENT_FAILED) {
+        // 자동결제 실패 시에만 직접 결제 생성.
+        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_NOT_FAILED);
         }
 
         // 자동결제 실패 시각(updatedAt) 기준 1시간 초과 여부
-        if (order.getUpdatedAt().plusHours(1).isBefore(LocalDateTime.now())) {
+        if (order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+            DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
+                    order.getOrderUid(),
+                    order.getBuyerId(),
+                    order.getSellerId()
+            );
+            boolean existEvent = outboxQueryService.checkIfOutboxExists(PAYMENT_TOPIC, event);
+            if(!existEvent) {
+                outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+            }
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
         }
 
@@ -94,8 +111,15 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
+        if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
+            // TODO : 단순 자동결제 실패 가 아니라 환불처리가 필요할듯 이미 PAID 결제는 완료됨.
+            log.error("자동결제 금액 불일치 orderId={} expected={} actual={}",
+                    orderId, payment.getAmount(), response.amount());
+            failureService.persistBillingKeyFailure(payment, order, orderId);
+            throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        }
+
         paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
-        // TODO : 성공 이벤트 발행
         return PaymentResponse.from(payment);
     }
 
@@ -126,6 +150,7 @@ public class PaymentApplicationService {
         }
 
         if (!payment.getAmount().equals(portOneClientPayment.amount())) {
+            // TODO : 단순 자동결제 실패 가 아니라 환불처리가 필요할듯 이미 PAID 결제는 완료됨.
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
