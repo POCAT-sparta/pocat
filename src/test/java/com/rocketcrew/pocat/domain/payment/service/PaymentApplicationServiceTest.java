@@ -139,7 +139,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("성공: PortOne PAID, 금액 일치 → completePayment 호출")
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
             LocalDateTime paidAt = LocalDateTime.now();
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
@@ -168,7 +168,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: 구매자 불일치 → PAYMENT_BUYER_MISMATCH")
         void fail_buyerMismatch() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED); // buyerId=1L
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED); // buyerId=1L
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
@@ -198,7 +198,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: PortOne 상태가 PAID 아님 → PAYMENT_STATUS_NOT_PAID")
         void fail_portOneNotPaid() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
@@ -215,7 +215,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: 금액 불일치(부족) → PAYMENT_AMOUNT_MISMATCH")
         void fail_amountMismatch() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
@@ -232,7 +232,7 @@ class PaymentApplicationServiceTest {
         @DisplayName("실패: 금액 불일치(초과) → PAYMENT_AMOUNT_MISMATCH")
         void fail_amountMismatch_over() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));

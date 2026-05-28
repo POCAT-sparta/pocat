@@ -114,7 +114,7 @@ public final class TestFixtures {
                 .buyerId(1L)
                 .orderUid("ORD-001")
                 .finalPrice(10000L)
-                .status(OrderStatus.PAYMENT_FAILED)
+                .status(OrderStatus.AUTO_PAYMENT_FAILED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
@@ -134,7 +134,7 @@ public final class TestFixtures {
                 .buyerId(1L)
                 .orderUid("ORD-001")
                 .finalPrice(10000L)
-                .status(OrderStatus.PAYMENT_FAILED)
+                .status(OrderStatus.AUTO_PAYMENT_FAILED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
