@@ -1,32 +1,26 @@
 package com.rocketcrew.pocat.domain.payment.dto.request;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-
+/**
+ * PortOne Webhook 수신 DTO.
+ * Bean Validation 어노테이션을 의도적으로 제거함.
+ * 컨트롤러에서 byte[]로 수신 후 ObjectMapper로 직접 역직렬화하므로
+ * @Valid / @NotBlank 등의 Jakarta Validation이 실행되지 않는다.
+ * 실제 검증은 PaymentCommandService.handleWebhook()의 수동 null 체크로 수행한다.
+ */
 public record WebhookRequest(
-        @NotBlank(message = "type은 필수입니다.")
         String type,
-        @NotBlank(message = "timestamp는 필수입니다.")
         String timestamp,
-        @NotNull(message = "data는 필수입니다.")
-        @Valid WebhookData data
+        WebhookData data
 ) {
     public record WebhookData(
-            @NotBlank(message = "paymentId는 필수입니다.")
             String paymentId,       // 우리 paymentUid
             String transactionId,
             String storeId,
-            @NotNull(message = "amount는 필수입니다.")
-            @Valid WebhookAmount amount,
-            @NotBlank(message = "status는 필수입니다.")
+            WebhookAmount amount,
             String status           // PAID / FAILED / CANCELLED
     ) {}
 
     public record WebhookAmount(
-            @NotNull(message = "total은 필수입니다.")
-            @Positive(message = "total은 0보다 커야 합니다.")
             Long total
     ) {}
 }

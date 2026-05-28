@@ -48,6 +48,7 @@ public class PaymentCommandService {
         order.completePayment();
         settlementCommandService.createSettlement(order.getOrderUid());
         evictAvgPriceCache(order.getCardId());
+
         failureService.cancelExpiry(payment.getOrderId());
         eventPublisher.publishEvent(new PaymentCompletedEvent(
                 order.getOrderUid(),

@@ -86,14 +86,13 @@ public class FailureService {
                     ));
                 });
     }
-
-    /**
      * 결제가 성공적으로 완료되거나 이미 즉시 실패 처리될 때 Redis 키를 정리한다.
      * TTL 만료 경로(onMessage)에서는 TTL키가 이미 사라진 상태이므로 shadow키만 추가 삭제한다.
      */
     public void cancelExpiry(Long orderId) {
         redisTemplate.delete(PAYMENT_EXPIRY_KEY_PREFIX + orderId);
         redisTemplate.delete(PAYMENT_SHADOW_KEY_PREFIX + orderId);
+
     }
 
 }
