@@ -2,7 +2,6 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
 import com.rocketcrew.pocat.domain.payment.client.PortOnePaymentResponse;
@@ -87,8 +86,8 @@ public class PaymentWebhookService {
             Long amount = portOneClientPayment.amount();
 
             if (!payment.getAmount().equals(amount)) {
-                failureService.markFailed(payment.getId());
-                failureService.cancelExpiry(payment.getId());
+                failureService.markFailed(payment.getOrderId(), "결제 금액 불일치");
+                failureService.cancelExpiry(payment.getOrderId());
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
 
@@ -97,8 +96,8 @@ public class PaymentWebhookService {
                     portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt()
             );
         } else {
-            failureService.markFailed(payment.getId());
-            failureService.cancelExpiry(payment.getId());
+            failureService.markFailed(payment.getOrderId(), "PG사 결제 실패");
+            failureService.cancelExpiry(payment.getOrderId());
         }
     }
 }

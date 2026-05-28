@@ -3,7 +3,6 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.domain.payment.event.PaymentBillingRequestedEvent;
 import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
-import com.rocketcrew.pocat.domain.payment.event.PaymentWindowExpiredEvent;
 import com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,10 +30,5 @@ public class PaymentEventHandler {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(PaymentFailedEvent event) {
         paymentEventProducer.sendPaymentFailed(event);
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handle(PaymentWindowExpiredEvent event) {
-        paymentEventProducer.sendWindowExpired(event);
     }
 }

@@ -4,11 +4,13 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
+import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ public class PaymentCommandService {
     private final SettlementCommandService settlementCommandService;
     private final FailureService failureService;
     private final StringRedisTemplate redisTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Payment createPayment(Order order) {
         Payment payment = Payment.builder()
@@ -45,7 +48,13 @@ public class PaymentCommandService {
         order.completePayment();
         settlementCommandService.createSettlement(order.getOrderUid());
         evictAvgPriceCache(order.getCardId());
-        failureService.cancelExpiry(payment.getId());
+        failureService.cancelExpiry(payment.getOrderId());
+        eventPublisher.publishEvent(new PaymentCompletedEvent(
+                order.getOrderUid(),
+                order.getBuyerId(),
+                order.getSellerId(),
+                order.getFinalPrice()
+        ));
     }
 
     private String generatePaymentUid() {
