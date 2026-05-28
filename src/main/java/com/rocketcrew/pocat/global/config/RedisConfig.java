@@ -57,7 +57,6 @@ public class RedisConfig {
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(subscriber, new PatternTopic("notification:*"));
         container.addMessageListener(paymentExpiryEventListener, new PatternTopic("__keyevent@*__:expired"));
-        container.addMessageListener(paymentExpiryEventListener, new PatternTopic("__keyevent@*__:expired"));
         container.addMessageListener(auctionExpirationRedisSubscriber, new PatternTopic("__keyevent@*__:expired"));
         return container;
     }
