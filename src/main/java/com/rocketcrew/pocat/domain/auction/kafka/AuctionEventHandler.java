@@ -38,5 +38,10 @@ public class AuctionEventHandler {
     public void handle(AuctionEndedEvent event) {
         auctionEventProducer.sendEnded(event);
     }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handle(AuctionBuyoutCompletedEvent event) {
+        auctionEventProducer.sendBuyoutCompleted(event);
+    }
 }
 
