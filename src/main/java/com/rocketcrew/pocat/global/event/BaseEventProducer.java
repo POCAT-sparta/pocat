@@ -1,7 +1,6 @@
 package com.rocketcrew.pocat.global.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.global.outbox.entity.OutboxEvent;
 import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
