@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.payment.event.PaymentBillingRequestedEvent;
 import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
+import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -16,10 +17,10 @@ public class PaymentEventProducer extends BaseEventProducer {
     private static final String TOPIC = "payment";
 
     public PaymentEventProducer(
-            @Qualifier("paymentKafkaTemplate")
-            KafkaTemplate<String, String> kafkaTemplate,
-            ObjectMapper objectMapper) {
-        super(kafkaTemplate, objectMapper);
+            @Qualifier("paymentKafkaTemplate") KafkaTemplate<String, String> kafkaTemplate,
+            ObjectMapper objectMapper,
+            OutboxRepository outboxRepository) {
+        super(kafkaTemplate, objectMapper, outboxRepository);
     }
 
     // 자동결제 요청

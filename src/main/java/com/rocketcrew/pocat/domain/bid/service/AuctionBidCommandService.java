@@ -44,6 +44,7 @@ public class AuctionBidCommandService {
     private final EntityManager entityManager;
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService auctionEsIndexService;
 
     public CreateAuctionBidResponse createBid(Long userId, Long auctionId, CreateBidRequest request) {
         if (request == null) {
@@ -81,6 +82,16 @@ public class AuctionBidCommandService {
         AuctionBid savedBid = auctionBidRepository.save(auctionBid);
 
         latestAuction.updateHighestBid(request.bidPrice(), userId);
+
+        // 커밋 후 ES highestPrice 부분 업데이트
+        final Long bidAuctionId = auctionId;
+        final Long newHighestPrice = request.bidPrice();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                auctionEsIndexService.updateHighestPrice(bidAuctionId, newHighestPrice);
+            }
+        });
 
         return CreateAuctionBidResponse.from(savedBid);
     }

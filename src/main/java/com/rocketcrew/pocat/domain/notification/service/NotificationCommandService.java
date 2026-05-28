@@ -11,7 +11,6 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.NotificationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,8 @@ public class NotificationCommandService {
 
     private static final String TOPIC = "notification";
 
-    // NotificationEventHandler에서만 호출 — 직접 호출 금지, eventPublisher.publishEvent(NotificationSendEvent) 사용
+    // 서비스 레이어에서는 eventPublisher.publishEvent(NotificationSendEvent) 사용
+    // Kafka 컨슈머처럼 트랜잭션 컨텍스트 밖에서 호출할 경우 sendFromConsumer() 사용
     void sendInternal(Long userId, NotificationType type, String message, Object relatedData) {
         String relatedDataJson = toJson(relatedData);
         Notification notification = Notification.create(userId, type, message, relatedDataJson);
@@ -51,6 +51,11 @@ public class NotificationCommandService {
                         log.error("Kafka 알림 전송 실패 - notificationId={}, userId={}", notification.getId(), userId, ex);
                     }
                 });
+    }
+
+    // Kafka 컨슈머 전용 — 이미 커밋된 이벤트를 소비하여 알림 발송 시 사용
+    public void send(Long userId, NotificationType type, String message, Object relatedData) {
+        sendInternal(userId, type, message, relatedData);
     }
 
     // 개별 읽음 처리
