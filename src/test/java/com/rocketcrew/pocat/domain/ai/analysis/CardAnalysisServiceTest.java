@@ -254,17 +254,26 @@ class CardAnalysisServiceTest {
 
         @Test
         @DisplayName("analyzeCardFallback — CircuitBreaker open 시 기본 응답 반환")
-        void analyzeCardFallback_returnsDefaultResponse() {
-            // fallback shape 직접 검증 (AOP 없이 유닛 테스트에서 fallback shape 확인)
-            CardAnalysisResult fallback = new CardAnalysisResult(
-                    "UNKNOWN", null, "UNKNOWN",
-                    "현재 AI 분석 서비스를 이용할 수 없습니다. 잠시 후 다시 시도해주세요.",
-                    java.util.List.of(), java.util.List.of(), java.util.List.of(),
-                    "gemini-1.5-flash", 0, 0, java.time.LocalDateTime.now());
+        void analyzeCardFallback_returnsDefaultResponse() throws Exception {
+            // cache miss stub → Fallback 2 (기본 응답) 경로 실행
+            given(redisTemplate.opsForValue()).willReturn(valueOperations);
+            given(valueOperations.get(anyString())).willReturn(null);
 
-            assertThat(fallback.priceTrend()).isEqualTo("UNKNOWN");
-            assertThat(fallback.demandLevel()).isEqualTo("UNKNOWN");
-            assertThat(fallback.summary()).contains("AI 분석 서비스");
+            Method fallbackMethod = CardAnalysisService.class.getDeclaredMethod(
+                    "analyzeCardFallback", Long.class, Throwable.class);
+            fallbackMethod.setAccessible(true);
+
+            CardAnalysisResult result;
+            try {
+                result = (CardAnalysisResult) fallbackMethod.invoke(
+                        cardAnalysisService, 1L, new RuntimeException("CB open"));
+            } catch (java.lang.reflect.InvocationTargetException ite) {
+                throw new RuntimeException(ite.getCause());
+            }
+
+            assertThat(result.priceTrend()).isEqualTo("UNKNOWN");
+            assertThat(result.demandLevel()).isEqualTo("UNKNOWN");
+            assertThat(result.summary()).contains("AI 분석 서비스");
         }
 
         @Test

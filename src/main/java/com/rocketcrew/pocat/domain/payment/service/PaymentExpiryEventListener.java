@@ -30,12 +30,19 @@ public class PaymentExpiryEventListener implements MessageListener {
         if (!expiredKey.startsWith(FailureService.PAYMENT_EXPIRY_KEY_PREFIX)) return;
 
         String orderIdStr = expiredKey.substring(FailureService.PAYMENT_EXPIRY_KEY_PREFIX.length());
+        Long orderId;
         try {
-            Long orderId = Long.parseLong(orderIdStr);
-            failureService.markFailed(orderId, PaymentErrorReason.PAYMENT_EXPIRED);
-            failureService.cancelExpiry(orderId);
+            orderId = Long.parseLong(orderIdStr);
         } catch (NumberFormatException e) {
             log.warn("[PaymentExpiry] 파싱 불가 key={}", expiredKey);
+            return;
+        }
+        try {
+            failureService.markFailed(orderId, PaymentErrorReason.PAYMENT_EXPIRED);
+        } catch (Exception e) {
+            log.warn("[PaymentExpiry] markFailed 실패 orderId={} reason={}", orderId, e.getMessage());
+        } finally {
+            failureService.cancelExpiry(orderId);
         }
     }
 }

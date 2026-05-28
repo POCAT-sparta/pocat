@@ -20,21 +20,25 @@
 ## 2. 도메인별 심층 분석
 
 ### 2.1 TradePost (거래 게시글)
+
 - **이전 상태**: 게시글 생성/수정 시 이벤트 발행 여부만 어렴풋이 짐작 가능.
 - **개선 사항**: `ArgumentCaptor`를 도입하여 `TradePostEmbeddingEvent`에 담기는 **postId**와 **content**의 정합성을 실측. 
 - **기대 효과**: RAG(Retrieval-Augmented Generation) 시스템으로 전달되는 데이터의 품질을 소스 코드 레벨에서 보장함으로써, AI 검색 기능의 신뢰도를 근본적으로 향상시킴.
 
 ### 2.2 Chat & Notification (실시간성 도메인)
+
 - **분석 관점**: 상태 변경(읽음 처리, 나가기 등) 시의 권한 검증 및 멱등성 보장.
 - **정밀 검증**: 커서 기반 페이지네이션 조회 시 `nextCursor`가 단순히 존재함이 아니라, **마지막 데이터의 ID**와 정확히 일치하는지 단언(Assertion) 강화.
 - **기대 효과**: 대량 데이터 조회 시의 누락 없는 탐색과 클라이언트 측의 중복 요청에 대한 안정적 처리를 보장.
 
 ### 2.3 AI 장애 시나리오 (Fault Tolerance)
+
 - **시나리오**: AI API의 응답 지연(Timeout) 및 할당량 초과(Rate Limit).
 - **기술적 해결**: Resilience4j의 `@CircuitBreaker`와 `@RateLimiter`를 리플렉션을 통해 정적 검증하고, 실제 장애 시 `ServiceException(AI_RATE_LIMITED)`이 의도된 코드와 함께 전파되는지 확인.
 - **결과**: 외부 서비스 불능 상태에서도 전체 POCAT 애플리케이션이 정지되지 않고, 최소한의 정보(Fallback)를 제공하거나 사용자에게 명확한 안내를 제공함을 입증.
 
 ### 2.4 Payment (결제 안정성)
+
 - **이전 상태**: 결제 실패 사유가 "AMOUNT_NULL", "USER_CANCELLED" 등 문자열 리터럴로 산재되어 있어 오타에 취약하고 추적성이 낮음.
 - **개선 사항**: 
     - `PaymentErrorReason` Enum을 도입하여 실패 사유를 중앙 집중 관리.

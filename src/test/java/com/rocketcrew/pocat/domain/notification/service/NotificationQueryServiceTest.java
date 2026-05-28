@@ -92,6 +92,7 @@ class NotificationQueryServiceTest {
 
             assertThat(response.hasNext()).isFalse();
             assertThat(response.content()).hasSize(10);
+            assertThat(response.nextCursor()).isNull();
         }
     }
 }

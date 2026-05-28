@@ -103,6 +103,7 @@ class TradePostCommandServiceTest {
             ArgumentCaptor<TradePostEmbeddingEvent> eventCaptor = ArgumentCaptor.forClass(TradePostEmbeddingEvent.class);
             verify(eventPublisher).publishEvent(eventCaptor.capture());
             assertThat(eventCaptor.getValue().postId()).isEqualTo(10L);
+            assertThat(eventCaptor.getValue().content()).isEqualTo("수정된 내용");
         }
 
         @Test
