@@ -78,7 +78,7 @@ public class AuctionBuyoutTransactionService {
 
         Long previousHighestBidderId = auction.getHighestBidderId();
 
-        markExistingBidsLost(auction, buyerId);
+        markExistingBidsLost(auction, buyoutBid.getId());
         auction.updateHighestBid(reservation.buyoutPrice(), buyerId);
         auction.endAfterPaymentPending();
         bidOutbidEventPublisher.publish(
@@ -101,9 +101,9 @@ public class AuctionBuyoutTransactionService {
                 .orElseThrow(() -> new AuctionException(ErrorCode.AUCTION_NOT_FOUND));
     }
 
-    private void markExistingBidsLost(Auction auction, Long buyoutBuyerId) {
+    private void markExistingBidsLost(Auction auction, Long buyoutBidId) {
         for (AuctionBid bid : auctionBidRepository.findAllByAuctionId(auction.getId())) {
-            if (bid.getUserId().equals(buyoutBuyerId)) {
+            if (buyoutBidId.equals(bid.getId())) {
                 continue;
             }
             if (bid.getStatus() == BidStatus.LEADING) {

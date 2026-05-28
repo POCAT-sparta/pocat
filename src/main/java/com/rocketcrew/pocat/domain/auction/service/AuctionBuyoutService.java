@@ -179,7 +179,7 @@ public class AuctionBuyoutService {
             return lock.tryLock(AUCTION_LOCK_WAIT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED);
+            throw new AuctionException(ErrorCode.AUCTION_LOCK_FAILED, e);
         }
     }
 }

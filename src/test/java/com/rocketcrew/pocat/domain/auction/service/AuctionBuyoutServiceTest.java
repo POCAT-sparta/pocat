@@ -21,14 +21,12 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.redisson.api.RLock;
@@ -55,8 +53,9 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class AuctionBuyoutServiceTest {
 
-    @InjectMocks
     AuctionBuyoutService service;
+
+    AuctionBuyoutTransactionService buyoutTransactionService;
 
     @Mock
     AuctionRepository auctionRepository;
@@ -74,9 +73,6 @@ class AuctionBuyoutServiceTest {
     UserQueryService userQueryService;
 
     @Mock
-    EntityManager entityManager;
-
-    @Mock
     RedissonClient redissonClient;
 
     @Mock
@@ -90,8 +86,21 @@ class AuctionBuyoutServiceTest {
 
     @BeforeEach
     void setUp() throws InterruptedException {
+        buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository);
+        service = new AuctionBuyoutService(
+                auctionRepository,
+                orderCommandService,
+                orderQueryService,
+                userQueryService,
+                redissonClient,
+                eventPublisher,
+                outboxEventWriter,
+                buyoutTransactionService
+        );
+
         given(redissonClient.getLock(anyString())).willReturn(rLock);
         given(rLock.tryLock(anyLong(), any(TimeUnit.class))).willReturn(true);
+        given(rLock.isHeldByCurrentThread()).willReturn(true);
         TransactionSynchronizationManager.initSynchronization();
     }
 
@@ -190,6 +199,7 @@ class AuctionBuyoutServiceTest {
         assertThat(savedBid.getStatus()).isEqualTo(BidStatus.WON);
 
         verify(orderCommandService).createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
+        verify(rLock).unlock();
 
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
         verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture());
@@ -259,6 +269,7 @@ class AuctionBuyoutServiceTest {
         assertThat(auction.getHighestPrice()).isEqualTo(5000L);
         verify(auctionBidRepository, never()).save(any(AuctionBid.class));
         verify(redissonClient).getLock("auction:lock:10");
+        verify(rLock).unlock();
         verify(eventPublisher, never()).publishEvent(any());
     }
 
@@ -288,19 +299,42 @@ class AuctionBuyoutServiceTest {
                 .build();
         ReflectionTestUtils.setField(auction, "id", 10L);
 
-        RuntimeException paymentFailure = new RuntimeException("payment failed");
         given(userQueryService.getUserEntity(1L)).willReturn(buyer);
         given(auctionRepository.findById(10L)).willReturn(Optional.of(auction));
-        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L))
-                .willThrow(paymentFailure);
+        PaymentResponse payment = new PaymentResponse(
+                "PAY-FAILED",
+                20L,
+                10000L,
+                PaymentType.BILLING_KEY,
+                null,
+                PaymentStatus.FAILED,
+                null,
+                LocalDateTime.now()
+        );
+        Order failedOrder = Order.builder()
+                .auctionId(10L)
+                .cardId(3L)
+                .sellerId(2L)
+                .buyerId(1L)
+                .orderUid("ORD-FAILED")
+                .finalPrice(10000L)
+                .status(OrderStatus.AUTO_PAYMENT_FAILED)
+                .deliveryStatus(DeliveryStatus.PREPARING)
+                .build();
+        ReflectionTestUtils.setField(failedOrder, "id", 20L);
+        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(payment);
+        given(orderQueryService.findByOrderid(20L)).willReturn(failedOrder);
 
         // when & then
         assertThatThrownBy(() -> service.buyout(1L, 10L))
-                .isSameAs(paymentFailure);
+                .isInstanceOf(com.rocketcrew.pocat.global.exception.domain.AuctionException.class);
         assertThat(auction.getStatus()).isEqualTo(AuctionStatus.ACTIVE);
         assertThat(auction.getHighestBidderId()).isNull();
         assertThat(auction.getHighestPrice()).isEqualTo(5000L);
         verify(auctionBidRepository, never()).save(any(AuctionBid.class));
+        verify(orderCommandService).createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
+        verify(orderQueryService).findByOrderid(20L);
+        verify(rLock).unlock();
         verify(eventPublisher, never()).publishEvent(any());
     }
 }
