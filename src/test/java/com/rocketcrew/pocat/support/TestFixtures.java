@@ -13,6 +13,8 @@ import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
+import com.rocketcrew.pocat.domain.payment.entity.WebhookEvent;
+import com.rocketcrew.pocat.domain.payment.entity.WebhookEventStatus;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -27,6 +29,19 @@ import java.time.LocalDateTime;
 public final class TestFixtures {
 
     private TestFixtures() {}
+
+    // ── WebhookEvent ──────────────────────────────────────────────────
+
+    public static WebhookEvent aWebhookEvent() {
+        WebhookEvent event = WebhookEvent.builder()
+                .paymentId("PAY-001")
+                .eventType("Transaction.Paid")
+                .rawBody("{}")
+                .status(WebhookEventStatus.RECEIVED)
+                .build();
+        ReflectionTestUtils.setField(event, "id", 1L);
+        return event;
+    }
 
     // ── User ─────────────────────────────────────────────────────────
 

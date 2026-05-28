@@ -233,16 +233,16 @@ class PaymentControllerTest {
         }
 
         @Test
-        @DisplayName("실패: X-PortOne-Signature 헤더 누락 → 400")
+        @DisplayName("실패: X-PortOne-Signature 헤더 누락 → 403 FORBIDDEN")
         void fail_missingSignatureHeader() throws Exception {
-            // @RequestHeader("X-PortOne-Signature") 는 required=true (기본값)이므로
-            // Spring MVC 가 서비스 호출 전에 400 Bad Request 를 자동 반환한다.
+            willThrow(new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID))
+                    .given(paymentWebhookService).handleWebhook(isNull(), any(byte[].class));
+
             mockMvc.perform(post("/api/v1/payments/webhook")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{}".getBytes()))
-                    .andExpect(status().isBadRequest());
-
-            verifyNoInteractions(paymentApplicationService);
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("WEBHOOK_SIGNATURE_INVALID"));
         }
     }
 }

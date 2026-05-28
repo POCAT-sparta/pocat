@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ class PaymentCommandServiceTest {
     @Mock private SettlementCommandService settlementCommandService;
     @Mock private FailureService failureService;
     @Mock private StringRedisTemplate redisTemplate;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     // ── createPayment ──────────────────────────────────────────────────
 
