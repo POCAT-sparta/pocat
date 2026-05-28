@@ -38,6 +38,7 @@ public class AuctionLifecycleService {
     private final AuctionBidRepository auctionBidRepository;
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuctionEsIndexService auctionEsIndexService;
 
     // 검수 승인된 경매를 현재 시각 기준으로 ACTIVE 상태로 전환하고 종료 이벤트 예약용 정보를 확정한다.
     public boolean activateApprovedAuction(Long auctionId) {
@@ -53,6 +54,15 @@ public class AuctionLifecycleService {
         LocalDateTime startedAt = LocalDateTime.now(AUCTION_ZONE);
         LocalDateTime endedAt = startedAt.plusDays(AUCTION_DURATION_DAYS);
         latestAuction.activate(startedAt, endedAt);
+
+        // ACTIVE 전환 후 커밋이 완료되면 ES 인덱싱
+        final Auction auctionSnapshot = latestAuction;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                auctionEsIndexService.index(auctionSnapshot);
+            }
+        });
 
         eventPublisher.publishEvent(new AuctionActivatedEvent(
                 latestAuction.getId(),
@@ -77,6 +87,13 @@ public class AuctionLifecycleService {
         if (latestAuction.getHighestBidderId() == null) {
             latestAuction.markNoBidder();
             publishEndedEvent(latestAuction, List.of());
+            final Long noAuctionId = latestAuction.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    auctionEsIndexService.updateStatus(noAuctionId, com.rocketcrew.pocat.domain.auction.enums.AuctionStatus.NO_BIDDER);
+                }
+            });
             return true;
         }
 
@@ -89,6 +106,13 @@ public class AuctionLifecycleService {
         markBidResults(bids, latestAuction.getHighestBidderId());
         latestAuction.end();
         publishEndedEvent(latestAuction, loserIds);
+        final Long endedAuctionId = latestAuction.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                auctionEsIndexService.updateStatus(endedAuctionId, com.rocketcrew.pocat.domain.auction.enums.AuctionStatus.ENDED);
+            }
+        });
         return true;
     }
 
