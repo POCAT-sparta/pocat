@@ -58,7 +58,7 @@ public class LikeCommandService {
             likeRepository.save(like);
             return new ToggleLikeResponse(auctionId, true);  // isLiked = true (추가됨)
         } catch (DataIntegrityViolationException e) {
-            if (e.getMostSpecificCause() instanceof org.hibernate.exception.ConstraintViolationException) {
+            if (e.getCause() instanceof org.hibernate.exception.ConstraintViolationException) {
                 throw new LikeException(ErrorCode.LIKE_DUPLICATE);
             }
             throw e;
