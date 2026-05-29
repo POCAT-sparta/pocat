@@ -97,6 +97,7 @@ public class FailureService {
                             order.getOrderUid(),
                             order.getBuyerId(),
                             order.getSellerId()
+
             );
             outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
             eventPublisher.publishEvent(event);
