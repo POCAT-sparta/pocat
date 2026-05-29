@@ -52,7 +52,7 @@ public class PaymentCommandService {
         order.completePayment();
         evictAvgPriceCache(order.getCardId());
 
-        failureService.cancelExpiry(payment.getOrderId());
+//        failureService.cancelExpiry(payment.getOrderId());
 
         PaymentCompletedEvent event = new PaymentCompletedEvent(
                 order.getOrderUid(),
