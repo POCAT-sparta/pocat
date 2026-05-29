@@ -60,12 +60,12 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
         }
 
-        Payment payment = paymentCommandService.createPayment(order, PaymentType.PG_DIRECT);
+        Payment payment = paymentCommandService.createPayment(order.getId(), PaymentType.PG_DIRECT);
         return PaymentResponse.from(payment);
     }
 
-    public PaymentResponse autoPayment(Long orderId) {
-        Order order = orderQueryService.findByOrderid(orderId);
+    public PaymentResponse autoPayment(String orderUid) {
+        Order order = orderQueryService.findByOrderUid(orderUid);
 
         if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) {
             return paymentQueryService.findByOrderId(order.getId());
@@ -78,7 +78,7 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
 
-        Payment payment = paymentCommandService.createPayment(order , PaymentType.BILLING_KEY);
+        Payment payment = paymentCommandService.createPayment(order.getId() , PaymentType.BILLING_KEY);
 
         PortOnePaymentResponse response = portOneClientService.attemptBillingKeyPayment(
                 payment.getPaymentUid(), billingKey, payment.getAmount()
@@ -94,14 +94,14 @@ public class PaymentApplicationService {
 
         // 이후 성공이 아니면 실패처리
         if (!PortOneStatus.PAID.equals(response.status())) {
-            failureService.persistBillingKeyFailure(payment, order);
+            failureService.persistBillingKeyFailure(payment.getId(), order.getId());
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
         // 금액이 맞지 않으면 취소
         if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
             cancelPayment(payment.getPaymentUid(),response.amount());
-            failureService.persistBillingKeyFailure(payment, order);
+            failureService.persistBillingKeyFailure(payment.getId(), order.getId());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 

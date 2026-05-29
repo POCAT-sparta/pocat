@@ -53,7 +53,7 @@ class PaymentCommandServiceTest {
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
             given(paymentRepository.save(any(Payment.class))).willReturn(saved);
 
-            Payment result = paymentCommandService.createPayment(order, PaymentType.BILLING_KEY);
+            Payment result = paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY);
 
             assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING);
             assertThat(result.getAmount()).isEqualTo(10000L);

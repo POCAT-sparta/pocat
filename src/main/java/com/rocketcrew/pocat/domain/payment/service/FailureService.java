@@ -6,11 +6,11 @@ import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.AutoPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.DirectPaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import static com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 @Slf4j
@@ -25,14 +26,18 @@ import static com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.Paym
 @RequiredArgsConstructor
 public class FailureService {
 
-    private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxEventWriter;
 
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void persistBillingKeyFailure(Payment payment, Order order) {
+    public void persistBillingKeyFailure(Long paymentId, Long orderId) {
+        Payment payment = paymentRepository.findByIdWithLock(paymentId)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+        Order order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
         payment.fail();
         order.failPayment();
         AutoPaymentFailedEvent event = new AutoPaymentFailedEvent(
