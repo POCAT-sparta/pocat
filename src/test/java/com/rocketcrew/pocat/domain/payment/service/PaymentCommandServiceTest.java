@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
@@ -35,7 +36,7 @@ class PaymentCommandServiceTest {
     private PaymentCommandService paymentCommandService;
 
     @Mock private PaymentRepository paymentRepository;
-    @Mock private FailureService failureService;
+    @Mock private SetExpireService setExpireService;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private OutboxEventWriter outboxEventWriter;
