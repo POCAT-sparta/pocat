@@ -25,9 +25,6 @@ import static com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.Paym
 @RequiredArgsConstructor
 public class FailureService {
 
-    public static final String PAYMENT_EXPIRY_KEY_PREFIX = "order:expire";
-    public static final String PAYMENT_SHADOW_KEY_PREFIX = "order:shadow";
-
     private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -65,11 +62,6 @@ public class FailureService {
             outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
             eventPublisher.publishEvent(event);
         }
-    }
-
-    public void cancelExpiry(Long orderId) {
-        redisTemplate.delete(PAYMENT_EXPIRY_KEY_PREFIX + orderId);
-        redisTemplate.delete(PAYMENT_SHADOW_KEY_PREFIX + orderId);
     }
 
 }
