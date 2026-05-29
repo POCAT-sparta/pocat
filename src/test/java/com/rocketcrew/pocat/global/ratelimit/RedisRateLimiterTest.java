@@ -4,132 +4,115 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 
-import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
-/**
- * RED 테스트 — #133 RedisRateLimiter 단위 테스트
- *
- * 현재 com.rocketcrew.pocat.global.ratelimit 패키지에:
- *   - RedisRateLimiter 클래스가 없음
- *   - RateLimitProperties 클래스가 없음
- *
- * 위 두 클래스가 생성될 때까지 아래 테스트는 FAIL 해야 한다.
- */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("RedisRateLimiter — 존재 및 API 계약 RED 테스트")
+@DisplayName("RedisRateLimiter — 동작 테스트")
 class RedisRateLimiterTest {
 
-    private static final String RATE_LIMITER_CLASS =
-            "com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter";
+    @Mock
+    private StringRedisTemplate stringRedisTemplate;
 
-    private static final String RATE_LIMIT_PROPERTIES_CLASS =
-            "com.rocketcrew.pocat.global.ratelimit.RateLimitProperties";
+    @InjectMocks
+    private RedisRateLimiter redisRateLimiter;
 
     // ---------------------------------------------------------------
-    // T2-1: RedisRateLimiter 클래스 존재 + isAllowed 메서드 시그니처
+    // T1: 허용 (count < limit)
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("RedisRateLimiter 클래스")
-    class RedisRateLimiterClass {
+    @DisplayName("허용 케이스")
+    class Allowed {
 
         @Test
-        @DisplayName("RedisRateLimiter 클래스가 존재해야 한다")
-        void redisRateLimiter_classExists() {
-            // then — FAILS until RedisRateLimiter is created
-            assertThatCode(() -> Class.forName(RATE_LIMITER_CLASS))
-                    .as("RedisRateLimiter class must exist in com.rocketcrew.pocat.global.ratelimit")
-                    .doesNotThrowAnyException();
-        }
-
-        @Test
-        @DisplayName("isAllowed(String key, int limit, long windowSeconds) 메서드가 존재해야 한다")
-        void redisRateLimiter_isAllowedMethodExists() throws Exception {
+        @DisplayName("성공: execute returns 0L → isAllowed returns true")
+        void allowed_whenCountBelowLimit() {
             // given
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(RATE_LIMITER_CLASS);
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(
-                        "RedisRateLimiter class not found — create it first", e);
-            }
+            given(stringRedisTemplate.execute(any(RedisScript.class), anyList(), anyString(), anyString()))
+                    .willReturn(0L);
 
             // when
-            Method isAllowed;
-            try {
-                isAllowed = clazz.getDeclaredMethod("isAllowed", String.class, int.class, long.class);
-            } catch (NoSuchMethodException e) {
-                throw new AssertionError(
-                        "RedisRateLimiter must declare isAllowed(String key, int limit, long windowSeconds)", e);
-            }
+            boolean result = redisRateLimiter.isAllowed("rate:user:like:1", 10, 60L);
 
             // then
-            assertThat(isAllowed.getReturnType())
-                    .as("isAllowed() must return boolean")
-                    .isEqualTo(boolean.class);
-        }
-
-        @Test
-        @DisplayName("RedisRateLimiter 는 @Component 또는 @Service 로 스프링 빈 등록되어야 한다")
-        void redisRateLimiter_isSpringBean() throws Exception {
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(RATE_LIMITER_CLASS);
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(
-                        "RedisRateLimiter class not found — create it first", e);
-            }
-
-            boolean isComponent = clazz.isAnnotationPresent(
-                    org.springframework.stereotype.Component.class);
-            boolean isService = clazz.isAnnotationPresent(
-                    org.springframework.stereotype.Service.class);
-
-            // then — FAILS until @Component or @Service is added
-            assertThat(isComponent || isService)
-                    .as("RedisRateLimiter must be annotated with @Component or @Service")
-                    .isTrue();
+            assertThat(result).isTrue();
         }
     }
 
     // ---------------------------------------------------------------
-    // T2-2: RateLimitProperties 클래스 존재 확인
+    // T2: 차단 (count > limit)
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("RateLimitProperties 클래스")
-    class RateLimitPropertiesClass {
+    @DisplayName("차단 케이스")
+    class Blocked {
 
         @Test
-        @DisplayName("RateLimitProperties 클래스가 존재해야 한다")
-        void rateLimitProperties_classExists() {
-            // then — FAILS until RateLimitProperties is created
-            assertThatCode(() -> Class.forName(RATE_LIMIT_PROPERTIES_CLASS))
-                    .as("RateLimitProperties class must exist in com.rocketcrew.pocat.global.ratelimit")
-                    .doesNotThrowAnyException();
+        @DisplayName("실패: execute returns 1L → isAllowed returns false")
+        void blocked_whenCountExceedsLimit() {
+            // given
+            given(stringRedisTemplate.execute(any(RedisScript.class), anyList(), anyString(), anyString()))
+                    .willReturn(1L);
+
+            // when
+            boolean result = redisRateLimiter.isAllowed("rate:user:like:1", 10, 60L);
+
+            // then
+            assertThat(result).isFalse();
         }
+    }
+
+    // ---------------------------------------------------------------
+    // T3: null 반환 (첫 번째 요청 edge case)
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("null 반환 케이스")
+    class NullReturn {
 
         @Test
-        @DisplayName("RateLimitProperties 는 @ConfigurationProperties 로 선언되어야 한다")
-        void rateLimitProperties_isConfigurationProperties() throws Exception {
-            Class<?> clazz;
-            try {
-                clazz = Class.forName(RATE_LIMIT_PROPERTIES_CLASS);
-            } catch (ClassNotFoundException e) {
-                throw new AssertionError(
-                        "RateLimitProperties class not found — create it first", e);
-            }
+        @DisplayName("성공: execute returns null → isAllowed returns true (첫 번째 요청 edge case)")
+        void allowed_whenResultIsNull() {
+            // given
+            given(stringRedisTemplate.execute(any(RedisScript.class), anyList(), anyString(), anyString()))
+                    .willReturn(null);
 
-            boolean hasConfigProps = clazz.isAnnotationPresent(
-                    org.springframework.boot.context.properties.ConfigurationProperties.class);
+            // when
+            boolean result = redisRateLimiter.isAllowed("rate:user:like:1", 10, 60L);
 
-            // then — FAILS until @ConfigurationProperties is declared
-            assertThat(hasConfigProps)
-                    .as("RateLimitProperties must be annotated with @ConfigurationProperties")
-                    .isTrue();
+            // then
+            assertThat(result).isTrue();
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // T4: Redis 장애 (fail-open)
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("Redis 장애 케이스")
+    class RedisFailure {
+
+        @Test
+        @DisplayName("성공: execute throws RuntimeException → isAllowed returns true (fail-open)")
+        void failOpen_whenRedisThrows() {
+            // given
+            given(stringRedisTemplate.execute(any(RedisScript.class), anyList(), anyString(), anyString()))
+                    .willThrow(new RuntimeException("Redis connection refused"));
+
+            // when
+            boolean result = redisRateLimiter.isAllowed("rate:user:like:1", 10, 60L);
+
+            // then
+            assertThat(result).isTrue();
         }
     }
 }

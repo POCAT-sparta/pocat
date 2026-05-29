@@ -20,8 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -33,13 +31,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class AuthControllerTest {
 
     private MockMvc mockMvc;
@@ -60,7 +58,7 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
+        lenient().when(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).thenReturn(true);
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -100,6 +98,20 @@ class AuthControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("실패: Rate Limit 초과 → 429 Too Many Requests")
+        void fail_429_rateLimitExceeded() throws Exception {
+            // given: rate limit 차단 (BeforeEach lenient stub 오버라이드)
+            given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(false);
+            SignupRequest request = new SignupRequest("test@example.com", "Password1!", "tester", "010-1234-5678");
+
+            // when & then
+            mockMvc.perform(post("/api/v1/auth/signup")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isTooManyRequests());
         }
     }
 

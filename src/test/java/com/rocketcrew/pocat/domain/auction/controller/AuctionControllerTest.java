@@ -165,6 +165,15 @@ class AuctionControllerTest {
     class GetAuctions {
 
         @Test
+        @DisplayName("실패: Rate Limit 초과 → 429 Too Many Requests")
+        void fail_429_rateLimitExceeded() throws Exception {
+            given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(false);
+
+            mockMvc.perform(get("/api/v1/auctions"))
+                    .andExpect(status().isTooManyRequests());
+        }
+
+        @Test
         @DisplayName("성공: 경매 목록 반환")
         void success() throws Exception {
             SearchAuctionResponse resp = new SearchAuctionResponse(

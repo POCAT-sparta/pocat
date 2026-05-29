@@ -1,9 +1,14 @@
 package com.rocketcrew.pocat.domain.like.service;
 
+import com.rocketcrew.pocat.domain.like.dto.response.ToggleLikeResponse;
+import com.rocketcrew.pocat.domain.like.entity.Like;
 import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.exception.domain.LikeException;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -13,26 +18,24 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.dao.DataIntegrityViolationException;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
-/**
- * RED 테스트 — #133 동시성 제어
- *
- * 현재 LikeCommandService 에는:
- *   - RedissonClient 필드가 없음
- *   - ErrorCode.LIKE_LOCK_FAILED 가 없음
- *   - ErrorCode.RATE_LIMIT_EXCEEDED 가 없음
- *
- * 위 세 가지가 추가될 때까지 아래 테스트는 FAIL 해야 한다.
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("LikeCommandService — 동시성 제어 RED 테스트")
+@DisplayName("LikeCommandService — 동시성 제어 동작 테스트")
 class LikeCommandServiceTest {
 
     @InjectMocks
@@ -45,90 +48,160 @@ class LikeCommandServiceTest {
     private RedissonClient redissonClient;
 
     @Mock
+    private RLock rLock;
+
+    @Mock
     private RedisRateLimiter redisRateLimiter;
 
     @Mock
     private RateLimitProperties rateLimitProperties;
 
+    @BeforeEach
+    void setUp() throws InterruptedException {
+        given(rateLimitProperties.getLikeLimit()).willReturn(10);
+        given(rateLimitProperties.getLikeWindowSeconds()).willReturn(60L);
+        given(redisRateLimiter.isAllowed(anyString(), any(int.class), anyLong())).willReturn(true);
+        given(redissonClient.getLock(anyString())).willReturn(rLock);
+        given(rLock.tryLock(0L, TimeUnit.SECONDS)).willReturn(true);
+        given(rLock.isHeldByCurrentThread()).willReturn(false);
+    }
+
     // ---------------------------------------------------------------
-    // T1-1: RedissonClient 필드 주입 확인 (리플렉션)
+    // T1: Rate Limit 초과
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("RedissonClient 필드 주입")
-    class RedissonClientInjection {
+    @DisplayName("Rate Limit 초과")
+    class RateLimitExceeded {
 
         @Test
-        @DisplayName("LikeCommandService 에 RedissonClient 타입 필드가 선언되어 있어야 한다")
-        void likeCommandService_hasRedissonClientField() {
-            // when
-            boolean hasRedissonField = Arrays.stream(LikeCommandService.class.getDeclaredFields())
-                    .anyMatch(f -> f.getType().equals(RedissonClient.class));
+        @DisplayName("실패: Rate Limit 초과 → ServiceException(RATE_LIMIT_EXCEEDED)")
+        void fail_rateLimitExceeded() {
+            // given
+            given(redisRateLimiter.isAllowed(anyString(), any(int.class), anyLong())).willReturn(false);
 
-            // then — FAILS until RedissonClient is injected into LikeCommandService
-            assertThat(hasRedissonField)
-                    .as("LikeCommandService must declare a RedissonClient field for distributed locking")
-                    .isTrue();
-        }
-
-        @Test
-        @DisplayName("RedissonClient 필드가 실제로 주입되어 있어야 한다 (null 아님)")
-        void likeCommandService_redissonClientFieldIsNotNull() throws Exception {
-            // given: find the RedissonClient field (will throw NoSuchFieldException if absent)
-            Field redissonField = Arrays.stream(LikeCommandService.class.getDeclaredFields())
-                    .filter(f -> f.getType().equals(RedissonClient.class))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError(
-                            "RedissonClient field not found in LikeCommandService — add it for distributed locking"));
-
-            redissonField.setAccessible(true);
-            Object value = redissonField.get(likeCommandService);
-
-            // then — FAILS until Mockito can inject into the declared field
-            assertThat(value)
-                    .as("RedissonClient field must not be null — @InjectMocks should inject the mock")
-                    .isNotNull();
+            // when & then
+            assertThatThrownBy(() -> likeCommandService.toggleLike(1L, 1L))
+                    .isInstanceOf(ServiceException.class)
+                    .satisfies(ex -> assertThat(((ServiceException) ex).getErrorCode())
+                            .isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED));
         }
     }
 
     // ---------------------------------------------------------------
-    // T1-2: ErrorCode.LIKE_LOCK_FAILED 존재 확인
+    // T2: 락 획득 실패
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("ErrorCode 열거값 — Like 락 실패")
-    class LikeLockFailedErrorCode {
+    @DisplayName("락 획득 실패")
+    class LockAcquireFailed {
 
         @Test
-        @DisplayName("ErrorCode.LIKE_LOCK_FAILED 열거값이 존재해야 한다")
-        void errorCode_LIKE_LOCK_FAILED_exists() {
-            // when
-            boolean exists = Arrays.stream(ErrorCode.values())
-                    .anyMatch(e -> e.name().equals("LIKE_LOCK_FAILED"));
+        @DisplayName("실패: 락 획득 실패 → LikeException(LIKE_LOCK_FAILED)")
+        void fail_lockAcquireFailed() throws InterruptedException {
+            // given
+            given(rLock.tryLock(0L, TimeUnit.SECONDS)).willReturn(false);
 
-            // then — FAILS until LIKE_LOCK_FAILED is added to ErrorCode enum
-            assertThat(exists)
-                    .as("ErrorCode.LIKE_LOCK_FAILED must be declared for concurrent like/unlike protection")
-                    .isTrue();
+            // when & then
+            assertThatThrownBy(() -> likeCommandService.toggleLike(1L, 1L))
+                    .isInstanceOf(LikeException.class)
+                    .satisfies(ex -> assertThat(((LikeException) ex).getErrorCode())
+                            .isEqualTo(ErrorCode.LIKE_LOCK_FAILED));
         }
     }
 
     // ---------------------------------------------------------------
-    // T1-3: ErrorCode.RATE_LIMIT_EXCEEDED 존재 확인
+    // T3: 최초 좋아요
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("ErrorCode 열거값 — Rate Limit 초과")
-    class RateLimitExceededErrorCode {
+    @DisplayName("최초 좋아요")
+    class FirstLike {
 
         @Test
-        @DisplayName("ErrorCode.RATE_LIMIT_EXCEEDED 열거값이 존재해야 한다")
-        void errorCode_RATE_LIMIT_EXCEEDED_exists() {
-            // when
-            boolean exists = Arrays.stream(ErrorCode.values())
-                    .anyMatch(e -> e.name().equals("RATE_LIMIT_EXCEEDED"));
+        @DisplayName("성공: 최초 좋아요 → save 호출 후 isLiked=true 반환")
+        void success_firstLike() {
+            // given
+            given(likeRepository.findByUserIdAndAuctionId(1L, 1L)).willReturn(Optional.empty());
+            Like savedLike = Like.builder().userId(1L).auctionId(1L).build();
+            given(likeRepository.save(any(Like.class))).willReturn(savedLike);
 
-            // then — FAILS until RATE_LIMIT_EXCEEDED is added to ErrorCode enum
-            assertThat(exists)
-                    .as("ErrorCode.RATE_LIMIT_EXCEEDED must be declared for Redis-based rate limiting")
-                    .isTrue();
+            // when
+            ToggleLikeResponse response = likeCommandService.toggleLike(1L, 1L);
+
+            // then
+            assertThat(response.auctionId()).isEqualTo(1L);
+            assertThat(response.isLiked()).isTrue();
+            verify(likeRepository).save(any(Like.class));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // T4: 좋아요 취소
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("좋아요 취소")
+    class CancelLike {
+
+        @Test
+        @DisplayName("성공: 이미 좋아요 → delete 호출 후 isLiked=false 반환")
+        void success_cancelLike() {
+            // given
+            Like existingLike = Like.builder().userId(1L).auctionId(1L).build();
+            given(likeRepository.findByUserIdAndAuctionId(1L, 1L)).willReturn(Optional.of(existingLike));
+
+            // when
+            ToggleLikeResponse response = likeCommandService.toggleLike(1L, 1L);
+
+            // then
+            assertThat(response.auctionId()).isEqualTo(1L);
+            assertThat(response.isLiked()).isFalse();
+            verify(likeRepository).delete(existingLike);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // T5: unique 제약 위반 (DataIntegrity - ConstraintViolation)
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("unique 제약 위반")
+    class UniqueConstraintViolation {
+
+        @Test
+        @DisplayName("실패: save() 시 ConstraintViolationException → LikeException(LIKE_DUPLICATE)")
+        void fail_duplicateLike() {
+            // given
+            given(likeRepository.findByUserIdAndAuctionId(1L, 1L)).willReturn(Optional.empty());
+            org.hibernate.exception.ConstraintViolationException hibernateCve =
+                    new org.hibernate.exception.ConstraintViolationException(
+                            "Duplicate entry", new java.sql.SQLException(), "idx_likes_user_auction");
+            DataIntegrityViolationException dive = new DataIntegrityViolationException("constraint", hibernateCve);
+            given(likeRepository.save(any(Like.class))).willThrow(dive);
+
+            // when & then
+            assertThatThrownBy(() -> likeCommandService.toggleLike(1L, 1L))
+                    .isInstanceOf(LikeException.class)
+                    .satisfies(ex -> assertThat(((LikeException) ex).getErrorCode())
+                            .isEqualTo(ErrorCode.LIKE_DUPLICATE));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // T6: 비unique DataIntegrity 위반 (A3 구현 후 GREEN)
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("비unique DataIntegrity 위반")
+    class NonUniqueDataIntegrityViolation {
+
+        @Test
+        @DisplayName("실패: save() 시 비unique DataIntegrityViolationException → 그대로 전파 (A3 구현 후 GREEN)")
+        void fail_nonUniqueDataIntegrityViolation() {
+            // given
+            given(likeRepository.findByUserIdAndAuctionId(1L, 1L)).willReturn(Optional.empty());
+            DataIntegrityViolationException dive =
+                    new DataIntegrityViolationException("other constraint", new RuntimeException("not a constraint violation"));
+            given(likeRepository.save(any(Like.class))).willThrow(dive);
+
+            // when & then
+            assertThatThrownBy(() -> likeCommandService.toggleLike(1L, 1L))
+                    .isInstanceOf(DataIntegrityViolationException.class);
         }
     }
 }

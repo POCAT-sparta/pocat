@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,7 +24,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
 
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 
@@ -44,6 +48,9 @@ class FailureServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private OutboxEventWriter outboxEventWriter;
+
     // ── markFailed ─────────────────────────────────────────────────────
 
     @Nested
@@ -56,6 +63,7 @@ class FailureServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);  // id=1L
 
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            doNothing().when(outboxEventWriter).write(anyString(), anyString(), any());
 
             failureService.markFailed(1L, PaymentErrorReason.PAYMENT_EXPIRED);
 
