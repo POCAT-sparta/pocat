@@ -61,6 +61,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -171,6 +172,7 @@ class AuctionControllerTest {
 
             mockMvc.perform(get("/api/v1/auctions"))
                     .andExpect(status().isTooManyRequests());
+            verifyNoInteractions(queryService);
         }
 
         @Test
