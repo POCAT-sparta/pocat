@@ -5,7 +5,6 @@ import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
@@ -27,7 +26,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -62,12 +60,6 @@ class OrderCommandServiceTest {
 
     @Mock
     private PaymentApplicationService paymentApplicationService;
-
-    @Mock
-    private OutboxRepository outboxRepository;
-
-    @Mock
-    private ObjectMapper objectMapper;
 
     // ── createOrderFromAuction ─────────────────────────────────────────
 
@@ -116,12 +108,12 @@ class OrderCommandServiceTest {
             PaymentResponse paymentResponse = new PaymentResponse(
                     "PAY-001", 1L, 10000L, null, null, null, null, null);
             given(orderRepository.save(any(Order.class))).willReturn(savedOrder);
-            given(paymentApplicationService.autoPayment(1L)).willReturn(paymentResponse);
+            given(paymentApplicationService.autoPayment("1")).willReturn(paymentResponse);
 
             PaymentResponse result = orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
 
             verify(orderRepository).save(argThat(order -> order.getOrderType() == OrderType.BUYOUT));
-            verify(paymentApplicationService).autoPayment(1L);
+            verify(paymentApplicationService).autoPayment("1");
             assertThat(result.paymentUid()).isEqualTo("PAY-001");
         }
     }

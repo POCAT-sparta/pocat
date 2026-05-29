@@ -58,10 +58,12 @@ public class OrderQueryService {
         if (!order.getBuyerId().equals(userId)) {
             throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
         }
-        User buyer = userRepository.findById(order.getBuyerId())
-                .orElseThrow(() -> new OrderException(ErrorCode.USER_NOT_FOUND));
-        User seller = userRepository.findById(order.getSellerId())
-                .orElseThrow(() -> new OrderException(ErrorCode.USER_NOT_FOUND));
+        Map<Long, User> userMap = userRepository.findAllById(List.of(order.getBuyerId(), order.getSellerId()))
+                .stream().collect(Collectors.toMap(User::getId, u -> u));
+        User buyer = userMap.get(order.getBuyerId());
+        if (buyer == null) throw new OrderException(ErrorCode.USER_NOT_FOUND);
+        User seller = userMap.get(order.getSellerId());
+        if (seller == null) throw new OrderException(ErrorCode.USER_NOT_FOUND);
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         return OrderDetailResponse.of(order, buyer, seller, card);
@@ -82,6 +84,11 @@ public class OrderQueryService {
     public Order findByOrderid(Long orderId) {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new PaymentException(ErrorCode.ORDER_NOT_FOUND));
+    }
+
+    public Order findByOrderUid(String orderUid) {
+        return orderRepository.findByOrderUid(orderUid)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
     }
 
     @Transactional

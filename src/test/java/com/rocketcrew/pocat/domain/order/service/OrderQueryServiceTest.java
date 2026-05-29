@@ -34,6 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -110,8 +112,7 @@ class OrderQueryServiceTest {
             Card card = TestFixtures.aCard();    // id=3L
 
             given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
-            given(userRepository.findById(1L)).willReturn(Optional.of(buyer));
-            given(userRepository.findById(2L)).willReturn(Optional.of(seller));
+            given(userRepository.findAllById(List.of(1L, 2L))).willReturn(List.of(buyer, seller));
             given(cardRepository.findById(3L)).willReturn(Optional.of(card));
 
             OrderDetailResponse response = orderQueryService.getOneOrder(1L, "ORD-001");
@@ -120,6 +121,8 @@ class OrderQueryServiceTest {
             assertThat(response.orderUid()).isEqualTo("ORD-001");
             assertThat(response.buyer().nickname()).isEqualTo("구매자");
             assertThat(response.card().name()).isEqualTo("피카츄");
+            verify(userRepository).findAllById(List.of(1L, 2L));
+            verify(userRepository, never()).findById(any());
         }
 
         @Test
@@ -141,6 +144,36 @@ class OrderQueryServiceTest {
             assertThatThrownBy(() -> orderQueryService.getOneOrder(99L, "ORD-001"))
                     .isInstanceOf(OrderException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_FORBIDDEN);
+        }
+
+        @Test
+        @DisplayName("실패: 구매자 누락 → USER_NOT_FOUND")
+        void fail_buyerNotFound() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED); // buyerId=1L, sellerId=2L
+            User seller = TestFixtures.anAdmin(); // id=2L
+
+            given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
+            given(userRepository.findAllById(List.of(1L, 2L))).willReturn(List.of(seller)); // buyer 누락
+            given(cardRepository.findById(3L)).willReturn(Optional.of(TestFixtures.aCard()));
+
+            assertThatThrownBy(() -> orderQueryService.getOneOrder(1L, "ORD-001"))
+                    .isInstanceOf(OrderException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("실패: 판매자 누락 → USER_NOT_FOUND")
+        void fail_sellerNotFound() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED); // buyerId=1L, sellerId=2L
+            User buyer = TestFixtures.aUser(); // id=1L
+
+            given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
+            given(userRepository.findAllById(List.of(1L, 2L))).willReturn(List.of(buyer)); // seller 누락
+            given(cardRepository.findById(3L)).willReturn(Optional.of(TestFixtures.aCard()));
+
+            assertThatThrownBy(() -> orderQueryService.getOneOrder(1L, "ORD-001"))
+                    .isInstanceOf(OrderException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
         }
     }
 
