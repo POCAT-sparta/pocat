@@ -94,14 +94,14 @@ public class PaymentApplicationService {
 
         // 이후 성공이 아니면 실패처리
         if (!PortOneStatus.PAID.equals(response.status())) {
-            failureService.persistBillingKeyFailure(payment, order, true);
+            failureService.persistBillingKeyFailure(payment, order);
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
         // 금액이 맞지 않으면 취소
         if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
             cancelPayment(payment.getPaymentUid(),response.amount());
-            failureService.persistBillingKeyFailure(payment, order,true);
+            failureService.persistBillingKeyFailure(payment, order);
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 

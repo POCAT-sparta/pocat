@@ -322,7 +322,7 @@ class PaymentApplicationServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 
-            verify(failureService).persistBillingKeyFailure(payment, order, false);
+            verify(failureService).persistBillingKeyFailure(payment, order);
         }
     }
 }
