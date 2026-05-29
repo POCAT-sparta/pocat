@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.auction.service;
 
+import com.rocketcrew.pocat.domain.auction.document.AuctionDocument;
 import com.rocketcrew.pocat.domain.auction.dto.response.AdminAuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.AuctionResponse;
 import com.rocketcrew.pocat.domain.auction.dto.response.SearchAuctionResponse;
@@ -12,7 +13,10 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import org.springframework.data.elasticsearch.core.query.Query;
 import com.rocketcrew.pocat.domain.like.service.LikeQueryService;
+import com.rocketcrew.pocat.domain.series.service.SeriesQueryService;
+import com.rocketcrew.pocat.domain.set.service.PokemonSetQueryService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
@@ -34,20 +38,26 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.mockito.ArgumentMatchers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -67,6 +77,15 @@ class AuctionQueryServiceTest {
 
     @Mock
     LikeQueryService likeQueryService;
+
+    @Mock
+    ElasticsearchOperations elasticsearchOperations;
+
+    @Mock
+    SeriesQueryService seriesQueryService;
+
+    @Mock
+    PokemonSetQueryService pokemonSetQueryService;
 
     private Auction activeAuction;
     private Card card;
@@ -120,15 +139,22 @@ class AuctionQueryServiceTest {
 
         @Test
         @DisplayName("성공: 검색 조건으로 ACTIVE 경매 목록 반환")
+        @SuppressWarnings("unchecked")
         void success() {
             // given
             Pageable pageable = PageRequest.of(0, 20);
-            SearchAuctionResponse resp = new SearchAuctionResponse(
-                    1L, 2L, "판매자", "리자몽 경매", 1L, "리자몽",
-                    CardGrade.PSA_10, null, 10000L, null, 100000L,
-                    AuctionStatus.ACTIVE, null, null, null);
-            Page<SearchAuctionResponse> page = new PageImpl<>(List.of(resp), pageable, 1);
-            given(auctionRepository.searchAuctions(any(), eq(pageable))).willReturn(page);
+            AuctionDocument doc = AuctionDocument.builder()
+                    .id("1").sellerId(2L).sellerNickname("판매자").title("리자몽 경매")
+                    .cardId(1L).cardName("리자몽").grade(CardGrade.PSA_10.name())
+                    .startingPrice(10000L).buyoutPrice(100000L)
+                    .status(AuctionStatus.ACTIVE.name()).statusOrder(0)
+                    .build();
+            SearchHit<AuctionDocument> hit = mock(SearchHit.class);
+            given(hit.getContent()).willReturn(doc);
+            SearchHits<AuctionDocument> hits = mock(SearchHits.class);
+            given(hits.stream()).willReturn(Stream.of(hit));
+            given(hits.getTotalHits()).willReturn(1L);
+            given(elasticsearchOperations.search(ArgumentMatchers.<Query>any(), eq(AuctionDocument.class))).willReturn(hits);
 
             // when
             Page<SearchAuctionResponse> result = service.getAuctions(null, null, null, null, null, AuctionStatus.ACTIVE, pageable);
@@ -140,11 +166,14 @@ class AuctionQueryServiceTest {
 
         @Test
         @DisplayName("성공: 검색 결과 없으면 빈 페이지 반환")
+        @SuppressWarnings("unchecked")
         void successEmpty() {
             // given
             Pageable pageable = PageRequest.of(0, 20);
-            Page<SearchAuctionResponse> empty = new PageImpl<>(Collections.emptyList(), pageable, 0);
-            given(auctionRepository.searchAuctions(any(), eq(pageable))).willReturn(empty);
+            SearchHits<AuctionDocument> emptyHits = mock(SearchHits.class);
+            given(emptyHits.stream()).willReturn(Stream.empty());
+            given(emptyHits.getTotalHits()).willReturn(0L);
+            given(elasticsearchOperations.search(ArgumentMatchers.<Query>any(), eq(AuctionDocument.class))).willReturn(emptyHits);
 
             // when
             Page<SearchAuctionResponse> result = service.getAuctions("없는키워드", null, null, null, null, AuctionStatus.ACTIVE, pageable);

@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.community.freepost.service;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -50,6 +51,9 @@ class FreePostQueryServiceTest {
 
     @Mock
     private FreePostViewCountService viewCountService;
+
+    @Mock
+    private FreePostDetailCacheService freePostDetailCacheService;
 
     private User user;
     private FreePost freePost;
@@ -116,6 +120,8 @@ class FreePostQueryServiceTest {
         void success_viewCountIncremented_forNonOwner() {
             given(freePostRepository.findById(10L)).willReturn(Optional.of(freePost));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(freePostDetailCacheService.loadPostDetail(10L))
+                    .willReturn(FreePostResponse.of(freePost, "테스터", 0));
 
             FreePostResponse response = freePostQueryService.getPost(10L, "127.0.0.1", 99L);
 
@@ -129,6 +135,8 @@ class FreePostQueryServiceTest {
         void success_noViewCountForOwner() {
             given(freePostRepository.findById(10L)).willReturn(Optional.of(freePost));
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(freePostDetailCacheService.loadPostDetail(10L))
+                    .willReturn(FreePostResponse.of(freePost, "테스터", 0));
 
             FreePostResponse response = freePostQueryService.getPost(10L, "127.0.0.1", 1L);
 

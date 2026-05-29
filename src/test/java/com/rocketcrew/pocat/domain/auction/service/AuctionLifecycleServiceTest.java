@@ -7,6 +7,8 @@ import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +56,12 @@ class AuctionLifecycleServiceTest {
 
     @Mock
     ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    AuctionEsIndexService auctionEsIndexService;
+
+    @Mock
+    OutboxEventWriter outboxEventWriter;
 
     @BeforeEach
     void setUp() throws InterruptedException {
