@@ -17,8 +17,8 @@
 | 2 | **입력값 검증** — Rate Limit 키 생성 시 사용자 입력값이 그대로 노출되지 않는가 | PASS | `rate:user:like:{userId}` 형태로 내부 ID만 사용 |
 | 3 | **SQL Injection** — 신규 쿼리에 파라미터 바인딩이 적용되는가 | PASS | JPA/QueryDSL 파라미터 바인딩 일관 적용 |
 | 4 | **민감 데이터 노출** — Rate Limit 초과 응답에 내부 구조(Redis 키, 한도값)가 노출되지 않는가 | PASS | 에러 응답은 `ErrorCode` 상수만 반환, 내부 구조 미노출 |
-| 5 | **분산 락 leaseTime** — leaseTime 미설정으로 인한 락 영구 점유 위험이 없는가 | PASS | `tryLock(waitTime=0, leaseTime=3s, SECONDS)` 명시적 설정 |
-| 6 | **멱등성 키 충돌** — 서로 다른 기능 간 Redis 키 네임스페이스가 충돌하지 않는가 | PASS | `lock:like:{userId}:{cardId}` / `rate:user:like:{userId}` 분리 |
+| 5 | **분산 락 leaseTime** — leaseTime 미설정으로 인한 락 영구 점유 위험이 없는가 | PASS | `tryLock(waitTime=0, SECONDS)` (Redisson 기본 watchdog leaseTime 사용) |
+| 6 | **멱등성 키 충돌** — 서로 다른 기능 간 Redis 키 네임스페이스가 충돌하지 않는가 | PASS | `like:lock:{userId}:{auctionId}` / `rate:user:like:{userId}` 분리 |
 | 7 | **CVE 의존성** — 이번 PR에서 추가된 라이브러리에 알려진 CVE가 없는가 | PASS | 신규 외부 의존성 없음 (Redisson, Spring Data Redis 기존 버전 유지) |
 
 ---
@@ -62,7 +62,7 @@ public boolean isAllowed(String key, int limit, Duration window) {
 | 항목 | 내용 |
 |------|------|
 | **심각도** | MEDIUM |
-| **위치** | `LikeCommandService#like()` |
+| **위치** | `LikeCommandService#toggleLike()` |
 | **문제** | 분산 락만 적용되어 순차 처리는 보장되나, 동일 사용자의 반복 요청(DoS-like)을 제한하지 못함 |
 | **수정** | `rate:user:like:{userId}` 키로 분당 10회 Rate Limit 추가 — Lock 진입 전 선제 차단 |
 

@@ -58,7 +58,10 @@ public class LikeCommandService {
             likeRepository.save(like);
             return new ToggleLikeResponse(auctionId, true);  // isLiked = true (추가됨)
         } catch (DataIntegrityViolationException e) {
-            throw new LikeException(ErrorCode.LIKE_DUPLICATE);
+            if (e.getMostSpecificCause() instanceof org.hibernate.exception.ConstraintViolationException) {
+                throw new LikeException(ErrorCode.LIKE_DUPLICATE);
+            }
+            throw e;
         }
     }
 
@@ -72,13 +75,19 @@ public class LikeCommandService {
     }
 
     private void releaseLockAfterTransaction(RLock lock) {
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCompletion(int status) {
-                if (lock.isHeldByCurrentThread()) {
-                    lock.unlock();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
                 }
+            });
+        } else {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
             }
-        });
+        }
     }
 }

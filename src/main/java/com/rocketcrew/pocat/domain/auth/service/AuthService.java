@@ -74,7 +74,7 @@ public class AuthService {
         try {
             userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
-            throw new AuthException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            throw new AuthException(ErrorCode.EMAIL_ALREADY_EXISTS, e);
         }
         return new SignupResponse(user.getId(), user.getEmail(), user.getNickname());
     }
