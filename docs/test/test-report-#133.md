@@ -9,28 +9,43 @@
 
 ---
 
-## 1. 신규 테스트 파일
+## 1. 신규·변경 테스트 파일
 
-| 파일 | 위치 | 설명 |
-|------|------|------|
-| `LikeCommandServiceTest` | `src/test/java/...` | 분산 락(Redisson) 획득·실패 시나리오, Rate Limit 통합 검증 |
-| `RedisRateLimiterTest` | `src/test/java/...` | 고정 윈도우 Rate Limiting 정상·초과·Redis 장애(fail-open) 시나리오 |
-| `AuthServiceTest` | `src/test/java/...` | `signup` 중복 이메일 예외 처리 RED 테스트 추가 |
+| 파일 | 변경 유형 | 설명 |
+|------|-----------|------|
+| `LikeCommandServiceTest` | 전면 교체 | 리플렉션 RED → 동작 테스트 6개 (rate limit·lock·toggle·DataIntegrity) |
+| `RedisRateLimiterTest` | 전면 교체 | 리플렉션 RED → 동작 테스트 4개 (allow·block·null·Redis 장애) |
+| `AuthServiceTest` | 기존 유지 | `signup` 중복 이메일 예외 처리 검증 |
+| `AuthControllerTest` | 수정 | LENIENT→per-stub, 429 Rate Limit 테스트 추가 |
+| `AuctionControllerTest` | 수정 | 검색 엔드포인트 429 Rate Limit 테스트 추가 |
+| `FailureServiceTest` | 버그픽스 | `OutboxEventWriter @Mock` 누락 → NPE 수정 |
 
 ---
 
 ## 2. RED → GREEN 결과
+
+### 초기 구현 (#133 Phase 3a/3b)
 
 | 단계 | 테스트 수 | 상태 |
 |------|-----------|------|
 | RED (구현 전) | 10 | FAIL |
 | GREEN (구현 후) | 10 | PASS |
 
+### PR 리뷰 반영 (Phase 3b 2차)
+
+| 단계 | 테스트 수 | 상태 |
+|------|-----------|------|
+| 리뷰 반영 후 대상 | 44 | PASS |
+| 버그 발견 (getMostSpecificCause→getCause) | 1 | 즉시 수정 |
+| 최종 | 44 | PASS |
+
 ### 통과된 테스트 목록 (요약)
 
-- `RedisRateLimiterTest` — 허용 범위 내 요청 통과, 한도 초과 시 false 반환, Redis 장애 시 fail-open(true 반환) 검증
-- `LikeCommandServiceTest` — 락 정상 획득 후 좋아요 처리, 락 타임아웃 시 예외 전파, Rate Limit 초과 시 예외 전파
-- `AuthServiceTest` (signup) — 중복 이메일 가입 시 `DuplicateEmailException` 발생 검증
+- `LikeCommandServiceTest` — rate limit 초과·락 실패·최초 좋아요·좋아요 취소·unique 제약 위반·비unique 전파 (6개)
+- `RedisRateLimiterTest` — 허용·차단·null 반환·Redis 장애 fail-open (4개)
+- `AuthControllerTest` — signup/login/reissue/logout 기존 + 429 Rate Limit (9개)
+- `AuctionControllerTest` — 기존 + 429 Rate Limit (기존 수 + 1개)
+- `FailureServiceTest` — markFailed 성공·실패 (2개, OutboxEventWriter NPE 수정)
 
 ---
 
@@ -71,9 +86,12 @@
 
 | 대상 클래스 | 추가 커버리지 |
 |------------|--------------|
-| `RedisRateLimiter` | 핵심 경로 100% (정상·초과·장애) |
-| `LikeCommandService` | 락 획득·실패·Rate Limit 초과 경로 |
+| `RedisRateLimiter` | allow·block·null·장애(fail-open) 전체 경로 |
+| `LikeCommandService` | rate limit·락 실패·toggle 정상·DataIntegrity 분기 |
 | `AuthService#signup` | 중복 이메일 예외 분기 |
+| `AuthController` | signup/reissue Rate Limit 차단(429) 경로 |
+| `AuctionController` | 검색 Rate Limit 차단(429) 경로 |
+| `FailureService#markFailed` | OutboxEventWriter 포함 성공·실패 전체 경로 |
 
 ---
 
