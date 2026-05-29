@@ -6,6 +6,8 @@ import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
 import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,12 @@ class AdminSettlementCommandServiceTest {
 
     @Mock
     private SettlementRepository settlementRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private OutboxEventWriter outboxEventWriter;
 
     private Settlement buildPendingSettlement() {
         Settlement settlement = Settlement.builder()

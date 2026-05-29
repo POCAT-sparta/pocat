@@ -31,28 +31,28 @@ public class OutboxProcessor {
 
         if (updated == 0) return; // 이미 다른 서버가 선점
 
-        try {
-            // 2. 영속성 컨텍스트의 객체 상태도 동기화 (save 시 덮어쓰기 방지)
-            event.changeStatusToProcessing(); // 엔티티에 내부 상태 변경 메서드 추가 권장
+        // relay()에 @Transactional이 없어 findTop100... 이후 엔티티가 detached 상태임.
+        // REQUIRES_NEW 트랜잭션 안에서 재조회해야 dirty checking이 정상 동작함.
+        OutboxEvent managed = outboxRepository.findById(event.getId()).orElse(null);
+        if (managed == null) return;
 
+        try {
             // 3. Kafka 발행 (동기 대기)
-            template.send(event.getTopic(), event.getPartitionKey(), event.getPayload())
+            template.send(managed.getTopic(), managed.getPartitionKey(), managed.getPayload())
                     .get(5, TimeUnit.SECONDS);
 
             // 4. 발행 성공 ➡️ SENT
-            event.markSent();
-            log.info("릴레이 성공: id={}, topic={}", event.getId(), event.getTopic());
+            managed.markSent();
+            log.info("릴레이 성공: id={}, topic={}", managed.getId(), managed.getTopic());
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("릴레이 인터럽트 발생: id={}", event.getId());
-            event.markPendingForRetry();
-            // 무조건 트랜잭션 내에서 변경 감지(Dirty Checking)로 저장되도록 유도
+            log.warn("릴레이 인터럽트 발생: id={}", managed.getId());
+            managed.markPendingForRetry();
         } catch (Exception e) {
-            event.markPendingForRetry();
-            log.error("릴레이 실패: id={}, retryCount={}", event.getId(), event.getRetryCount(), e);
+            managed.markPendingForRetry();
+            log.error("릴레이 실패: id={}, retryCount={}", managed.getId(), managed.getRetryCount(), e);
         }
-
-        // 영속 상태이므로 메서드 종료 시(커밋 시점) 자동으로 DB에 UPDATE가 날아갑니다.
+        // managed 엔티티이므로 트랜잭션 커밋 시 dirty checking으로 자동 UPDATE됨.
     }
 }

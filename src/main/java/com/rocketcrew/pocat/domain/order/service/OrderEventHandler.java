@@ -8,6 +8,8 @@ import com.rocketcrew.pocat.domain.order.producer.OrderEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -19,21 +21,25 @@ public class OrderEventHandler {
     private final OrderEventProducer orderEventProducer;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(OrderCreatedEvent event) {
         orderEventProducer.sendOrderCreated(event);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(OrderCancelledEvent event) {
         orderEventProducer.sendOrderCancelled(event);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(OrderDeliveryStartedEvent event) {
         orderEventProducer.sendDeliveryStarted(event);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(OrderDeliveryCompletedEvent event) {
         orderEventProducer.sendDeliveryCompleted(event);
     }

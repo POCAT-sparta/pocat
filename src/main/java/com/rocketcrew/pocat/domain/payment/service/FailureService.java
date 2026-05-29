@@ -98,7 +98,7 @@ public class FailureService {
                     );
                     outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
                     eventPublisher.publishEvent(event);
-                });
+                };
     }
 
     /**

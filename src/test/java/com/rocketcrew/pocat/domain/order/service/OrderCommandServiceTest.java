@@ -1,14 +1,19 @@
 package com.rocketcrew.pocat.domain.order.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,13 +24,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -40,6 +50,53 @@ class OrderCommandServiceTest {
 
     @Mock
     private CardRepository cardRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private OutboxEventWriter outboxEventWriter;
+
+    @Mock
+    private PaymentApplicationService paymentApplicationService;
+
+    @Mock
+    private OutboxRepository outboxRepository;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
+    // ── createOrderFromAuction ─────────────────────────────────────────
+
+    @Nested
+    @DisplayName("createOrderFromAuction()")
+    class CreateOrderFromAuction {
+
+        @Test
+        @DisplayName("성공: 주문 저장 후 outbox 기록 및 이벤트 발행")
+        void success() {
+            Order savedOrder = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            given(orderRepository.findByAuctionIdAndBidderRank(10L, 1)).willReturn(Optional.empty());
+            given(orderRepository.save(any(Order.class))).willReturn(savedOrder);
+
+            orderCommandService.createOrderFromAuction(10L, 3L, 2L, 1L, 10000L);
+
+            verify(orderRepository).save(any(Order.class));
+            verify(outboxEventWriter).write(eq("order"), any(), any(OrderCreatedEvent.class));
+            verify(eventPublisher).publishEvent(any(OrderCreatedEvent.class));
+        }
+
+        @Test
+        @DisplayName("성공(멱등): 이미 주문이 존재하면 저장하지 않는다")
+        void success_idempotent_alreadyExists() {
+            Order existing = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            given(orderRepository.findByAuctionIdAndBidderRank(10L, 1)).willReturn(Optional.of(existing));
+
+            orderCommandService.createOrderFromAuction(10L, 3L, 2L, 1L, 10000L);
+
+            verify(orderRepository, never()).save(any());
+        }
+    }
 
     // ── cancelOrder ────────────────────────────────────────────────────
 

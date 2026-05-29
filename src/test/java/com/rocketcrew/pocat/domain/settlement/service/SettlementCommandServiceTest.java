@@ -7,7 +7,9 @@ import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
 import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -44,6 +46,12 @@ class SettlementCommandServiceTest {
     @Mock
     private OrderRepository orderRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private OutboxEventWriter outboxEventWriter;
+
     private Order buildOrder(Long id, Long finalPrice) {
         Order order = Order.builder()
                 .cardId(10L)
@@ -69,14 +77,14 @@ class SettlementCommandServiceTest {
 
             given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
             given(settlementRepository.existsByOrderId(1L)).willReturn(false);
-            given(settlementRepository.save(any(Settlement.class))).willAnswer(inv -> inv.getArgument(0));
+            given(settlementRepository.saveAndFlush(any(Settlement.class))).willAnswer(inv -> inv.getArgument(0));
 
             // when
             settlementCommandService.createSettlement("ORD-001");
 
             // then
             ArgumentCaptor<Settlement> captor = ArgumentCaptor.forClass(Settlement.class);
-            verify(settlementRepository).save(captor.capture());
+            verify(settlementRepository).saveAndFlush(captor.capture());
             Settlement saved = captor.getValue();
 
             long expectedPlatformFee = BigDecimal.valueOf(totalPrice)
@@ -105,7 +113,7 @@ class SettlementCommandServiceTest {
             settlementCommandService.createSettlement("ORD-001");
 
             // then
-            verify(settlementRepository, never()).save(any());
+            verify(settlementRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -123,18 +131,18 @@ class SettlementCommandServiceTest {
         @Test
         @DisplayName("성공(레이스 컨디션): DataIntegrityViolationException 발생 시 무시")
         void success_raceCondition_dataIntegrityViolation() {
-            // given
+            // given — 첫 번째 existsBy=false(진입 허용), saveAndFlush가 중복 오류, catch 블록 재확인 시 true
             Order order = buildOrder(1L, 10000L);
             given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
-            given(settlementRepository.existsByOrderId(1L)).willReturn(false);
-            given(settlementRepository.save(any(Settlement.class)))
+            given(settlementRepository.existsByOrderId(1L)).willReturn(false, true);
+            given(settlementRepository.saveAndFlush(any(Settlement.class)))
                     .willThrow(new DataIntegrityViolationException("duplicate"));
 
             // when — should not throw
             settlementCommandService.createSettlement("ORD-001");
 
             // then
-            verify(settlementRepository).save(any(Settlement.class));
+            verify(settlementRepository).saveAndFlush(any(Settlement.class));
         }
     }
 }
