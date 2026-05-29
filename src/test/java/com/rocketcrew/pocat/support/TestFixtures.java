@@ -10,6 +10,7 @@ import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
@@ -111,10 +112,32 @@ public final class TestFixtures {
                 .finalPrice(10000L)
                 .status(status)
                 .deliveryStatus(DeliveryStatus.PREPARING)
+                .orderType(OrderType.AUCTION)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(1));
         ReflectionTestUtils.setField(order, "updatedAt", LocalDateTime.now().minusMinutes(30));
+        return order;
+    }
+
+    /**
+     * 즉시구매 주문. bidderRank 없음, orderType=BUYOUT.
+     */
+    public static Order anBuyoutOrder(OrderStatus status) {
+        Order order = Order.builder()
+                .auctionId(10L)
+                .cardId(3L)
+                .sellerId(2L)
+                .buyerId(1L)
+                .orderUid("ORD-002")
+                .finalPrice(10000L)
+                .status(status)
+                .deliveryStatus(DeliveryStatus.PREPARING)
+                .orderType(OrderType.BUYOUT)
+                .build();
+        ReflectionTestUtils.setField(order, "id", 1L);
+        ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusMinutes(5));
+        ReflectionTestUtils.setField(order, "updatedAt", LocalDateTime.now().minusMinutes(1));
         return order;
     }
 
@@ -131,6 +154,7 @@ public final class TestFixtures {
                 .finalPrice(10000L)
                 .status(OrderStatus.AUTO_PAYMENT_FAILED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
+                .orderType(OrderType.AUCTION)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(2));
@@ -151,6 +175,7 @@ public final class TestFixtures {
                 .finalPrice(10000L)
                 .status(OrderStatus.AUTO_PAYMENT_FAILED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
+                .orderType(OrderType.AUCTION)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(3));
@@ -171,6 +196,7 @@ public final class TestFixtures {
                 .finalPrice(10000L)
                 .status(OrderStatus.PAYMENT_COMPLETED)
                 .deliveryStatus(DeliveryStatus.SHIPPING)
+                .orderType(OrderType.AUCTION)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusDays(1));

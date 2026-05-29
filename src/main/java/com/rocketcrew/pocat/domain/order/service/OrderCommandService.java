@@ -56,13 +56,11 @@ public class OrderCommandService {
         eventPublisher.publishEvent(event);
     }
 
-    //  TODO : 즉시구매는 만료기한 없음 -> redis 만료 키 설정 X
-    // 즉시구매 주문 생성 — AUTO_PAYMENT_FAILED 전환 후 PG 결제 레코드 생성, 호출부에서 paymentUid로 결제창 오픈
+    // 즉시구매 주문 생성 — 자동결제 시도, 실패 시 재시도 기회 없이 즉시 종료
     public PaymentResponse createOrderFromBuyout(Long auctionId, Long cardId, Long sellerId,
                                                  Long buyerId, Long finalPrice) {
         Order order = orderRepository.save(
-                Order.fromAuction(auctionId, cardId, sellerId, buyerId, finalPrice, 1));
-        order.openPaymentWindow(); // 결제 만료기한 설정
+                Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
         return paymentApplicationService.autoPayment(order.getId());
     }
 
