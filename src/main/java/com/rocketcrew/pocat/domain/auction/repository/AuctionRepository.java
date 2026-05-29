@@ -37,6 +37,11 @@ public interface AuctionRepository extends JpaRepository<Auction, Long>, Auction
             LocalDateTime endedAt
     );
 
+    List<Auction> findAllByStatusAndUpdatedAtLessThanEqualOrderByUpdatedAtAsc(
+            AuctionStatus status,
+            LocalDateTime updatedAt
+    );
+
     List<Auction> findByCardIdAndStatus(Long cardId, AuctionStatus status);
 
     List<Auction> findByCardIdInAndStatus(List<Long> cardIds, AuctionStatus status);
