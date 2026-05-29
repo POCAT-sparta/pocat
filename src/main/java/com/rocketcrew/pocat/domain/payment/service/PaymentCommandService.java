@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
@@ -33,9 +34,12 @@ public class PaymentCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxEventWriter;
     private final SetExpireService setExpireService;
+    private final OrderQueryService orderQueryService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Payment createPayment(Order order, PaymentType paymentType) {
+    public Payment createPayment(Long orderId, PaymentType paymentType) {
+        Order order = orderQueryService.findByOrderid(orderId);
+
         Payment payment = Payment.builder()
                 .orderId(order.getId())
                 .paymentUid(generatePaymentUid())

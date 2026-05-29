@@ -60,7 +60,7 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
         }
 
-        Payment payment = paymentCommandService.createPayment(order, PaymentType.PG_DIRECT);
+        Payment payment = paymentCommandService.createPayment(order.getId(), PaymentType.PG_DIRECT);
         return PaymentResponse.from(payment);
     }
 
@@ -78,7 +78,7 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
 
-        Payment payment = paymentCommandService.createPayment(order , PaymentType.BILLING_KEY);
+        Payment payment = paymentCommandService.createPayment(order.getId() , PaymentType.BILLING_KEY);
 
         PortOnePaymentResponse response = portOneClientService.attemptBillingKeyPayment(
                 payment.getPaymentUid(), billingKey, payment.getAmount()

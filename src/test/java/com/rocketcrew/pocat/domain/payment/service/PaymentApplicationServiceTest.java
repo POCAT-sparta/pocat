@@ -63,12 +63,12 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(paymentQueryService.findByOrderIdAndStatus(1L, PaymentStatus.PENDING))
                     .willReturn(Optional.empty());
-            given(paymentCommandService.createPayment(order, PaymentType.BILLING_KEY)).willReturn(saved);
+            given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(saved);
 
             PaymentResponse response = paymentApplicationService.generatePayment(1L, request);
 
             assertThat(response.status()).isEqualTo(PaymentStatus.PENDING);
-            verify(paymentCommandService).createPayment(order, PaymentType.BILLING_KEY);
+            verify(paymentCommandService).createPayment(order.getId(), PaymentType.BILLING_KEY);
         }
 
         @Test
@@ -267,7 +267,7 @@ class PaymentApplicationServiceTest {
 
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(paymentCommandService.createPayment(order, PaymentType.BILLING_KEY)).willReturn(payment);
+            given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
 
@@ -314,7 +314,7 @@ class PaymentApplicationServiceTest {
 
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(paymentCommandService.createPayment(order, PaymentType.BILLING_KEY)).willReturn(payment);
+            given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
 
