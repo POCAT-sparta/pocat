@@ -12,10 +12,8 @@ import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
-import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import com.rocketcrew.pocat.global.outbox.entity.OutboxEvent;
 import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +30,6 @@ public class OrderCommandService {
     private final CardRepository cardRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentApplicationService paymentApplicationService;
-    private final OutboxRepository outboxRepository;
-    private final ObjectMapper objectMapper;
     private final OutboxEventWriter outboxEventWriter;
 
     // 경매 낙찰 주문 생성 — rank=1 Order 저장 후 order.created 이벤트 발행
@@ -61,7 +57,7 @@ public class OrderCommandService {
                                                  Long buyerId, Long finalPrice) {
         Order order = orderRepository.save(
                 Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
-        return paymentApplicationService.autoPayment(order.getId());
+        return paymentApplicationService.autoPayment(order.getOrderUid());
     }
 
     public OrderResponse cancelOrder(Long userId, String orderUid, String reason) {

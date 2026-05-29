@@ -271,7 +271,7 @@ class PaymentApplicationServiceTest {
             given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
 
-            paymentApplicationService.autoPayment(1L);
+            paymentApplicationService.autoPayment("1");
 
             verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("BILLING_KEY"), eq(paidAt));
         }
@@ -285,7 +285,7 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findByOrderId(1L)).willReturn(
                     PaymentResponse.from(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED)));
 
-            PaymentResponse response = paymentApplicationService.autoPayment(1L);
+            PaymentResponse response = paymentApplicationService.autoPayment("1");
 
             assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
             verify(portOneClientService, never()).attemptBillingKeyPayment(anyString(), anyString(), anyLong());
@@ -300,7 +300,7 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
-            assertThatThrownBy(() -> paymentApplicationService.autoPayment(1L))
+            assertThatThrownBy(() -> paymentApplicationService.autoPayment("1"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BILLING_KEY_NOT_FOUND);
         }
@@ -318,7 +318,7 @@ class PaymentApplicationServiceTest {
             given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
 
-            assertThatThrownBy(() -> paymentApplicationService.autoPayment(1L))
+            assertThatThrownBy(() -> paymentApplicationService.autoPayment("1"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 

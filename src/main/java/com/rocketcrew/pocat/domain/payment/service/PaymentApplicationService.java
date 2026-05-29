@@ -64,8 +64,8 @@ public class PaymentApplicationService {
         return PaymentResponse.from(payment);
     }
 
-    public PaymentResponse autoPayment(Long orderId) {
-        Order order = orderQueryService.findByOrderid(orderId);
+    public PaymentResponse autoPayment(String orderUid) {
+        Order order = orderQueryService.findByOrderUid(orderUid);
 
         if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) {
             return paymentQueryService.findByOrderId(order.getId());

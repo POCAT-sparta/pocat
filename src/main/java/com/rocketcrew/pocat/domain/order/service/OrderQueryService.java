@@ -84,6 +84,11 @@ public class OrderQueryService {
                 .orElseThrow(() -> new PaymentException(ErrorCode.ORDER_NOT_FOUND));
     }
 
+    public Order findByOrderUid(String orderUid) {
+        return orderRepository.findByOrderUid(orderUid)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+    }
+
     @Transactional
     public Order findByOrderIdWithLock(Long orderId) {
         return orderRepository.findByIdWithLock(orderId)
