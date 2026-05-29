@@ -9,6 +9,10 @@ import com.rocketcrew.pocat.domain.auth.service.AuthService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuthException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
+import com.rocketcrew.pocat.global.util.HttpRequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,9 +26,19 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @PostMapping("/v1/auth/signup")
-    public ResponseEntity<ApiResponseDto<SignupResponse>> signup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<ApiResponseDto<SignupResponse>> signup(
+            @Valid @RequestBody SignupRequest request,
+            HttpServletRequest httpRequest) {
+        String ip = HttpRequestUtils.resolveClientIp(httpRequest);
+        if (!redisRateLimiter.isAllowed("rate:ip:signup:" + ip,
+                rateLimitProperties.getSignupLimit(),
+                rateLimitProperties.getSignupWindowSeconds())) {
+            throw new AuthException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         SignupResponse response = authService.signup(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
@@ -37,7 +51,15 @@ public class AuthController {
     }
 
     @PostMapping("/v1/auth/reissue")
-    public ResponseEntity<ApiResponseDto<TokenResponse>> reissue(@Valid @RequestBody ReissueRequest request) {
+    public ResponseEntity<ApiResponseDto<TokenResponse>> reissue(
+            @Valid @RequestBody ReissueRequest request,
+            HttpServletRequest httpRequest) {
+        String ip = HttpRequestUtils.resolveClientIp(httpRequest);
+        if (!redisRateLimiter.isAllowed("rate:ip:reissue:" + ip,
+                rateLimitProperties.getReissueLimit(),
+                rateLimitProperties.getReissueWindowSeconds())) {
+            throw new AuthException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         TokenResponse response = authService.reissue(request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
