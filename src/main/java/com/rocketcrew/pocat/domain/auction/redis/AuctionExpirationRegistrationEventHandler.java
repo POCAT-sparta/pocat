@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.auction.service;
+package com.rocketcrew.pocat.domain.auction.redis;
 
 import com.rocketcrew.pocat.domain.auction.event.AuctionActivatedEvent;
 import lombok.RequiredArgsConstructor;

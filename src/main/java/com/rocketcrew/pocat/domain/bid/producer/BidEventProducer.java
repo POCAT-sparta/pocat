@@ -21,11 +21,11 @@ public class BidEventProducer extends BaseEventProducer {
 
     // 입찰 생성
     public void sendBidCreated(BidCreatedEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 
     // 밀려난 입찰
     public void sendBidOutbid(BidOutbidEvent event) {
-        send(TOPIC, String.valueOf(event.getAuctionId()), event);
+        send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
 }

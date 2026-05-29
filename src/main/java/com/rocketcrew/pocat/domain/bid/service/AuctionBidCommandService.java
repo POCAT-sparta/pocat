@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.bid.dto.request.CreateBidRequest;
 import com.rocketcrew.pocat.domain.bid.dto.response.CreateAuctionBidResponse;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
+import com.rocketcrew.pocat.domain.bid.event.BidCreatedEvent;
 import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -14,6 +15,8 @@ import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.BidException;
+import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 @Transactional
 public class AuctionBidCommandService {
 
-    private static final String BID_LOCK_KEY_PREFIX = "auction:bid:lock:";
+    private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
     private static final long BID_LOCK_WAIT_SECONDS = 0L;
     private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
@@ -45,6 +48,7 @@ public class AuctionBidCommandService {
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
     private final com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService auctionEsIndexService;
+    private final OutboxEventWriter outboxEventWriter;
 
     public CreateAuctionBidResponse createBid(Long userId, Long auctionId, CreateBidRequest request) {
         if (request == null) {
@@ -57,7 +61,7 @@ public class AuctionBidCommandService {
         validateAuctionAvailable(auction);
         validateBidder(bidder, auction);
 
-        RLock lock = redissonClient.getLock(BID_LOCK_KEY_PREFIX + auctionId);
+        RLock lock = redissonClient.getLock(AUCTION_LOCK_KEY_PREFIX + auctionId);
         if (!acquireLock(lock)) {
             throw new BidException(ErrorCode.BID_LOCK_FAILED);
         }
@@ -82,6 +86,7 @@ public class AuctionBidCommandService {
         AuctionBid savedBid = auctionBidRepository.save(auctionBid);
 
         latestAuction.updateHighestBid(request.bidPrice(), userId);
+        publishBidCreatedEvent(latestAuction, userId, request.bidPrice());
 
         // 커밋 후 ES highestPrice 부분 업데이트
         final Long bidAuctionId = auctionId;
@@ -161,12 +166,30 @@ public class AuctionBidCommandService {
                 )
                 .ifPresent(previousLeadingBid -> {
                     previousLeadingBid.markOutbid();
-                    eventPublisher.publishEvent(new BidOutbidEvent(
-                            auction.getId(),
-                            previousHighestBidderId,
-                            currentHighestPrice
-                    ));
+                    publishBidOutbidEvent(auction.getId(), previousHighestBidderId, currentHighestPrice);
                 });
+    }
+
+    private void publishBidCreatedEvent(Auction auction, Long bidderId, Long bidPrice) {
+        publishBidEvent(auction.getId(), new BidCreatedEvent(
+                auction.getId(),
+                auction.getSellerId(),
+                bidderId,
+                bidPrice
+        ));
+    }
+
+    private void publishBidOutbidEvent(Long auctionId, Long previousBidderId, Long currentHighestPrice) {
+        publishBidEvent(auctionId, new BidOutbidEvent(
+                auctionId,
+                previousBidderId,
+                currentHighestPrice
+        ));
+    }
+
+    private void publishBidEvent(Long auctionId, BaseEvent event) {
+        outboxEventWriter.write("bid", String.valueOf(auctionId), event);
+        eventPublisher.publishEvent(event);
     }
 
     private boolean acquireLock(RLock lock) {
@@ -174,7 +197,7 @@ public class AuctionBidCommandService {
             return lock.tryLock(BID_LOCK_WAIT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new BidException(ErrorCode.BID_LOCK_FAILED);
+            throw new BidException(ErrorCode.BID_LOCK_FAILED, e);
         }
     }
 

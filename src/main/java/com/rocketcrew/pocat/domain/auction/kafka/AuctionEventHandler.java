@@ -1,7 +1,6 @@
-package com.rocketcrew.pocat.domain.auction.service;
+package com.rocketcrew.pocat.domain.auction.kafka;
 
 import com.rocketcrew.pocat.domain.auction.event.*;
-import com.rocketcrew.pocat.domain.auction.producer.AuctionEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -38,6 +37,11 @@ public class AuctionEventHandler {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(AuctionEndedEvent event) {
         auctionEventProducer.sendEnded(event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handle(AuctionBuyoutCompletedEvent event) {
+        auctionEventProducer.sendBuyoutCompleted(event);
     }
 }
 
