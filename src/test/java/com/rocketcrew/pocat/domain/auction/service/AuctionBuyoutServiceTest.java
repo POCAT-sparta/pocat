@@ -95,7 +95,6 @@ class AuctionBuyoutServiceTest {
     void setUp() throws InterruptedException {
         buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository);
         service = new AuctionBuyoutService(
-                auctionRepository,
                 orderRepository,
                 paymentRepository,
                 orderCommandService,
