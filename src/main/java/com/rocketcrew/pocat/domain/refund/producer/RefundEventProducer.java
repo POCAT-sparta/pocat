@@ -24,16 +24,16 @@ public class RefundEventProducer extends BaseEventProducer {
 
     // 환불 요철
     public void sendRefundRequested(RefundRequestedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(),event);
     }
 
     // 환불 승인
     public void sendRefundApproved(RefundApprovedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(),event);
     }
 
     // 환불 거절
     public void sendRefundRejected(RefundRejectedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+        send(TOPIC, event.getOrderUid(), event.getOutboxId(),event);
     }
 }

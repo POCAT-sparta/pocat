@@ -39,15 +39,14 @@ public abstract class BaseEventProducer {
             // 1. 카프카 동기 전송
             kafkaTemplate.send(topic, key, payload).get();
 
-            log.info("Kafka 발행 성공: topic={}, eventType={}", topic, event.getEventType()
+            log.info("Kafka 발행 성공: topic={}, eventType={}, outBoxId={}", topic, event.getEventType(), outboxId
             );
-            // 2. 아웃박스 상태를 SENT로 변경 (outboxId가 있는 경우에만)
-            if (outboxId != null) {
-                outboxRepository.findById(outboxId).ifPresent(outboxEvent -> {
-                    outboxEvent.markSent();
-                    outboxRepository.save(outboxEvent);
-                });
-            }
+            // 2. 아웃박스 상태를 SENT로 변경 (성공 시에만)
+            outboxRepository.findById(outboxId).ifPresent(outboxEvent -> {
+                outboxEvent.markSent(); //
+                outboxRepository.save(outboxEvent);
+                log.info("save 완료");
+            });
         } catch (Exception e) {
             log.error("Kafka 발행 실패: topic={}, eventType={}", topic, event.getEventType(), e);
             // 예외시 스케줄러가 처리할 수 있도록 예외던지지 않기.

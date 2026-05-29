@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.event;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
 public abstract class BaseEvent {
 
     private final String eventType;
+    @JsonIgnore
     private Long outboxId;
     private final LocalDateTime occurredAt;
 

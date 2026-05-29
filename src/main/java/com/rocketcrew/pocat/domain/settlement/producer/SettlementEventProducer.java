@@ -23,11 +23,11 @@ public class SettlementEventProducer extends BaseEventProducer {
 
     // 정산 생성
     public void sendSettlementCreated(SettlementCreatedEvent event) {
-        send(TOPIC, event.getSettlementUid(), event);
+        send(TOPIC, event.getSettlementUid(), event.getOutboxId(), event);
     }
 
     // 정산 완료
     public void sendSettlementCompleted(SettlementCompletedEvent event) {
-        send(TOPIC, event.getSettlementUid(), event);
+        send(TOPIC, event.getSettlementUid(), event.getOutboxId(), event);
     }
 }

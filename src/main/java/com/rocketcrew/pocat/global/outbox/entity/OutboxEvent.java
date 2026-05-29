@@ -86,7 +86,6 @@ public class OutboxEvent {
         }
     }
 
-    // OutboxEvent.java 엔티티 내부에 추가
     public void changeStatusToProcessing() {
         this.status = OutboxStatus.PROCESSING;
     }

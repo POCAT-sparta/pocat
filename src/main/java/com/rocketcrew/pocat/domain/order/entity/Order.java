@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.order.entity;
 
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
@@ -58,6 +59,10 @@ public class Order extends BaseEntity {
     @Column(name = "bidder_rank")
     private Integer bidderRank;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_type", nullable = false, length = 20)
+    private OrderType orderType;
+
     public void cancel(String reason) {
         this.status = OrderStatus.CANCELLED;
         this.cancelReason = reason;
@@ -66,7 +71,7 @@ public class Order extends BaseEntity {
         }
     }
 
-    // 주문 생성 메서드 필요 (서비스레벨에서)
+    // 경매구매용
     public static Order fromAuction(Long auctionId, Long cardId, Long sellerId, Long buyerId, Long finalPrice, Integer bidderRank) {
         return Order.builder()
                 .auctionId(auctionId)
@@ -78,11 +83,23 @@ public class Order extends BaseEntity {
                 .status(OrderStatus.PAYMENT_PENDING)
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .bidderRank(bidderRank)
+                .orderType(OrderType.AUCTION)
                 .build();
     }
 
-    public void openPaymentWindow() {
-        this.paymentDeadline = LocalDateTime.now().plusHours(1);
+    // 즉시구매용
+    public static Order fromBuyout(Long auctionId, Long cardId, Long sellerId, Long buyerId, Long finalPrice) {
+        return Order.builder()
+                .auctionId(auctionId)
+                .cardId(cardId)
+                .sellerId(sellerId)
+                .buyerId(buyerId)
+                .orderUid(TsidGenerator.generateOrderUid())
+                .finalPrice(finalPrice)
+                .status(OrderStatus.PAYMENT_PENDING)
+                .deliveryStatus(DeliveryStatus.PREPARING)
+                .orderType(OrderType.BUYOUT)
+                .build();
     }
 
     // 빌링키 자동결제(PAYMENT_PENDING) 또는 PG 직접결제(AUTO/DIRECT_PAYMENT_FAILED) 성공 시 호출
