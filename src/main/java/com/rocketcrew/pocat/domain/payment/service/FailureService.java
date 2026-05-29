@@ -43,7 +43,8 @@ public class FailureService {
         eventPublisher.publishEvent(new PaymentFailedEvent(
                 order.getOrderUid(),
                 order.getBuyerId(),
-                "자동결제 실패"
+                "자동결제 실패",
+                "AUTO"
         ));
     }
 
@@ -73,19 +74,22 @@ public class FailureService {
      */
     // TODO : 만료시간이 실제로 지났는지 검사를 해야함. expireAt 이 생기면 진행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(Long orderId, String reason) {
+    public void markFailed(Long orderId, String reason, String failureType) {
         orderRepository.findById(orderId)
                 .filter(o -> o.getStatus() == OrderStatus.PAYMENT_PENDING)
                 .ifPresent(order -> {
                     order.failPayment();
-                    log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
+                    log.info("[OrderFailure] orderId={} reason={} type={} → FAILED", orderId, reason, failureType);
                     eventPublisher.publishEvent(new PaymentFailedEvent(
                             order.getOrderUid(),
                             order.getBuyerId(),
-                            reason
+                            reason,
+                            failureType
                     ));
                 });
     }
+
+    /**
      * 결제가 성공적으로 완료되거나 이미 즉시 실패 처리될 때 Redis 키를 정리한다.
      * TTL 만료 경로(onMessage)에서는 TTL키가 이미 사라진 상태이므로 shadow키만 추가 삭제한다.
      */

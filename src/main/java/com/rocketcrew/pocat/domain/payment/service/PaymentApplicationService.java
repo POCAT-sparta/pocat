@@ -48,7 +48,8 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
         }
 
-        if (order.getStatus() != OrderStatus.PAYMENT_FAILED) {
+        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
+                && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_NOT_FAILED);
         }
 

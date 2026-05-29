@@ -38,6 +38,7 @@ public class AuctionDocument {
     @Field(type = FieldType.Long)    private Long   sellerId;
     @Field(type = FieldType.Keyword) private String sellerNickname;
     @Field(type = FieldType.Text)    private String title;
+    @Field(type = FieldType.Text)    private String description;
     @Field(type = FieldType.Keyword) private String status;
     @Field(type = FieldType.Integer) private int    statusOrder;   // ACTIVE=0, ENDED=1, NO_BIDDER=2
     @Field(type = FieldType.Long)    private Long   startingPrice;
@@ -94,6 +95,7 @@ public class AuctionDocument {
                 .sellerId(auction.getSellerId())
                 .sellerNickname(sellerNickname)
                 .title(auction.getTitle())
+                .description(auction.getDescription())
                 .status(auction.getStatus() != null ? auction.getStatus().name() : null)
                 .statusOrder(toStatusOrder(auction.getStatus()))
                 .startingPrice(auction.getStartingPrice())

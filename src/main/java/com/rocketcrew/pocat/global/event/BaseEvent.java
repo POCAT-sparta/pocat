@@ -11,6 +11,10 @@ public abstract class BaseEvent {
     private Long outboxId;
     private final LocalDateTime occurredAt;
 
+    protected BaseEvent(String eventType) {
+        this(eventType, null);
+    }
+
     protected BaseEvent(String eventType, Long outboxId) {
         this.eventType = eventType;
         this.outboxId = outboxId;

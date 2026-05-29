@@ -142,7 +142,8 @@ public class CardDocument {
                 status != null ? CardStatus.valueOf(status) : null,
                 createdAt,
                 updatedAt,
-                null  // activeAuction — 카드 목록에서는 CardQueryService가 별도로 주입
+                null,  // activeAuction — 카드 목록에서는 CardQueryService가 별도로 주입
+                0      // activeAuctionCount — CardQueryService가 별도로 주입
         );
     }
 }
