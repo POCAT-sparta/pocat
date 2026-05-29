@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.card.controller;
 
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
+import com.rocketcrew.pocat.domain.card.dto.response.ActiveAuctionSummary;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
@@ -53,6 +54,14 @@ public class CardController {
     public ResponseEntity<ApiResponseDto<CardResponse>> getCard(@PathVariable Long cardId) {
         CardResponse response = cardQueryService.getCard(cardId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
+    }
+
+    @GetMapping("/v1/cards/{cardId}/auctions")
+    public ResponseEntity<ApiResponseDto<PageResponseDto<ActiveAuctionSummary>>> getCardAuctions(
+            @PathVariable Long cardId,
+            @PageableDefault(size = 10, sort = "startedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<ActiveAuctionSummary> page = cardQueryService.getCardAuctions(cardId, pageable);
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, PageResponseDto.of(page, page.getContent())));
     }
 
     @PostMapping("/v1/cards")

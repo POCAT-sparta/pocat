@@ -8,7 +8,6 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.card.document.CardDocument;
@@ -41,7 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -120,25 +118,25 @@ public class CardQueryService {
                 .map(SearchHit::getContent)
                 .toList();
 
-        // 진행 중인 경매(ACTIVE)를 카드 ID 단위로 배치 조회 → 단일 쿼리
-        Map<Long, ActiveAuctionSummary> activeAuctionMap = Collections.emptyMap();
+        // 진행 중인 경매(ACTIVE) 건수를 카드 ID 단위로 배치 집계 → 단일 쿼리
+        Map<Long, Long> auctionCountMap = Collections.emptyMap();
         if (!documents.isEmpty()) {
             List<Long> cardIds = documents.stream()
                     .map(doc -> Long.parseLong(doc.getId()))
                     .toList();
-            activeAuctionMap = auctionRepository.findByCardIdInAndStatus(cardIds, AuctionStatus.ACTIVE)
+            auctionCountMap = auctionRepository.countGroupByCardId(cardIds, AuctionStatus.ACTIVE)
                     .stream()
-                    // 동일 카드에 ACTIVE 경매가 둘 이상이면 startedAt DESC → id DESC 기준 최신 경매 선택
-                    .sorted(Comparator.comparing(Auction::getStartedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
-                            .thenComparingLong(Auction::getId)
-                            .reversed())
-                    .collect(Collectors.toMap(Auction::getCardId, ActiveAuctionSummary::from,
-                            (existing, replacement) -> existing));
+                    .collect(Collectors.toMap(
+                            AuctionRepository.CardAuctionCountView::getCardId,
+                            AuctionRepository.CardAuctionCountView::getAuctionCount
+                    ));
         }
 
-        final Map<Long, ActiveAuctionSummary> auctionMap = activeAuctionMap;
+        final Map<Long, Long> countMap = auctionCountMap;
         List<CardResponse> content = documents.stream()
-                .map(doc -> doc.toResponse().withActiveAuction(auctionMap.get(Long.parseLong(doc.getId()))))
+                .map(doc -> doc.toResponse()
+                        .withActiveAuctionCount(
+                                countMap.getOrDefault(Long.parseLong(doc.getId()), 0L).intValue()))
                 .toList();
 
         return new PageImpl<>(content, pageable, hits.getTotalHits());
@@ -149,14 +147,18 @@ public class CardQueryService {
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_FOUND);
         }
-        List<Auction> activeAuctions = auctionRepository.findByCardIdAndStatus(id, AuctionStatus.ACTIVE);
-        // 동일 카드에 ACTIVE 경매가 둘 이상이면 startedAt DESC → id DESC 기준 최신 경매 선택
-        ActiveAuctionSummary activeAuction = activeAuctions.stream()
-                .max(Comparator.comparing(Auction::getStartedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
-                        .thenComparingLong(Auction::getId))
-                .map(ActiveAuctionSummary::from)
-                .orElse(null);
-        return CardResponse.from(card, activeAuction);
+        int count = (int) auctionRepository.countByCardIdAndStatus(id, AuctionStatus.ACTIVE);
+        return CardResponse.from(card).withActiveAuctionCount(count);
+    }
+
+    public Page<ActiveAuctionSummary> getCardAuctions(Long cardId, Pageable pageable) {
+        Card card = getCardEntity(cardId);
+        if (card.getStatus() != CardStatus.ACTIVE) {
+            throw new CardException(ErrorCode.CARD_NOT_FOUND);
+        }
+        return auctionRepository
+                .findByCardIdAndStatusOrderByStartedAtDescIdDesc(cardId, AuctionStatus.ACTIVE, pageable)
+                .map(ActiveAuctionSummary::from);
     }
 
     public Card getCardEntity(Long id) {

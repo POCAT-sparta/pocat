@@ -99,10 +99,10 @@ public class AuctionQueryService {
             )._toQuery());
         }
 
-        // 키워드: title, cardName, cardNameKo, seriesKo, setNameKo 교차 필드 검색
+        // 키워드: title, description, cardName, cardNameKo, seriesKo, setNameKo 교차 필드 검색
         if (StringUtils.hasText(keyword)) {
             bool.must(MultiMatchQuery.of(m -> m
-                    .fields("title", "cardName", "cardNameKo", "seriesKo", "setNameKo")
+                    .fields("title", "description", "cardName", "cardNameKo", "seriesKo", "setNameKo")
                     .query(keyword)
                     .type(TextQueryType.CrossFields)
                     .operator(Operator.And))._toQuery());

@@ -27,7 +27,8 @@ public record CardResponse(
         CardStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        ActiveAuctionSummary activeAuction
+        ActiveAuctionSummary activeAuction,  // 단건 조회용
+        int activeAuctionCount               // 목록 조회용
 ) {
     public static CardResponse from(Card card) {
         return from(card, null);
@@ -53,14 +54,22 @@ public record CardResponse(
                 card.getStatus(),
                 card.getCreatedAt(),
                 card.getUpdatedAt(),
-                activeAuction
+                activeAuction,
+                0
         );
     }
 
-    /** ES 응답에 activeAuction을 붙일 때 사용 */
+    /** 단건 조회: 진행 중인 경매 상세 정보 붙이기 */
     public CardResponse withActiveAuction(ActiveAuctionSummary activeAuction) {
         return new CardResponse(id, userId, tcgdexId, name, series, setId, setName,
                 cardNumber, rarity, category, grade, imageUrl, source, status,
-                createdAt, updatedAt, activeAuction);
+                createdAt, updatedAt, activeAuction, 0);
+    }
+
+    /** 목록 조회: 진행 중인 경매 건수 붙이기 */
+    public CardResponse withActiveAuctionCount(int count) {
+        return new CardResponse(id, userId, tcgdexId, name, series, setId, setName,
+                cardNumber, rarity, category, grade, imageUrl, source, status,
+                createdAt, updatedAt, null, count);
     }
 }
