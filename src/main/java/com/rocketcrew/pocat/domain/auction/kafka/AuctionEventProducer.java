@@ -42,7 +42,7 @@ public class AuctionEventProducer extends BaseEventProducer {
     public void sendEnded(AuctionEndedEvent event) {
         send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }
-
+    // 즉시 구매
     public void sendBuyoutCompleted(AuctionBuyoutCompletedEvent event) {
         send(TOPIC, String.valueOf(event.getAuctionId()), event.getOutboxId(), event);
     }

@@ -15,7 +15,7 @@ public class AuctionInspectionPassedEvent extends BaseEvent {
 
     public AuctionInspectionPassedEvent(Long auctionId, Long sellerId,
                                         String auctionTitle, LocalDateTime approvedAt) {
-        super("auction.inspection.passed");
+        super(AuctionEventType.INSPECTION_PASSED);
         this.auctionId = auctionId;
         this.sellerId = sellerId;
         this.auctionTitle = auctionTitle;
