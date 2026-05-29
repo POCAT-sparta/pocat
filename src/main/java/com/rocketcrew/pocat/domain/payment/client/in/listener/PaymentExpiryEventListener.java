@@ -1,5 +1,6 @@
-package com.rocketcrew.pocat.domain.payment.service;
+package com.rocketcrew.pocat.domain.payment.client.in.listener;
 
+import com.rocketcrew.pocat.domain.payment.service.FailureService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -10,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+
+import static com.rocketcrew.pocat.domain.payment.service.FailureService.PAYMENT_EXPIRY_KEY_PREFIX;
 
 /**
  * Redis keyspace expired 이벤트를 수신하여 TTL이 만료된 PENDING 결제를 FAILED 처리한다.
@@ -28,9 +31,9 @@ public class PaymentExpiryEventListener implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String expiredKey = new String(message.getBody(), StandardCharsets.UTF_8);
-        if (!expiredKey.startsWith(FailureService.PAYMENT_EXPIRY_KEY_PREFIX)) return;
+        if (!expiredKey.startsWith(PAYMENT_EXPIRY_KEY_PREFIX)) return;
 
-        String orderIdStr = expiredKey.substring(FailureService.PAYMENT_EXPIRY_KEY_PREFIX.length());
+        String orderIdStr = expiredKey.substring(PAYMENT_EXPIRY_KEY_PREFIX.length());
         Long orderId;
         try {
             orderId = Long.parseLong(orderIdStr);

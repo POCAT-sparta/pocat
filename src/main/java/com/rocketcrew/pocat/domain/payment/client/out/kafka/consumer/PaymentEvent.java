@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.payment.consumer;
+package com.rocketcrew.pocat.domain.payment.client.out.kafka.consumer;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;

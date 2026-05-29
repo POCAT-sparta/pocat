@@ -1,7 +1,7 @@
-package com.rocketcrew.pocat.domain.payment.service;
+package com.rocketcrew.pocat.domain.payment.client.out.kafka.handler;
 
-import com.rocketcrew.pocat.domain.payment.event.PaymentBaseEvent;
-import com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentBaseEvent;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.PaymentEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

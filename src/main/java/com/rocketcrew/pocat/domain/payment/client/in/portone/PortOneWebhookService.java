@@ -1,16 +1,18 @@
-package com.rocketcrew.pocat.domain.payment.service;
+package com.rocketcrew.pocat.domain.payment.client.in.portone;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
-import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
-import com.rocketcrew.pocat.domain.payment.client.PortOnePaymentResponse;
-import com.rocketcrew.pocat.domain.payment.client.PortOneSignatureVerifier;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneSignatureVerifier;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.WebhookEvent;
 import com.rocketcrew.pocat.domain.payment.entity.WebhookEventStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.payment.service.FailureService;
+import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
@@ -26,13 +28,13 @@ import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PaymentWebhookService {
+public class PortOneWebhookService {
 
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
     private final FailureService failureService;
     private final PaymentCommandService paymentCommandService;
-    private final PortOneClient portOneClient;
+    private final PortOneClientService portOneClientService;
     private final PortOneSignatureVerifier portOneSignatureVerifier;
     private final OrderQueryService orderQueryService;
     private final WebhookEventCommandService webhookEventCommandService;
@@ -122,7 +124,7 @@ public class PaymentWebhookService {
         PortOnePaymentResponse portOnePayment = null;
         if ("PAID".equals(status)) {
             try {
-                portOnePayment = portOneClient.getPayment(paymentId);
+                portOnePayment = portOneClientService.getPayment(paymentId);
             } catch (Exception e) {
                 // PortOne 조회 실패 — 재전송 유도 (non-200 반환)
                 log.error("웹훅 처리 중 PortOne 조회 실패 paymentId={}", paymentId, e);

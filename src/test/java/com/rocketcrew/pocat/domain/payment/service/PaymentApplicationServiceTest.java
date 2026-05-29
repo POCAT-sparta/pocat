@@ -3,12 +3,14 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
-import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
-import com.rocketcrew.pocat.domain.payment.client.PortOnePaymentResponse;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -38,7 +40,7 @@ class PaymentApplicationServiceTest {
     @InjectMocks
     private PaymentApplicationService paymentApplicationService;
 
-    @Mock private PortOneClient portOneClient;
+    @Mock private PortOneClientService portOneClientService;
     @Mock private FailureService failureService;
     @Mock private UserRepository userRepository;
     @Mock private PaymentCommandService paymentCommandService;
@@ -61,12 +63,12 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(paymentQueryService.findByOrderIdAndStatus(1L, PaymentStatus.PENDING))
                     .willReturn(Optional.empty());
-            given(paymentCommandService.createPayment(order)).willReturn(saved);
+            given(paymentCommandService.createPayment(order, PaymentType.BILLING_KEY)).willReturn(saved);
 
             PaymentResponse response = paymentApplicationService.generatePayment(1L, request);
 
             assertThat(response.status()).isEqualTo(PaymentStatus.PENDING);
-            verify(paymentCommandService).createPayment(order);
+            verify(paymentCommandService).createPayment(order, PaymentType.BILLING_KEY);
         }
 
         @Test
@@ -126,7 +128,7 @@ class PaymentApplicationServiceTest {
             PaymentResponse response = paymentApplicationService.generatePayment(1L, new CreatePaymentRequest(1L));
 
             assertThat(response.paymentUid()).isEqualTo("PAY-001");
-            verify(paymentCommandService, never()).createPayment(any());
+            verify(paymentCommandService, never()).createPayment(any(), PaymentType.BILLING_KEY);
         }
     }
 
@@ -146,8 +148,8 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
-            given(portOneClient.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse("PAID", 10000L, "CARD", paidAt));
+            given(portOneClientService.getPayment("PAY-001")).willReturn(
+                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
 
             paymentApplicationService.confirmPayment(1L, "PAY-001");
 
@@ -191,7 +193,7 @@ class PaymentApplicationServiceTest {
             PaymentResponse response = paymentApplicationService.confirmPayment(1L, "PAY-001");
 
             assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
-            verify(portOneClient, never()).getPayment(anyString());
+            verify(portOneClientService, never()).getPayment(anyString());
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }
 
@@ -204,8 +206,9 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
-            given(portOneClient.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse("FAILED", 10000L, null, null));
+            given(portOneClientService.getPayment("PAY-001")).willReturn(
+                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -221,8 +224,9 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
-            given(portOneClient.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse("PAID", 5000L, "CARD", LocalDateTime.now()));
+            given(portOneClientService.getPayment("PAY-001")).willReturn(
+                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -238,8 +242,8 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
-            given(portOneClient.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse("PAID", 15000L, "CARD", LocalDateTime.now()));
+            given(portOneClientService.getPayment("PAY-001")).willReturn(
+                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -263,9 +267,9 @@ class PaymentApplicationServiceTest {
 
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(paymentCommandService.createPayment(order)).willReturn(payment);
-            given(portOneClient.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
-                    .willReturn(new PortOnePaymentResponse("PAID", 10000L, "BILLING_KEY", paidAt));
+            given(paymentCommandService.createPayment(order, PaymentType.BILLING_KEY)).willReturn(payment);
+            given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
 
             paymentApplicationService.autoPayment(1L);
 
@@ -284,7 +288,7 @@ class PaymentApplicationServiceTest {
             PaymentResponse response = paymentApplicationService.autoPayment(1L);
 
             assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
-            verify(portOneClient, never()).attemptBillingKeyPayment(anyString(), anyString(), anyLong());
+            verify(portOneClientService, never()).attemptBillingKeyPayment(anyString(), anyString(), anyLong());
         }
 
         @Test
@@ -310,15 +314,15 @@ class PaymentApplicationServiceTest {
 
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
-            given(paymentCommandService.createPayment(order)).willReturn(payment);
-            given(portOneClient.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
-                    .willReturn(new PortOnePaymentResponse("FAILED", 10000L, null, null));
+            given(paymentCommandService.createPayment(order, PaymentType.BILLING_KEY)).willReturn(payment);
+            given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
 
             assertThatThrownBy(() -> paymentApplicationService.autoPayment(1L))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 
-            verify(failureService).persistBillingKeyFailure(payment, order, 1L);
+            verify(failureService).persistBillingKeyFailure(payment, order, false);
         }
     }
 }

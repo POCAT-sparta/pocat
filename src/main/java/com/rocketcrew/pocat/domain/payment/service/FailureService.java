@@ -4,8 +4,8 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
-import com.rocketcrew.pocat.domain.payment.event.AutoPaymentFailedEvent;
-import com.rocketcrew.pocat.domain.payment.event.DirectPaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.AutoPaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.DirectPaymentFailedEvent;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import static com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer.PAYMENT_TOPIC;
+import static com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 /**
  * 결제 실패 상태를 독립 트랜잭션으로 저장하는 서비스.
@@ -32,8 +32,8 @@ import static com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer.
 @RequiredArgsConstructor
 public class FailureService {
 
-    static final String PAYMENT_EXPIRY_KEY_PREFIX = "order:expire";
-    static final String PAYMENT_SHADOW_KEY_PREFIX = "order:shadow";
+    public static final String PAYMENT_EXPIRY_KEY_PREFIX = "order:expire";
+    public static final String PAYMENT_SHADOW_KEY_PREFIX = "order:shadow";
 
     private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
@@ -41,14 +41,15 @@ public class FailureService {
     private final OutboxEventWriter outboxEventWriter;
 
 
-    // TODO : 실패 시 왜 실패했는지 받을 수 있어야 함 PORTONE API 확인 필요.
-    // TODO : LocalDateTime.now().plusHours(24) -> order.getExpireAt 으로 변경해야 함: 승현님 작업 완료후 진행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void persistBillingKeyFailure(Payment payment, Order order, Long orderId) {
+    public void persistBillingKeyFailure(Payment payment, Order order,Boolean evnetFlag) {
         payment.fail();
         order.failPayment();
-        scheduleExpiry(orderId, LocalDateTime.now().plusHours(24));
-
+        // 경매 종료 후 자동 결제 일때만 redis저장
+        if(evnetFlag){
+            Duration ttl = Duration.between(LocalDateTime.now(), order.getPaymentDeadline());
+            scheduleExpiry(order.getId(), ttl);
+        }
         AutoPaymentFailedEvent event = new AutoPaymentFailedEvent(
                 order.getOrderUid(),
                 order.getBuyerId(),
@@ -62,9 +63,9 @@ public class FailureService {
      * PENDING 결제를 Redis에 등록한다. expireAt까지 TTL이 지나면
      * PaymentExpiryEventHandler가 keyspace expired 이벤트를 수신해 markFailed를 호출한다.
      */
-    public void scheduleExpiry(Long orderId, LocalDateTime expireAt) {
-        Duration ttl = Duration.between(LocalDateTime.now(), expireAt);
+    public void scheduleExpiry(Long orderId, Duration ttl) {
         if (ttl.isNegative() || ttl.isZero()) return;
+
         redisTemplate.opsForValue().setIfAbsent(
                 PAYMENT_EXPIRY_KEY_PREFIX + orderId,
                 String.valueOf(orderId),
@@ -88,17 +89,18 @@ public class FailureService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
-        if (order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+        // 스케줄러, ttl웹훅 어디서 호출해도 멱등하게 상태 처리를 해야함.
+        if (order.getStatus() == OrderStatus.PAYMENT_PENDING && order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
             order.failPayment();
             log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
             DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
                             order.getOrderUid(),
                             order.getBuyerId(),
                             order.getSellerId()
-                    );
-                    outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
-                    eventPublisher.publishEvent(event);
-                });
+            );
+            outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+            eventPublisher.publishEvent(event);
+        }
     }
 
     /**

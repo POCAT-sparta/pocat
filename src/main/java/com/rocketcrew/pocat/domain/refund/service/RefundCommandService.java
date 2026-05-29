@@ -3,7 +3,7 @@ package com.rocketcrew.pocat.domain.refund.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
-import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
@@ -45,7 +45,7 @@ public class RefundCommandService {
     private final PaymentRepository paymentRepository;
     private final SettlementRepository settlementRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final PortOneClient portOneClient;
+    private final PortOneClientService portOneClientService;
 
     // 환불 요청 가능한 주문 상태
     private static final Set<OrderStatus> REFUNDABLE_STATUSES =
@@ -119,7 +119,7 @@ public class RefundCommandService {
         refund.markProcessing();
 
         try {
-            portOneClient.cancelPayment(payment.getPaymentUid(), refund.getAmount(), refund.getReason());
+            portOneClientService.cancelPayment(payment.getPaymentUid(), refund.getAmount(), refund.getReason());
         } catch (Exception e) {
             handleRetryFailure(refund, e.getMessage());
             log.warn("환불 승인 중 PortOne 취소 실패 — 자동 재시도 예정. refundId={}, paymentUid={}",
@@ -178,7 +178,7 @@ public class RefundCommandService {
                 refundId, payment.getPaymentUid(), refund.getRetryCount());
 
         try {
-            portOneClient.cancelPayment(payment.getPaymentUid(), refund.getAmount(), refund.getReason());
+            portOneClientService.cancelPayment(payment.getPaymentUid(), refund.getAmount(), refund.getReason());
         } catch (Exception e) {
             handleRetryFailure(refund, e.getMessage());
             log.warn("환불 재시도 실패. refundId={}, paymentUid={}, retryCount={}",

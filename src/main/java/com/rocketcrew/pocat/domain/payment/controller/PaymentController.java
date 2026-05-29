@@ -4,7 +4,7 @@ import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
-import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
+import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
 
     private final PaymentQueryService paymentQueryService;
-    private final PaymentWebhookService paymentWebhookService;
+    private final PortOneWebhookService portOneWebhookService;
     private final PaymentApplicationService paymentApplicationService;
 
     /** 6.1 결제 요청 — PG 직접결제 레코드 생성 */
@@ -61,7 +61,7 @@ public class PaymentController {
     public ResponseEntity<ApiResponseDto<Void>> handleWebhook(
             @RequestHeader(value = "X-PortOne-Signature", required = false) String signature,
             @RequestBody byte[] rawBody) {
-        paymentWebhookService.handleWebhook(signature, rawBody);
+        portOneWebhookService.handleWebhook(signature, rawBody);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 }
