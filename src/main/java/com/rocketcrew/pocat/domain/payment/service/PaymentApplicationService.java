@@ -184,7 +184,10 @@ public class PaymentApplicationService {
 
             // 성공, 실패 확정 시 반환
             if (PortOneStatus.PAID.equals(response.status())
-                    || PortOneStatus.FAILED.equals(response.status())) {
+                    || PortOneStatus.FAILED.equals(response.status())
+                    || PortOneStatus.CANCELLED.equals(response.status())
+                    || PortOneStatus.PARTIAL_CANCELLED.equals(response.status())
+            ) {
                 return response;
             }
             log.warn("결제 미확정 상태 paymentUid={} status={} attempt={}/{}",
