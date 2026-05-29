@@ -12,6 +12,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuthException;
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -70,7 +71,11 @@ public class AuthService {
                 .userRole(UserRole.USER)
                 .build();
 
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new AuthException(ErrorCode.EMAIL_ALREADY_EXISTS, e);
+        }
         return new SignupResponse(user.getId(), user.getEmail(), user.getNickname());
     }
 

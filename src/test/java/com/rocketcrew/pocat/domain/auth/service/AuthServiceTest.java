@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -112,6 +113,30 @@ class AuthServiceTest {
                     .isInstanceOf(AuthException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.EMAIL_ALREADY_EXISTS);
             verify(userRepository, never()).save(any());
+        }
+
+        /**
+         * RED 테스트 — #133
+         *
+         * existsByEmail() 체크를 통과한 직후, 동시 요청에 의해 DB UNIQUE 제약 위반이 발생할 수 있다.
+         * DataIntegrityViolationException 을 잡아 AuthException(EMAIL_ALREADY_EXISTS) 로 변환해야 한다.
+         * 현재 AuthService.signup() 에는 이 catch 블록이 없으므로 FAIL.
+         */
+        @Test
+        @DisplayName("실패(RED): save() 시 DataIntegrityViolationException → EMAIL_ALREADY_EXISTS 변환 (동시성 경쟁 시나리오)")
+        void fail_dataIntegrityViolation_convertedToEmailAlreadyExists() {
+            // given — email check passes (race condition: another thread saves between check and save)
+            SignupRequest request = new SignupRequest(
+                    "race@example.com", "Password1!", "racer", "010-9999-0000");
+            given(userRepository.existsByEmail("race@example.com")).willReturn(false);
+            given(passwordEncoder.encode("Password1!")).willReturn("encodedPassword");
+            given(userRepository.save(any(User.class)))
+                    .willThrow(new DataIntegrityViolationException("Unique constraint violation"));
+
+            // when & then — FAILS until AuthService catches DataIntegrityViolationException
+            assertThatThrownBy(() -> authService.signup(request))
+                    .isInstanceOf(AuthException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.EMAIL_ALREADY_EXISTS);
         }
     }
 

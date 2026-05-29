@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ class PaymentCommandServiceTest {
     @Mock private SettlementCommandService settlementCommandService;
     @Mock private FailureService failureService;
     @Mock private StringRedisTemplate redisTemplate;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     // ── createPayment ──────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ class PaymentCommandServiceTest {
         @Test
         @DisplayName("성공: PG_DIRECT PENDING 결제를 저장하고 반환한다")
         void success() {
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
             given(paymentRepository.save(any(Payment.class))).willReturn(saved);
 

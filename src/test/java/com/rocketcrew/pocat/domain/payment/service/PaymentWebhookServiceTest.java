@@ -30,6 +30,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+
+import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PaymentWebhookService")
@@ -45,6 +49,7 @@ class PaymentWebhookServiceTest {
     @Mock private PortOneClient portOneClient;
     @Mock private PortOneSignatureVerifier portOneSignatureVerifier;
     @Mock private OrderQueryService orderQueryService;
+    @Mock private WebhookEventCommandService webhookEventCommandService;
 
     // ── handleWebhook ──────────────────────────────────────────────────
 
@@ -89,6 +94,8 @@ class PaymentWebhookServiceTest {
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
+            given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
+                    .willReturn(TestFixtures.aWebhookEvent());
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(portOneClient.getPayment("PAY-001")).willReturn(
@@ -106,6 +113,8 @@ class PaymentWebhookServiceTest {
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
+            given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
+                    .willReturn(TestFixtures.aWebhookEvent());
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.empty());
 
             paymentWebhookService.handleWebhook("valid-sig", body);
@@ -121,6 +130,8 @@ class PaymentWebhookServiceTest {
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
+            given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
+                    .willReturn(TestFixtures.aWebhookEvent());
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
 
             paymentWebhookService.handleWebhook("valid-sig", body);
@@ -129,24 +140,22 @@ class PaymentWebhookServiceTest {
         }
 
         @Test
-        @DisplayName("실패: PAID이지만 금액 불일치 → markFailed + cancelExpiry + PAYMENT_AMOUNT_MISMATCH")
-        void fail_amountMismatch() throws Exception {
+        @DisplayName("성공: PAID이지만 금액 불일치 → markFailed 호출 후 리턴 (예외 발생 안함)")
+        void success_with_amountMismatch() throws Exception {
             byte[] body = validBody();
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
+            given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
+                    .willReturn(TestFixtures.aWebhookEvent());
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
-            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(portOneClient.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse("PAID", 5000L, "CARD", LocalDateTime.now())); // 금액 불일치
 
-            assertThatThrownBy(() -> paymentWebhookService.handleWebhook("valid-sig", body))
-                    .isInstanceOf(PaymentException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+            paymentWebhookService.handleWebhook("valid-sig", body);
 
-            verify(failureService).markFailed(1L);
+            verify(failureService).markFailed(eq(1L), eq(PaymentErrorReason.AMOUNT_MISMATCH));
             verify(failureService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }
@@ -159,11 +168,13 @@ class PaymentWebhookServiceTest {
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(failedWebhookRequest());
+            given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
+                    .willReturn(TestFixtures.aWebhookEvent());
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
 
             paymentWebhookService.handleWebhook("valid-sig", body);
 
-            verify(failureService).markFailed(1L);
+            verify(failureService).markFailed(eq(1L), eq(PaymentErrorReason.WEBHOOK_FAILED));
             verify(failureService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }

@@ -48,13 +48,13 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
         }
 
-        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
-                && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
+        // 자동결제 실패 시에만 직접 결제 생성.
+        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_NOT_FAILED);
         }
 
         // 자동결제 실패 시각(updatedAt) 기준 1시간 초과 여부
-        if (order.getUpdatedAt().plusHours(1).isBefore(LocalDateTime.now())) {
+        if (order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
         }
 
@@ -95,8 +95,15 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
+        if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
+            // TODO : 단순 자동결제 실패 가 아니라 환불처리가 필요할듯 이미 PAID 결제는 완료됨.
+            log.error("자동결제 금액 불일치 orderId={} expected={} actual={}",
+                    orderId, payment.getAmount(), response.amount());
+            failureService.persistBillingKeyFailure(payment, order, orderId);
+            throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        }
+
         paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
-        // TODO : 성공 이벤트 발행
         return PaymentResponse.from(payment);
     }
 
@@ -127,6 +134,7 @@ public class PaymentApplicationService {
         }
 
         if (!payment.getAmount().equals(portOneClientPayment.amount())) {
+            // TODO : 단순 자동결제 실패 가 아니라 환불처리가 필요할듯 이미 PAID 결제는 완료됨.
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 

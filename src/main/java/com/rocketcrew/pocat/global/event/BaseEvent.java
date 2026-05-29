@@ -12,12 +12,7 @@ public abstract class BaseEvent {
     private final LocalDateTime occurredAt;
 
     protected BaseEvent(String eventType) {
-        this(eventType, null);
-    }
-
-    protected BaseEvent(String eventType, Long outboxId) {
         this.eventType = eventType;
-        this.outboxId = outboxId;
         this.occurredAt = LocalDateTime.now();
     }
 

@@ -241,6 +241,74 @@ class AiAssistantServiceTest {
         }
     }
 
+    // ---------------------------------------------------------------
+    // AI 장애 시나리오
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("AI 장애 시나리오")
+    class AiFaultScenarios {
+
+        @Test
+        @DisplayName("@CircuitBreaker 어노테이션 선언 확인")
+        void circuitBreakerAnnotationDeclared() throws Exception {
+            Method chatMethod = AiAssistantService.class.getMethod("chat", Long.class, AiChatRequest.class);
+            io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker cb =
+                    chatMethod.getAnnotation(io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker.class);
+            assertThat(cb)
+                    .as("chat() must be annotated with @CircuitBreaker(name=\"aiService\")")
+                    .isNotNull();
+            assertThat(cb.name()).isEqualTo("aiService");
+            assertThat(cb.fallbackMethod()).isEqualTo("chatFallback");
+        }
+
+        @Test
+        @DisplayName("@RateLimiter 어노테이션 선언 확인")
+        void rateLimiterAnnotationDeclared() throws Exception {
+            Method chatMethod = AiAssistantService.class.getMethod("chat", Long.class, AiChatRequest.class);
+            io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =
+                    chatMethod.getAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
+            assertThat(rl)
+                    .as("chat() must be annotated with @RateLimiter(name=\"aiEndpoint\", fallbackMethod=\"chatRateLimitFallback\")")
+                    .isNotNull();
+            assertThat(rl.name()).isEqualTo("aiEndpoint");
+            assertThat(rl.fallbackMethod()).isEqualTo("chatRateLimitFallback");
+        }
+
+        @Test
+        @DisplayName("ChatClient 예외 발생 시 ServiceException(AI_SERVICE_UNAVAILABLE) 반환")
+        void chatClientException_throwsServiceException() {
+            // given
+            AiChatRequest request = new AiChatRequest("테스트 메시지", null);
+            given(callResponseSpec.chatResponse()).willThrow(new RuntimeException("LLM timeout"));
+
+            // when / then
+            assertThatThrownBy(() -> aiAssistantService.chat(USER_ID, request))
+                    .isInstanceOf(ServiceException.class);
+            verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-1.5-flash");
+        }
+
+        @Test
+        @DisplayName("fallback 메서드 chatFallback 존재 확인")
+        void chatFallbackMethodExists() throws Exception {
+            Method fallback = AiAssistantService.class.getDeclaredMethod(
+                    "chatFallback", Long.class, AiChatRequest.class, Throwable.class);
+            assertThat(fallback)
+                    .as("chatFallback(Long, AiChatRequest, Throwable) must exist")
+                    .isNotNull();
+        }
+
+        @Test
+        @DisplayName("fallback 메서드 chatRateLimitFallback 존재 확인")
+        void chatRateLimitFallbackMethodExists() throws Exception {
+            Method fallback = AiAssistantService.class.getDeclaredMethod(
+                    "chatRateLimitFallback", Long.class, AiChatRequest.class,
+                    io.github.resilience4j.ratelimiter.RequestNotPermitted.class);
+            assertThat(fallback)
+                    .as("chatRateLimitFallback(Long, AiChatRequest, RequestNotPermitted) must exist")
+                    .isNotNull();
+        }
+    }
+
     // helper to avoid static import ambiguity with Mockito.eq
     private static <T> T eq(T value) {
         return org.mockito.ArgumentMatchers.eq(value);
