@@ -11,6 +11,8 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -28,6 +30,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -45,11 +50,19 @@ class FreePostCommandServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    private RateLimitProperties rateLimitProperties;
+
     private User user;
     private FreePost freePost;
 
     @BeforeEach
     void setUp() {
+        given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
+
         user = User.builder()
                 .email("user@test.com")
                 .password("pw")

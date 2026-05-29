@@ -62,6 +62,7 @@ jwt:
 portone:
   secret: ${PORTONE_SECRET}
   webhook-secret: ${PORTONE_WEBHOOK_SECRET}
+  webhook-allowed-ips: ${PORTONE_WEBHOOK_ALLOWED_IPS:}
 
 ranking:
   auction:
@@ -78,6 +79,20 @@ management:
       # spring-ai 1.0.0 과의 호환 버전(8.16.x)에는 해당 메서드가 없어 헬스체크가 NoSuchMethodError로 터짐.
       # ES 연결 자체는 정상 동작하므로 액추에이터 헬스 지표만 비활성화.
       enabled: false
+
+rate-limit:
+  signup-limit: 5
+  signup-window-seconds: 60
+  reissue-limit: 5
+  reissue-window-seconds: 60
+  post-limit: 5
+  post-window-seconds: 60
+  comment-limit: 5
+  comment-window-seconds: 60
+  search-limit: 30
+  search-window-seconds: 60
+  like-limit: 10
+  like-window-seconds: 60
 
 resilience4j:
   circuitbreaker:

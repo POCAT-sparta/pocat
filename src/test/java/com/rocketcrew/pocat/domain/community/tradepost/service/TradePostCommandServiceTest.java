@@ -10,6 +10,8 @@ import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepos
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,6 +31,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -46,10 +51,18 @@ class TradePostCommandServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    private RateLimitProperties rateLimitProperties;
+
     private TradePost tradePost;
 
     @BeforeEach
     void setUp() {
+        given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
+
         tradePost = TradePost.builder()
                 .userId(1L)
                 .title("거래 게시글")

@@ -20,7 +20,13 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import com.rocketcrew.pocat.global.util.HttpRequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +54,8 @@ public class AuctionController {
     private final AuctionQueryService auctionQueryService;
     private final AuctionCommandService auctionCommandService;
     private final AuctionRankingService auctionRankingService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     // 인기 경매 조회
     @GetMapping("/v1/auctions/popular")
@@ -66,7 +74,20 @@ public class AuctionController {
             @RequestParam(required = false) CardGrade grade,
             @RequestParam(required = false) CardCategory category,
             @RequestParam(required = false) AuctionStatus status,
-            @PageableDefault(size = 20, sort = {"startedAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = {"startedAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest request) {
+        String rateLimitKey;
+        if (userDetails != null) {
+            rateLimitKey = "rate:user:search:" + userDetails.getUserId();
+        } else {
+            rateLimitKey = "rate:ip:search:" + HttpRequestUtils.resolveClientIp(request);
+        }
+        if (!redisRateLimiter.isAllowed(rateLimitKey,
+                rateLimitProperties.getSearchLimit(),
+                rateLimitProperties.getSearchWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         Page<SearchAuctionResponse> page = auctionQueryService.getAuctions(
                 keyword, series, setName, grade, category, status, pageable);
         PageResponseDto<SearchAuctionResponse> response = PageResponseDto.of(page, page.getContent());
