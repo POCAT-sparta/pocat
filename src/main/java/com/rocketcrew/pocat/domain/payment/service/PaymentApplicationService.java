@@ -10,7 +10,6 @@ import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePayment
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
-import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -24,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -60,13 +58,6 @@ public class PaymentApplicationService {
         // 자동결제 실패 시각(updatedAt) 기준 1시간 초과 여부
         if (order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
-        }
-
-        // 이미 PENDING 레코드가 있으면 기존 paymentUid 반환 (중복 방지 / 멱등성)
-        Optional<Payment> existing = paymentQueryService.findByOrderIdAndStatus(
-                request.orderId(), PaymentStatus.PENDING);
-        if (existing.isPresent()) {
-            return PaymentResponse.from(existing.get());
         }
 
         Payment payment = paymentCommandService.createPayment(order, PaymentType.PG_DIRECT);
