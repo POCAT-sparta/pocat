@@ -55,4 +55,24 @@ class HttpRequestUtilsTest {
 
         assertThat(HttpRequestUtils.resolveClientIp(request)).isEqualTo("127.0.0.1");
     }
+
+    @Test
+    @DisplayName("XFF trailing comma ('1.1.1.1, ') → trailing empty 스킵하고 '1.1.1.1' 반환")
+    void resolveClientIp_trailingComma_returnsLastNonBlank() {
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        given(request.getHeader("X-Forwarded-For")).willReturn("1.1.1.1, ");
+        given(request.getRemoteAddr()).willReturn("9.9.9.9");
+
+        assertThat(HttpRequestUtils.resolveClientIp(request)).isEqualTo("1.1.1.1");
+    }
+
+    @Test
+    @DisplayName("XFF 전체가 공백/빈 토큰 ('  ,  ') → remoteAddr fallback")
+    void resolveClientIp_allBlankTokens_returnsRemoteAddr() {
+        HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+        given(request.getHeader("X-Forwarded-For")).willReturn("  ,  ");
+        given(request.getRemoteAddr()).willReturn("9.9.9.9");
+
+        assertThat(HttpRequestUtils.resolveClientIp(request)).isEqualTo("9.9.9.9");
+    }
 }
