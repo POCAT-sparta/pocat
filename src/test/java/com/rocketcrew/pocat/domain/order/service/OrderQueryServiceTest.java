@@ -110,8 +110,7 @@ class OrderQueryServiceTest {
             Card card = TestFixtures.aCard();    // id=3L
 
             given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
-            given(userRepository.findById(1L)).willReturn(Optional.of(buyer));
-            given(userRepository.findById(2L)).willReturn(Optional.of(seller));
+            given(userRepository.findAllById(List.of(1L, 2L))).willReturn(List.of(buyer, seller));
             given(cardRepository.findById(3L)).willReturn(Optional.of(card));
 
             OrderDetailResponse response = orderQueryService.getOneOrder(1L, "ORD-001");

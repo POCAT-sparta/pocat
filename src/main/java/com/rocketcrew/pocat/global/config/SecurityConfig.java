@@ -73,6 +73,7 @@ public class SecurityConfig {
                         // PortOne 서버가 직접 호출하는 Webhook — JWT 인증 없음
                         // X-PortOne-Signature HMAC-SHA256 서명 검증은 PortOneSignatureVerifier에서 완전 구현됨
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
