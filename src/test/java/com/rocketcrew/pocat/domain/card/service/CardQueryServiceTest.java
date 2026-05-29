@@ -44,6 +44,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -416,6 +417,7 @@ class CardQueryServiceTest {
 
             assertThat(result.averagePrice()).isEqualTo(7000L);
             verify(orderQueryService).getAveragePriceByCard(3L);
+            verify(valueOps).set(eq("card:avgprice:3"), anyString(), eq(1L), eq(TimeUnit.HOURS));
         }
     }
 

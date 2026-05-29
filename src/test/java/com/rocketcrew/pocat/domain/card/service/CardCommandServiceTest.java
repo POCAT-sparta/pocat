@@ -210,8 +210,7 @@ class CardCommandServiceTest {
             CardResponse response = service.approveCard(1L);
 
             assertThat(response.status()).isEqualTo(CardStatus.ACTIVE);
-            // 이벤트는 afterCommit 콜백에 등록되므로 실제 발행은 커밋 후지만,
-            // TransactionSynchronization이 등록됐는지 verify는 생략 (카드 상태만 검증)
+            // publishEvent는 approveCard() 내에서 직접 호출 (afterCommit 아님)
             verify(eventPublisher).publishEvent(any(CardEmbeddingEvent.class));
         }
 
@@ -349,6 +348,10 @@ class CardCommandServiceTest {
             service.deleteCard(1L);
 
             verify(cardRepository).delete(card);
+            // afterCommit 콜백을 직접 트리거해 ES 인덱스 제거 검증
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(sync -> sync.afterCommit());
+            verify(cardSearchRepository).deleteById("1");
         }
 
         @Test

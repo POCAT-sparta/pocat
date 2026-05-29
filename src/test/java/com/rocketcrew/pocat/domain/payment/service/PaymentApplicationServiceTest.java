@@ -221,7 +221,7 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.PAID, 15000L, "CARD", LocalDateTime.now(), "", null, null, null));
+                    new PortOnePaymentResponse(PortOneStatus.PAID, 5000L, "CARD", LocalDateTime.now(), "", null, null, null));
 
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))

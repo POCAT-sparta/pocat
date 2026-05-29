@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
@@ -36,6 +37,7 @@ class PaymentCommandServiceTest {
     private PaymentCommandService paymentCommandService;
 
     @Mock private PaymentRepository paymentRepository;
+    @Mock private OrderQueryService orderQueryService;
     @Mock private SetExpireService setExpireService;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ApplicationEventPublisher eventPublisher;
@@ -52,6 +54,7 @@ class PaymentCommandServiceTest {
         void success() {
             Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentRepository.save(any(Payment.class))).willReturn(saved);
 
             Payment result = paymentCommandService.createPayment(order.getId(), PaymentType.PG_DIRECT);
