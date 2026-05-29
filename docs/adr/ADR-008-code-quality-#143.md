@@ -13,7 +13,7 @@
 
 ### Admin 컨트롤러 단일 방어 구조
 
-Admin 관련 컨트롤러 5개(`AdminOrderController`, `AdminSettlementController`, `AdminUserController`, `AdminAuctionController`, `AdminChatController`)는 Spring Security `SecurityConfig`의 URL 패턴(`/api/v1/admin/**`) 하나에만 의존하고 있었다. ADR-007에서 `AdminCardController`에 메서드 레벨 인가를 추가하는 패턴을 확립했으나, 나머지 Admin 컨트롤러 5개는 동일한 조치가 이루어지지 않아 Security 설정 변경 시 내부 서비스 메서드까지 보호되지 않는 취약 구조가 잔존하였다.
+Admin 관련 컨트롤러 5개(`AdminRefundController`, `AdminPokemonController`, `AdminSeriesController`, `AdminPokemonSetController`, `AdminEsMigrationController`)는 Spring Security `SecurityConfig`의 URL 패턴(`/api/v1/admin/**`) 하나에만 의존하고 있었다. ADR-007에서 `AdminCardController`에 메서드 레벨 인가를 추가하는 패턴을 확립했으나, 나머지 Admin 컨트롤러 5개는 동일한 조치가 이루어지지 않아 Security 설정 변경 시 내부 서비스 메서드까지 보호되지 않는 취약 구조가 잔존하였다.
 
 ### OrderQueryService N+1 문제
 
@@ -29,7 +29,7 @@ Admin 관련 컨트롤러 5개(`AdminOrderController`, `AdminSettlementControlle
 
 ### 1. Admin 컨트롤러 5개에 클래스 레벨 @PreAuthorize 추가
 
-`AdminOrderController`, `AdminSettlementController`, `AdminUserController`, `AdminAuctionController`, `AdminChatController` 5개 컨트롤러의 클래스 선언부에 `@PreAuthorize("hasRole('ADMIN')")` 애노테이션을 추가한다.
+`AdminRefundController`, `AdminPokemonController`, `AdminSeriesController`, `AdminPokemonSetController`, `AdminEsMigrationController` 5개 컨트롤러의 클래스 선언부에 `@PreAuthorize("hasRole('ADMIN')")` 애노테이션을 추가한다.
 
 - URL 패턴 보안(SecurityConfig)과 메서드 보안(@PreAuthorize)을 함께 적용하는 Defense-in-Depth 원칙을 준수한다.
 - ADR-007에서 `AdminCardController`에 적용한 패턴과 일관성을 확보한다.
@@ -89,7 +89,7 @@ Admin 관련 컨트롤러 5개(`AdminOrderController`, `AdminSettlementControlle
 
 ## 관련 코드
 
-- `AdminOrderController`, `AdminSettlementController`, `AdminUserController`, `AdminAuctionController`, `AdminChatController` — 클래스 레벨 `@PreAuthorize("hasRole('ADMIN')")` 추가
+- `AdminRefundController`, `AdminPokemonController`, `AdminSeriesController`, `AdminPokemonSetController`, `AdminEsMigrationController` — 클래스 레벨 `@PreAuthorize("hasRole('ADMIN')")` 추가
 - `OrderQueryService.getOneOrder()` — `findAllById` 배치 조회로 변경
 - `SwaggerConfig` — 신규 작성 (OpenApiBean 정의)
 - `SecurityConfig` — `/swagger-ui/**`, `/v3/api-docs/**` 인증 예외 추가

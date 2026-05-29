@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.core.env.Environment;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +31,7 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
+    private final Environment environment;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -56,28 +58,31 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/ws/chat/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/auctions/me",
-                                "/api/v1/bids/me",
-                                "/api/v1/posts/free/me",
-                                "/api/v1/likes/me").authenticated()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/auctions/**",
-                                "/api/v1/cards/**",
-                                "/api/v1/posts/free/**",
-                                "/api/v1/posts/trade/**",
-                                "/api/v1/comments/**").permitAll()
-                        // PortOne 서버가 직접 호출하는 Webhook — JWT 인증 없음
-                        // X-PortOne-Signature HMAC-SHA256 서명 검증은 PortOneSignatureVerifier에서 완전 구현됨
-                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth
+                            .requestMatchers("/api/v1/auth/**").permitAll()
+                            .requestMatchers("/ws/chat/**").permitAll()
+                            .requestMatchers(HttpMethod.GET,
+                                    "/api/v1/auctions/me",
+                                    "/api/v1/bids/me",
+                                    "/api/v1/posts/free/me",
+                                    "/api/v1/likes/me").authenticated()
+                            .requestMatchers(HttpMethod.GET,
+                                    "/api/v1/auctions/**",
+                                    "/api/v1/cards/**",
+                                    "/api/v1/posts/free/**",
+                                    "/api/v1/posts/trade/**",
+                                    "/api/v1/comments/**").permitAll()
+                            // PortOne 서버가 직접 호출하는 Webhook — JWT 인증 없음
+                            // X-PortOne-Signature HMAC-SHA256 서명 검증은 PortOneSignatureVerifier에서 완전 구현됨
+                            .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
+                            .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+                            .requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
+                    if (environment.matchesProfiles("local")) {
+                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtUtil, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class
