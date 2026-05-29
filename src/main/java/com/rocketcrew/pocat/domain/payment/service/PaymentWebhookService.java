@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -149,7 +151,7 @@ public class PaymentWebhookService {
 
             if (paidAmount == null) {
                 log.error("웹훅 PortOne 응답 amount null paymentId={}", paymentId);
-                failureService.markFailed(payment.getOrderId());
+                failureService.markFailed(payment.getOrderId(), PaymentErrorReason.AMOUNT_NULL);
                 failureService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
                 return;
@@ -158,7 +160,7 @@ public class PaymentWebhookService {
             if (!payment.getAmount().equals(paidAmount)) {
                 log.error("웹훅 금액 불일치 paymentId={} expected={} actual={}",
                         paymentId, payment.getAmount(), paidAmount);
-                failureService.markFailed(payment.getOrderId());
+                failureService.markFailed(payment.getOrderId(), PaymentErrorReason.AMOUNT_MISMATCH);
                 failureService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
                 return;  // 실패 처리 완료 — throw 시 non-200으로 PortOne 불필요 재전송 유발
@@ -174,14 +176,14 @@ public class PaymentWebhookService {
 
         } else if ("CANCELLED".equals(status)) {
             log.info("결제창 사용자 취소 웹훅 수신 paymentId={}", paymentId);
-            failureService.markFailed(payment.getOrderId());
+            failureService.markFailed(payment.getOrderId(), PaymentErrorReason.USER_CANCELLED);
             failureService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
 
         } else {
             // FAILED 또는 미지원 상태 — 결제 실패 처리
             log.info("결제 실패 웹훅 수신 paymentId={} status={}", paymentId, status);
-            failureService.markFailed(payment.getOrderId());
+            failureService.markFailed(payment.getOrderId(), PaymentErrorReason.WEBHOOK_FAILED);
             failureService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
         }

@@ -1,8 +1,6 @@
 package com.rocketcrew.pocat.domain.payment.service;
 
-import com.rocketcrew.pocat.domain.payment.event.PaymentBillingRequestedEvent;
-import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
-import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.event.PaymentBaseEvent;
 import com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,17 +16,7 @@ public class PaymentEventHandler {
     private final PaymentEventProducer paymentEventProducer;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handle(PaymentBillingRequestedEvent event) {
-        paymentEventProducer.sendBillingRequested(event);
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handle(PaymentCompletedEvent event) {
-        paymentEventProducer.sendPaymentCompleted(event);
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handle(PaymentFailedEvent event) {
-        paymentEventProducer.sendPaymentFailed(event);
+    public void handle(PaymentBaseEvent event) {
+        paymentEventProducer.publish(event);
     }
 }

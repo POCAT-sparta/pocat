@@ -23,6 +23,8 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import com.rocketcrew.pocat.support.TestCustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +60,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -81,6 +85,12 @@ class AuctionControllerTest {
     @Mock
     AuctionRankingService rankingService;
 
+    @Mock
+    RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    RateLimitProperties rateLimitProperties;
+
     private CustomUserDetails userDetails;
     private CustomUserDetails adminDetails;
 
@@ -91,6 +101,8 @@ class AuctionControllerTest {
     void setUp() {
         userDetails = new TestCustomUserDetails(1L, "USER");
         adminDetails = new TestCustomUserDetails(1L, "ADMIN");
+
+        lenient().when(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).thenReturn(true);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -152,6 +164,16 @@ class AuctionControllerTest {
     @Nested
     @DisplayName("GET /api/v1/auctions")
     class GetAuctions {
+
+        @Test
+        @DisplayName("실패: Rate Limit 초과 → 429 Too Many Requests")
+        void fail_429_rateLimitExceeded() throws Exception {
+            given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(false);
+
+            mockMvc.perform(get("/api/v1/auctions"))
+                    .andExpect(status().isTooManyRequests());
+            verifyNoInteractions(queryService);
+        }
 
         @Test
         @DisplayName("성공: 경매 목록 반환")

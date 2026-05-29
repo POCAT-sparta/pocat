@@ -4,7 +4,9 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
-import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.event.AutoPaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.event.DirectPaymentFailedEvent;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -15,6 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+
+import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import static com.rocketcrew.pocat.domain.payment.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 /**
  * 결제 실패 상태를 독립 트랜잭션으로 저장하는 서비스.
@@ -31,6 +38,8 @@ public class FailureService {
     private final StringRedisTemplate redisTemplate;
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventWriter outboxEventWriter;
+
 
     // TODO : 실패 시 왜 실패했는지 받을 수 있어야 함 PORTONE API 확인 필요.
     // TODO : LocalDateTime.now().plusHours(24) -> order.getExpireAt 으로 변경해야 함: 승현님 작업 완료후 진행
@@ -40,11 +49,13 @@ public class FailureService {
         order.failPayment();
         scheduleExpiry(orderId, LocalDateTime.now().plusHours(24));
 
-        eventPublisher.publishEvent(new PaymentFailedEvent(
+        AutoPaymentFailedEvent event = new AutoPaymentFailedEvent(
                 order.getOrderUid(),
                 order.getBuyerId(),
-                "자동결제 실패"
-        ));
+                order.getSellerId()
+        );
+        outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+        eventPublisher.publishEvent(event);
     }
 
     /**
@@ -73,26 +84,30 @@ public class FailureService {
      */
     // TODO : 만료시간이 실제로 지났는지 검사를 해야함. expireAt 이 생기면 진행
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(Long orderId, String reason) {
-        orderRepository.findById(orderId)
-                .filter(o -> o.getStatus() == OrderStatus.PAYMENT_PENDING)
-                .ifPresent(order -> {
-                    order.failPayment();
-                    log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
-                    eventPublisher.publishEvent(new PaymentFailedEvent(
-                            order.getOrderUid(),
-                            order.getBuyerId(),
-                            reason
-                    ));
-                });
+    public void markFailed(Long orderId, PaymentErrorReason reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+            order.failPayment();
+            log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
+            DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
+                    order.getOrderUid(),
+                    order.getBuyerId(),
+                    order.getSellerId()
+            );
+            outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+            eventPublisher.publishEvent(event);
+        }
     }
+
+    /**
      * 결제가 성공적으로 완료되거나 이미 즉시 실패 처리될 때 Redis 키를 정리한다.
      * TTL 만료 경로(onMessage)에서는 TTL키가 이미 사라진 상태이므로 shadow키만 추가 삭제한다.
      */
     public void cancelExpiry(Long orderId) {
         redisTemplate.delete(PAYMENT_EXPIRY_KEY_PREFIX + orderId);
         redisTemplate.delete(PAYMENT_SHADOW_KEY_PREFIX + orderId);
-
     }
 
 }

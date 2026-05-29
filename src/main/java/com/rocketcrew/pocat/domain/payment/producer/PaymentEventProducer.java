@@ -1,9 +1,8 @@
 package com.rocketcrew.pocat.domain.payment.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.payment.event.PaymentBillingRequestedEvent;
-import com.rocketcrew.pocat.domain.payment.event.PaymentCompletedEvent;
-import com.rocketcrew.pocat.domain.payment.event.PaymentFailedEvent;
+import com.rocketcrew.pocat.domain.payment.event.PaymentBaseEvent;
+import com.rocketcrew.pocat.global.event.BaseEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
 import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -13,8 +12,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PaymentEventProducer extends BaseEventProducer {
 
-
-    private static final String TOPIC = "payment";
+    public static final String PAYMENT_TOPIC = "payment";
 
     public PaymentEventProducer(
             @Qualifier("paymentKafkaTemplate") KafkaTemplate<String, String> kafkaTemplate,
@@ -23,18 +21,7 @@ public class PaymentEventProducer extends BaseEventProducer {
         super(kafkaTemplate, objectMapper, outboxRepository);
     }
 
-    // 자동결제 요청
-    public void sendBillingRequested(PaymentBillingRequestedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
-    }
-
-    // 결제 완료
-    public void sendPaymentCompleted(PaymentCompletedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
-    }
-
-    // 결제 실패
-    public void sendPaymentFailed(PaymentFailedEvent event) {
-        send(TOPIC, event.getOrderUid(), event);
+    public void publish(PaymentBaseEvent event) {
+        send(PAYMENT_TOPIC, event.getOrderUid(), event.getOutboxId(), event);
     }
 }

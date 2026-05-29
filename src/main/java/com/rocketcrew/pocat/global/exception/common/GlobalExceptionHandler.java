@@ -159,6 +159,15 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    // 429 - Resilience4j Rate Limit 초과
+    @ExceptionHandler(io.github.resilience4j.ratelimiter.RequestNotPermitted.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleRequestNotPermitted(
+            io.github.resilience4j.ratelimiter.RequestNotPermitted e) {
+        ErrorCode errorCode = ErrorCode.RATE_LIMIT_EXCEEDED;
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponseDto.error(errorCode.name(), errorCode.getMessage()));
+    }
+
     // 500 - 그 외 모든 예외
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponseDto<Void>> handleException(Exception ex) {

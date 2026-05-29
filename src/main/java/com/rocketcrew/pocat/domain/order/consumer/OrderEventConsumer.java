@@ -69,7 +69,7 @@ public class OrderEventConsumer {
 
         // 자동결제 요청 이벤트 발행 (멱등성은 payment 도메인에서 보장)
         try {
-            paymentEventProducer.sendBillingRequested(
+            paymentEventProducer.publish(
                     new PaymentBillingRequestedEvent(
                             event.getOrderUid(),
                             event.getBuyerId(),

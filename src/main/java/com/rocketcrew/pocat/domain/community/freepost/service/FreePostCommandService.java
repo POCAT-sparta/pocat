@@ -10,8 +10,11 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.cache.CacheNames;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -26,8 +29,15 @@ public class FreePostCommandService {
     private final UserRepository userRepository;
     private final PostCommentCacheEvictor postCommentCacheEvictor;
     private final FreePostDetailCacheService freePostDetailCacheService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:post:" + userId,
+                rateLimitProperties.getPostLimit(),
+                rateLimitProperties.getPostWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         User user = findUserOrThrow(userId);
         FreePost freePost = FreePost.builder()
                 .userId(userId)
