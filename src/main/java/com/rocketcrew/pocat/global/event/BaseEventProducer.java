@@ -17,6 +17,14 @@ public abstract class BaseEventProducer {
     private final ObjectMapper objectMapper;
     private final OutboxRepository outboxRepository;
 
+    /**
+     * outboxId 없이 Kafka만 발행하는 편의 오버로드 (아웃박스 상태 업데이트 불필요한 경우).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    protected void send(String topic, String key, BaseEvent event) {
+        send(topic, key, null, event);
+    }
+
     // REQUIRES_NEW를 사용하여 이미 커밋된 메인 트랜잭션과 별개로 아웃박스 상태를 업데이트합니다.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     protected void send(

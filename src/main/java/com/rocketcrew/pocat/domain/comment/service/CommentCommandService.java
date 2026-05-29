@@ -10,8 +10,11 @@ import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostReposit
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostCommentCountService;
 import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.CommentException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +29,15 @@ public class CommentCommandService {
     private final FreePostCommentCountService freePostCommentCountService;
     private final PostCommentCacheEvictor postCommentCacheEvictor;
     private final FreePostDetailCacheService freePostDetailCacheService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     public CommentResponse createComment(Long userId, CreateCommentRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:comment:" + userId,
+                rateLimitProperties.getCommentLimit(),
+                rateLimitProperties.getCommentWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         if (!freePostRepository.existsById(request.freePostId())) {
             throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
         }

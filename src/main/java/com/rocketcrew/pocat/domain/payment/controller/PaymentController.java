@@ -6,13 +6,22 @@ import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import com.rocketcrew.pocat.global.util.HttpRequestUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,6 +31,9 @@ public class PaymentController {
     private final PaymentQueryService paymentQueryService;
     private final PaymentWebhookService paymentWebhookService;
     private final PaymentApplicationService paymentApplicationService;
+
+    @Value("${portone.webhook-allowed-ips:}")
+    private String allowedIpsConfig;
 
     /** 6.1 결제 요청 — PG 직접결제 레코드 생성 */
     @PostMapping("/v1/payments")
@@ -60,7 +72,15 @@ public class PaymentController {
     @PostMapping("/v1/payments/webhook")
     public ResponseEntity<ApiResponseDto<Void>> handleWebhook(
             @RequestHeader(value = "X-PortOne-Signature", required = false) String signature,
-            @RequestBody byte[] rawBody) {
+            @RequestBody byte[] rawBody,
+            HttpServletRequest request) {
+        if (StringUtils.hasText(allowedIpsConfig)) {
+            String clientIp = HttpRequestUtils.resolveClientIp(request);
+            List<String> allowed = Arrays.asList(allowedIpsConfig.split(","));
+            if (allowed.stream().noneMatch(ip -> ip.trim().equals(clientIp))) {
+                throw new PaymentException(ErrorCode.WEBHOOK_IP_FORBIDDEN);
+            }
+        }
         paymentWebhookService.handleWebhook(signature, rawBody);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
