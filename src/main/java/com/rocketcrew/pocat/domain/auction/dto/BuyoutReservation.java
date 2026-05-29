@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.auction.service;
+package com.rocketcrew.pocat.domain.auction.dto;
 
 public record BuyoutReservation(
         Long auctionId,
