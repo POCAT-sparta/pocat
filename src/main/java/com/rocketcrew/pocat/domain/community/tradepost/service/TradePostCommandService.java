@@ -10,7 +10,10 @@ import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepos
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.global.cache.CacheNames;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
@@ -24,8 +27,15 @@ public class TradePostCommandService {
 
     private final TradePostRepository tradePostRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     public CreateTradePost createPost(Long userId, CreateTradePostRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:post:" + userId,
+                rateLimitProperties.getPostLimit(),
+                rateLimitProperties.getPostWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         TradePost tradePost = TradePost.builder()
                 .userId(userId)
                 .title(request.title())
