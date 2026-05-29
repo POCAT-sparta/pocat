@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.payment.event;
+package com.rocketcrew.pocat.domain.payment.client.out.kafka.event;
 
 import com.rocketcrew.pocat.global.event.BaseEvent;
 import lombok.Getter;

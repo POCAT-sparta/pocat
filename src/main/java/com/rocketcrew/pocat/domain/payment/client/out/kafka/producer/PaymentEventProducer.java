@@ -1,8 +1,7 @@
-package com.rocketcrew.pocat.domain.payment.producer;
+package com.rocketcrew.pocat.domain.payment.client.out.kafka.producer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.payment.event.PaymentBaseEvent;
-import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentBaseEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
 import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.beans.factory.annotation.Qualifier;

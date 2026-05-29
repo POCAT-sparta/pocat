@@ -5,7 +5,7 @@ import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import com.rocketcrew.pocat.domain.auction.service.AuctionExpirationRedisSubscriber;
 import com.rocketcrew.pocat.domain.notification.service.NotificationRedisSubscriber;
-import com.rocketcrew.pocat.domain.payment.service.PaymentExpiryEventListener;
+import com.rocketcrew.pocat.domain.payment.client.in.listener.PaymentExpiryEventListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

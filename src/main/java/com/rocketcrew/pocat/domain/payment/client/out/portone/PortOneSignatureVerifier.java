@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.payment.client;
+package com.rocketcrew.pocat.domain.payment.client.out.portone;
 
 import com.rocketcrew.pocat.global.config.PortOneProperties;
 import lombok.RequiredArgsConstructor;

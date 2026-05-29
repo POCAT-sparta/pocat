@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.payment.service;
+package com.rocketcrew.pocat.domain.payment.client.in.portone;
 
 import com.rocketcrew.pocat.domain.payment.entity.WebhookEvent;
 import com.rocketcrew.pocat.domain.payment.entity.WebhookEventStatus;

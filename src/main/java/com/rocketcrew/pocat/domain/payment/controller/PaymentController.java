@@ -4,7 +4,7 @@ import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
-import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
+import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
@@ -29,7 +29,7 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentQueryService paymentQueryService;
-    private final PaymentWebhookService paymentWebhookService;
+    private final PortOneWebhookService portOneWebhookService;
     private final PaymentApplicationService paymentApplicationService;
 
     @Value("${portone.webhook-allowed-ips:}")
@@ -81,7 +81,7 @@ public class PaymentController {
                 throw new PaymentException(ErrorCode.WEBHOOK_IP_FORBIDDEN);
             }
         }
-        paymentWebhookService.handleWebhook(signature, rawBody);
+        portOneWebhookService.handleWebhook(signature, rawBody);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 }
