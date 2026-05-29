@@ -18,14 +18,14 @@ public class PaymentKafkaConsumer {
     private final ObjectMapper objectMapper;
 
     @KafkaListener(
-            topics = "payment",
+            topics = "order",
             groupId = "payment-billing-group",
             containerFactory = "paymentKafkaListenerContainerFactory"
     )
     public void consume(String message, Acknowledgment acknowledgment) {
         try {
             PaymentEvent event = objectMapper.readValue(message, PaymentEvent.class);
-            if (event.getEventType().equals("payment.billing.requested")) {
+            if (event.getEventType().equals("order.created")) {
                 paymentApplicationService.autoPayment(event.getOrderUid());
             }
             acknowledgment.acknowledge();
