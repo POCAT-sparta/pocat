@@ -7,16 +7,17 @@ import com.rocketcrew.pocat.domain.auction.event.AuctionBuyoutCompletedEvent;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
-import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
+import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
@@ -64,6 +65,12 @@ class AuctionBuyoutServiceTest {
     AuctionBidRepository auctionBidRepository;
 
     @Mock
+    OrderRepository orderRepository;
+
+    @Mock
+    PaymentRepository paymentRepository;
+
+    @Mock
     OrderCommandService orderCommandService;
 
     @Mock
@@ -89,6 +96,8 @@ class AuctionBuyoutServiceTest {
         buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository);
         service = new AuctionBuyoutService(
                 auctionRepository,
+                orderRepository,
+                paymentRepository,
                 orderCommandService,
                 orderQueryService,
                 userQueryService,
@@ -169,6 +178,9 @@ class AuctionBuyoutServiceTest {
         );
         given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(payment);
         given(orderQueryService.findByOrderid(20L)).willReturn(order);
+        given(auctionBidRepository.findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+                10L, 1L, BidStatus.WON
+        )).willReturn(Optional.empty());
         given(auctionBidRepository.findAllByAuctionId(10L)).willReturn(List.of(previousLeadingBid));
         given(auctionBidRepository.save(any(AuctionBid.class))).willAnswer(invocation -> {
             AuctionBid bid = invocation.getArgument(0);
@@ -202,14 +214,7 @@ class AuctionBuyoutServiceTest {
         verify(rLock).unlock();
 
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(eventPublisher, times(2)).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getAllValues()).anySatisfy(publishedEvent -> {
-            assertThat(publishedEvent).isInstanceOf(BidOutbidEvent.class);
-            BidOutbidEvent bidEvent = (BidOutbidEvent) publishedEvent;
-            assertThat(bidEvent.getAuctionId()).isEqualTo(10L);
-            assertThat(bidEvent.getPreviousBidderId()).isEqualTo(4L);
-            assertThat(bidEvent.getCurrentHighestPrice()).isEqualTo(10000L);
-        });
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
         assertThat(eventCaptor.getAllValues()).anySatisfy(publishedEvent -> {
             assertThat(publishedEvent).isInstanceOf(AuctionBuyoutCompletedEvent.class);
         });

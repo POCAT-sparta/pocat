@@ -5,13 +5,15 @@ import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.event.AuctionBuyoutCompletedEvent;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
-import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
-import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
+import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
+import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -39,6 +41,8 @@ public class AuctionBuyoutService {
     private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionRepository auctionRepository;
+    private final OrderRepository orderRepository;
+    private final PaymentRepository paymentRepository;
     private final OrderCommandService orderCommandService;
     private final OrderQueryService orderQueryService;
     private final UserQueryService userQueryService;
@@ -76,11 +80,46 @@ public class AuctionBuyoutService {
                 reservation,
                 buyerId,
                 order,
-                this::publishBidOutbidEventIfNeeded,
                 this::publishBuyoutCompletedEvent
         );
 
         return BuyoutAuctionResponse.of(completion.auction(), completion.buyoutBid(), order, paymentResponse);
+    }
+
+    public boolean recoverStalePaymentPendingAuction(Long auctionId) {
+        return orderRepository.findByAuctionIdAndBidderRank(auctionId, 1)
+                .map(order -> recoverStaleBuyoutWithOrder(auctionId, order))
+                .orElseGet(() -> buyoutTransactionService.restoreAuctionAfterPaymentFailure(auctionId));
+    }
+
+    private boolean recoverStaleBuyoutWithOrder(Long auctionId, Order order) {
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+        if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED
+                || (payment != null && payment.getStatus() == PaymentStatus.COMPLETED)) {
+            BuyoutReservation reservation = new BuyoutReservation(
+                    auctionId,
+                    order.getCardId(),
+                    order.getSellerId(),
+                    order.getFinalPrice()
+            );
+            buyoutTransactionService.completeBuyout(
+                    reservation,
+                    order.getBuyerId(),
+                    order,
+                    this::publishBuyoutCompletedEvent
+            );
+            return true;
+        }
+
+        if (payment == null
+                || payment.getStatus() == PaymentStatus.FAILED
+                || order.getStatus() == OrderStatus.AUTO_PAYMENT_FAILED
+                || order.getStatus() == OrderStatus.DIRECT_PAYMENT_FAILED
+                || order.getStatus() == OrderStatus.CANCELLED) {
+            return buyoutTransactionService.restoreAuctionAfterPaymentFailure(auctionId);
+        }
+
+        return false;
     }
 
     private BuyoutReservation reserveBuyoutWithLock(Long auctionId, User buyer) {
@@ -154,23 +193,6 @@ public class AuctionBuyoutService {
 
     private void publishAuctionEvent(Long auctionId, BaseEvent event) {
         outboxEventWriter.write("auction", String.valueOf(auctionId), event);
-        eventPublisher.publishEvent(event);
-    }
-
-    void publishBidOutbidEventIfNeeded(Long auctionId, Long previousHighestBidderId,
-                                       Long currentHighestPrice) {
-        if (previousHighestBidderId == null) {
-            return;
-        }
-        publishBidEvent(auctionId, new BidOutbidEvent(
-                auctionId,
-                previousHighestBidderId,
-                currentHighestPrice
-        ));
-    }
-
-    private void publishBidEvent(Long auctionId, BaseEvent event) {
-        outboxEventWriter.write("bid", String.valueOf(auctionId), event);
         eventPublisher.publishEvent(event);
     }
 

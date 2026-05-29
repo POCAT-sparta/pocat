@@ -48,11 +48,13 @@ public class AuctionBuyoutTransactionService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void restoreAuctionAfterPaymentFailure(Long auctionId) {
+    public boolean restoreAuctionAfterPaymentFailure(Long auctionId) {
         Auction auction = findAuction(auctionId);
         if (auction.getStatus() == AuctionStatus.PAYMENT_PENDING) {
             auction.restoreActiveFromPaymentPending();
+            return true;
         }
+        return false;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -60,7 +62,6 @@ public class AuctionBuyoutTransactionService {
             BuyoutReservation reservation,
             Long buyerId,
             Order order,
-            BidOutbidEventPublisher bidOutbidEventPublisher,
             BuyoutCompletedEventPublisher buyoutCompletedEventPublisher
     ) {
         Auction auction = findAuction(reservation.auctionId());
@@ -68,24 +69,12 @@ public class AuctionBuyoutTransactionService {
             throw new AuctionException(ErrorCode.AUCTION_INVALID_STATUS_TRANSITION);
         }
 
-        AuctionBid buyoutBid = auctionBidRepository.save(AuctionBid.builder()
-                .auctionId(auction.getId())
-                .userId(buyerId)
-                .bidPrice(reservation.buyoutPrice())
-                .status(BidStatus.LEADING)
-                .build());
-        buyoutBid.markWon();
-
+        AuctionBid buyoutBid = findOrCreateWonBuyoutBid(auction, buyerId, reservation.buyoutPrice());
         Long previousHighestBidderId = auction.getHighestBidderId();
 
         markExistingBidsLost(auction, buyoutBid.getId());
         auction.updateHighestBid(reservation.buyoutPrice(), buyerId);
         auction.endAfterPaymentPending();
-        bidOutbidEventPublisher.publish(
-                auction.getId(),
-                previousHighestBidderId,
-                reservation.buyoutPrice()
-        );
         buyoutCompletedEventPublisher.publish(
                 auction,
                 order,
@@ -94,6 +83,20 @@ public class AuctionBuyoutTransactionService {
         );
 
         return new BuyoutCompletion(auction, buyoutBid);
+    }
+
+    private AuctionBid findOrCreateWonBuyoutBid(Auction auction, Long buyerId, Long buyoutPrice) {
+        return auctionBidRepository.findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+                        auction.getId(),
+                        buyerId,
+                        BidStatus.WON
+                )
+                .orElseGet(() -> auctionBidRepository.save(AuctionBid.builder()
+                        .auctionId(auction.getId())
+                        .userId(buyerId)
+                        .bidPrice(buyoutPrice)
+                        .status(BidStatus.WON)
+                        .build()));
     }
 
     private Auction findAuction(Long auctionId) {
@@ -113,11 +116,6 @@ public class AuctionBuyoutTransactionService {
                 bid.markLost();
             }
         }
-    }
-
-    @FunctionalInterface
-    public interface BidOutbidEventPublisher {
-        void publish(Long auctionId, Long previousHighestBidderId, Long currentHighestPrice);
     }
 
     @FunctionalInterface
