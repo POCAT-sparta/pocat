@@ -7,7 +7,7 @@ import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
-import com.rocketcrew.pocat.domain.payment.service.PaymentWebhookService;
+import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
@@ -37,7 +37,6 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -57,7 +56,7 @@ class PaymentControllerTest {
     private PaymentQueryService paymentQueryService;
 
     @Mock
-    private PaymentWebhookService paymentWebhookService;
+    private PortOneWebhookService portOneWebhookService;
 
     private CustomUserDetails userDetails;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -207,7 +206,7 @@ class PaymentControllerTest {
         @DisplayName("현재 미구현: PortOne 미연동 시 503 반환 (PORTONE_NOT_INTEGRATED)")
         void success_200() throws Exception {
             willThrow(new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED))
-                    .given(paymentWebhookService).handleWebhook(anyString(), any(byte[].class));
+                    .given(portOneWebhookService).handleWebhook(anyString(), any(byte[].class));
 
             // PORTONE_NOT_INTEGRATED = 503
             mockMvc.perform(post("/api/v1/payments/webhook")
@@ -222,7 +221,7 @@ class PaymentControllerTest {
         @DisplayName("실패: 400 — 빈 body (WEBHOOK_EMPTY_BODY)")
         void fail_400_emptyBody() throws Exception {
             willThrow(new PaymentException(ErrorCode.WEBHOOK_EMPTY_BODY))
-                    .given(paymentWebhookService).handleWebhook(anyString(), any(byte[].class));
+                    .given(portOneWebhookService).handleWebhook(anyString(), any(byte[].class));
 
             mockMvc.perform(post("/api/v1/payments/webhook")
                             .header("X-PortOne-Signature", "test-sig")
@@ -236,7 +235,7 @@ class PaymentControllerTest {
         @DisplayName("실패: X-PortOne-Signature 헤더 누락 → 403 FORBIDDEN")
         void fail_missingSignatureHeader() throws Exception {
             willThrow(new PaymentException(ErrorCode.WEBHOOK_SIGNATURE_INVALID))
-                    .given(paymentWebhookService).handleWebhook(isNull(), any(byte[].class));
+                    .given(portOneWebhookService).handleWebhook(isNull(), any(byte[].class));
 
             mockMvc.perform(post("/api/v1/payments/webhook")
                             .contentType(MediaType.APPLICATION_JSON)

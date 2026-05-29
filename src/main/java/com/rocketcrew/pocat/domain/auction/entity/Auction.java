@@ -123,6 +123,21 @@ public class Auction extends BaseEntity {
         this.status = AuctionStatus.ENDED;
     }
 
+    public void markPaymentPending() {
+        validateActive();
+        this.status = AuctionStatus.PAYMENT_PENDING;
+    }
+
+    public void restoreActiveFromPaymentPending() {
+        validatePaymentPending();
+        this.status = AuctionStatus.ACTIVE;
+    }
+
+    public void endAfterPaymentPending() {
+        validatePaymentPending();
+        this.status = AuctionStatus.ENDED;
+    }
+
     // 입찰자가 없는 경매를 유찰 상태로 전환한다.
     public void markNoBidder() {
         validateActive();
@@ -145,6 +160,12 @@ public class Auction extends BaseEntity {
     private void validateActive() {
         if (this.status != AuctionStatus.ACTIVE) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
+        }
+    }
+
+    private void validatePaymentPending() {
+        if (this.status != AuctionStatus.PAYMENT_PENDING) {
+            throw new AuctionException(ErrorCode.AUCTION_INVALID_STATUS_TRANSITION);
         }
     }
 

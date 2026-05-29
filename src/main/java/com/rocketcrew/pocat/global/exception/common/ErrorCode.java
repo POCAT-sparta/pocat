@@ -89,6 +89,7 @@ public enum ErrorCode {
     PORTONE_INVALID_PAID_AT(HttpStatus.BAD_GATEWAY, "PortOne 응답의 paidAt 형식이 올바르지 않습니다."),
     BILLING_PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "자동 결제가 정상적으로 진행되지 않았습니다."),
     PAYMENT_STATUS_NOT_PAID(HttpStatus.BAD_REQUEST, "PortOne 결제 상태가 PAID가 아닙니다."),
+    PORTONE_NETWORK_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PortOne 결제 네트워크 오류"),
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -143,6 +144,18 @@ public class GlobalExceptionHandler {
                 .body(ApiResponseDto.error(
                         ErrorCode.INVALID_INPUT.name(),
                         ex.getMessage()
+                ));
+    }
+
+    // 400 - path variable/request parameter 타입 변환 실패
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponseDto.error(
+                        ErrorCode.INVALID_INPUT.name(),
+                        ErrorCode.INVALID_INPUT.getMessage()
                 ));
     }
 

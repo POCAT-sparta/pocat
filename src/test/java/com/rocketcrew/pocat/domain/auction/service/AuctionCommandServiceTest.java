@@ -371,7 +371,7 @@ class AuctionCommandServiceTest {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
 
             // when
-            AdminCancelAuctionResponse response = service.cancelAuction(1L, 1L, request);
+            AdminCancelAuctionResponse response = service.adminCancelAuction(1L, 1L, request);
 
             // then
             assertThat(response.status()).isEqualTo(AuctionStatus.CANCELLED);
@@ -395,7 +395,7 @@ class AuctionCommandServiceTest {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
 
             // when / then
-            assertThatThrownBy(() -> service.cancelAuction(1L, 999L, request))
+            assertThatThrownBy(() -> service.adminCancelAuction(1L, 999L, request))
                     .isInstanceOf(AuctionException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_NOT_FOUND);
         }
@@ -409,7 +409,7 @@ class AuctionCommandServiceTest {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("   ");
 
             // when / then
-            assertThatThrownBy(() -> service.cancelAuction(1L, 1L, request))
+            assertThatThrownBy(() -> service.adminCancelAuction(1L, 1L, request))
                     .isInstanceOf(AuctionException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_REASON_REQUIRED);
         }
@@ -423,7 +423,7 @@ class AuctionCommandServiceTest {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
 
             // when / then
-            assertThatThrownBy(() -> service.cancelAuction(1L, 1L, request))
+            assertThatThrownBy(() -> service.adminCancelAuction(1L, 1L, request))
                     .isInstanceOf(AuctionException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_CANNOT_CANCEL);
         }
@@ -437,7 +437,7 @@ class AuctionCommandServiceTest {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
 
             // when / then
-            assertThatThrownBy(() -> service.cancelAuction(1L, 1L, request))
+            assertThatThrownBy(() -> service.adminCancelAuction(1L, 1L, request))
                     .isInstanceOf(AuctionException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_CANNOT_CANCEL);
         }
@@ -452,7 +452,7 @@ class AuctionCommandServiceTest {
             AdminCancelAuctionRequest request = new AdminCancelAuctionRequest("정책 위반");
 
             // when / then
-            assertThatThrownBy(() -> service.cancelAuction(1L, 1L, request))
+            assertThatThrownBy(() -> service.adminCancelAuction(1L, 1L, request))
                     .isInstanceOf(AuctionException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_LOCK_FAILED);
         }

@@ -3,12 +3,15 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
-import com.rocketcrew.pocat.domain.payment.client.PortOneClient;
-import com.rocketcrew.pocat.domain.payment.client.PortOnePaymentResponse;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
-import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
+import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -20,14 +23,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentApplicationService {
 
-    private final PortOneClient portOneClient;
+    private final PortOneClientService portOneClientService;
     private final FailureService failureService;
     private final UserRepository userRepository;
 
@@ -58,18 +60,10 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
         }
 
-        // 이미 PENDING 레코드가 있으면 기존 paymentUid 반환 (중복 방지 / 멱등성)
-        Optional<Payment> existing = paymentQueryService.findByOrderIdAndStatus(
-                request.orderId(), PaymentStatus.PENDING);
-        if (existing.isPresent()) {
-            return PaymentResponse.from(existing.get());
-        }
-
-        Payment payment = paymentCommandService.createPayment(order);
+        Payment payment = paymentCommandService.createPayment(order, PaymentType.PG_DIRECT);
         return PaymentResponse.from(payment);
     }
 
-    // 즉시구매, 자동 결제 둘다 이거 호출하면 됨.
     public PaymentResponse autoPayment(Long orderId) {
         Order order = orderQueryService.findByOrderid(orderId);
 
@@ -84,29 +78,36 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
 
-        Payment payment = paymentCommandService.createPayment(order);
+        Payment payment = paymentCommandService.createPayment(order , PaymentType.BILLING_KEY);
 
-        PortOnePaymentResponse response = portOneClient.attemptBillingKeyPayment(
+        PortOnePaymentResponse response = portOneClientService.attemptBillingKeyPayment(
                 payment.getPaymentUid(), billingKey, payment.getAmount()
         );
 
-        if (!"PAID".equals(response.status())) {
-            failureService.persistBillingKeyFailure(payment, order, orderId);
+        // 네트워크 에러, 대기, 준비 건은 3번 재시도 하여 데이터 조회
+        if(PortOneStatus.NETWORK_ERROR.equals(response.status())
+                || PortOneStatus.READY.equals(response.status())
+                || PortOneStatus.PAY_PENDING.equals(response.status())
+        ) {
+            response = attemptWithRetry(payment.getPaymentUid());
+        }
+
+        // 이후 성공이 아니면 실패처리
+        if (!PortOneStatus.PAID.equals(response.status())) {
+            failureService.persistBillingKeyFailure(payment, order);
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
+        // 금액이 맞지 않으면 취소
         if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
-            // TODO : 단순 자동결제 실패 가 아니라 환불처리가 필요할듯 이미 PAID 결제는 완료됨.
-            log.error("자동결제 금액 불일치 orderId={} expected={} actual={}",
-                    orderId, payment.getAmount(), response.amount());
-            failureService.persistBillingKeyFailure(payment, order, orderId);
+            cancelPayment(payment.getPaymentUid(),response.amount());
+            failureService.persistBillingKeyFailure(payment, order);
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
         paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
         return PaymentResponse.from(payment);
     }
-
     /**
      * 6.2 결제 확정 요청 — Client Confirm 경로
      * 클라이언트가 PortOne SDK 결제 완료 후 서버에 확정을 요청.
@@ -123,23 +124,36 @@ public class PaymentApplicationService {
 
         if (payment.isFinalized()) return PaymentResponse.from(payment);
 
-        PortOnePaymentResponse portOneClientPayment = portOneClient.getPayment(paymentUid);
+        PortOnePaymentResponse portOneClientPayment = portOneClientService.getPayment(paymentUid);
 
         payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
 
         if (payment.isFinalized()) return PaymentResponse.from(payment);
 
-        if (!"PAID".equals(portOneClientPayment.status())) {
+        if(PortOneStatus.NETWORK_ERROR.equals(portOneClientPayment.status())
+                || PortOneStatus.READY.equals(portOneClientPayment.status())
+                || PortOneStatus.PAY_PENDING.equals(portOneClientPayment.status())
+        ) {
+            portOneClientPayment = attemptWithRetry(payment.getPaymentUid());
+        }
+
+        if (!PortOneStatus.PAID.equals(portOneClientPayment.status())) {
+            payment.fail();
+            if(order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+                failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+            }
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
-        if (!payment.getAmount().equals(portOneClientPayment.amount())) {
-            // TODO : 단순 자동결제 실패 가 아니라 환불처리가 필요할듯 이미 PAID 결제는 완료됨.
+        if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
+            payment.fail();
+            if(order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+                failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+            }
+            cancelPayment(payment.getPaymentUid(),portOneClientPayment.amount());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
-
         paymentCommandService.completePayment(payment, order, portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
-
         return PaymentResponse.from(payment);
     }
 
@@ -147,5 +161,43 @@ public class PaymentApplicationService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
     }
+
+    private PortOneCancelResponse cancelPayment(String paymentUid, Long amount) {
+        // TODO : resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요
+        // TODO : 취소 메서드 수정 필요
+        return portOneClientService.cancelPayment(paymentUid, amount ,"결제금액 불일치");
+    }
+
+    private PortOnePaymentResponse attemptWithRetry(String paymentUid) {
+        int MAX_RETRY = 3;
+        for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
+            PortOnePaymentResponse response = portOneClientService.getPayment(paymentUid);
+
+            // 성공, 실패 확정 시 반환
+            if (PortOneStatus.PAID.equals(response.status())
+                    || PortOneStatus.FAILED.equals(response.status())
+                    || PortOneStatus.CANCELLED.equals(response.status())
+                    || PortOneStatus.PARTIAL_CANCELLED.equals(response.status())
+            ) {
+                return response;
+            }
+            log.warn("결제 미확정 상태 paymentUid={} status={} attempt={}/{}",
+                    paymentUid, response.status(), attempt, MAX_RETRY);
+
+            if (attempt < MAX_RETRY) sleepSeconds(attempt);
+        }
+
+        throw new PaymentException(ErrorCode.PORTONE_NETWORK_ERROR);
+    }
+
+    private void sleepSeconds(int seconds) {
+        try {
+            Thread.sleep(1000L * seconds);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, ie);
+        }
+    }
+
 
 }

@@ -50,6 +50,9 @@ public class AuctionBid extends BaseEntity {
 
     // 경매 종료 시 낙찰되지 않은 입찰을 패찰 상태로 전환한다.
     public void markLost() {
+        if (this.status == BidStatus.LOST) {
+            return;
+        }
         validateLosable();
         this.status = BidStatus.LOST;
     }
