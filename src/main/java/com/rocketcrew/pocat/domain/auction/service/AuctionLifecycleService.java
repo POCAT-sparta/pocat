@@ -149,6 +149,7 @@ public class AuctionLifecycleService {
     private void publishAuctionEndedEvent(Auction auction, List<Long> loserIds) {
         publishAuctionEvent(auction.getId(), new AuctionEndedEvent(
                 auction.getId(),
+                auction.getCardId(),
                 auction.getHighestBidderId(),
                 auction.getSellerId(),
                 loserIds,

@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,6 +56,12 @@ class AuctionLifecycleServiceTest {
     @Mock
     ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    AuctionEsIndexService auctionEsIndexService;
+
+    @Mock
+    OutboxEventWriter outboxEventWriter;
+
     @BeforeEach
     void setUp() throws InterruptedException {
         given(redissonClient.getLock(anyString())).willReturn(rLock);
@@ -96,6 +103,7 @@ class AuctionLifecycleServiceTest {
                 return false;
             }
             return endedEvent.getAuctionId().equals(1L)
+                    && endedEvent.getCardId().equals(1L)
                     && endedEvent.getWinnerId().equals(10L)
                     && endedEvent.getLoserIds().equals(List.of(20L));
         }));
@@ -121,6 +129,7 @@ class AuctionLifecycleServiceTest {
                 return false;
             }
             return endedEvent.getAuctionId().equals(1L)
+                    && endedEvent.getCardId().equals(1L)
                     && endedEvent.getWinnerId() == null
                     && endedEvent.getSellerId().equals(100L)
                     && endedEvent.getLoserIds().isEmpty()

@@ -14,7 +14,7 @@ public class AuctionActivatedEvent extends BaseEvent {
 
     // 경매 활성화 후 Kafka 발행과 Redis TTL 등록에 필요한 정보를 담는다.
     public AuctionActivatedEvent(Long auctionId, Long sellerId, LocalDateTime endedAt) {
-        super("auction.activated");
+        super(AuctionEventType.ACTIVATED);
         this.auctionId = auctionId;
         this.sellerId = sellerId;
         this.endedAt = endedAt;

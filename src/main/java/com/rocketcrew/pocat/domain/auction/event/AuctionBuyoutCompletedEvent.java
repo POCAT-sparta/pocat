@@ -18,7 +18,7 @@ public class AuctionBuyoutCompletedEvent extends BaseEvent {
     public AuctionBuyoutCompletedEvent(Long auctionId, Long orderId, String orderUid,
                                        Long buyerId, Long sellerId, Long cardId,
                                        Long finalPrice, Long previousHighestBidderId) {
-        super("auction.buyout.completed");
+        super(AuctionEventType.BUYOUT_COMPLETED);
         this.auctionId = auctionId;
         this.orderId = orderId;
         this.orderUid = orderUid;

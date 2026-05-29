@@ -17,7 +17,7 @@ public class AuctionCancelledEvent extends BaseEvent {
     public AuctionCancelledEvent(Long auctionId, Long sellerId,
                                  Long cancelledBy, String reason,
                                  List<Long> bidderIds) {
-        super("auction.cancelled");
+        super(AuctionEventType.CANCELLED);
         this.auctionId = auctionId;
         this.sellerId = sellerId;
         this.cancelledBy = cancelledBy;
