@@ -1,11 +1,11 @@
 package com.rocketcrew.pocat.global.config;
 
+import com.rocketcrew.pocat.domain.order.service.ExpiryEventListener;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisSubscriber;
 import com.rocketcrew.pocat.domain.notification.service.NotificationRedisSubscriber;
-import com.rocketcrew.pocat.domain.payment.client.in.listener.PaymentExpiryEventListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,12 +51,12 @@ public class RedisConfig {
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
             NotificationRedisSubscriber subscriber,
-            PaymentExpiryEventListener paymentExpiryEventListener,
+            ExpiryEventListener ExpiryEventListener,
             AuctionExpirationRedisSubscriber auctionExpirationRedisSubscriber) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.addMessageListener(subscriber, new PatternTopic("notification:*"));
-        container.addMessageListener(paymentExpiryEventListener, new PatternTopic("__keyevent@*__:expired"));
+        container.addMessageListener(ExpiryEventListener, new PatternTopic("__keyevent@*__:expired"));
         container.addMessageListener(auctionExpirationRedisSubscriber, new PatternTopic("__keyevent@*__:expired"));
         return container;
     }
