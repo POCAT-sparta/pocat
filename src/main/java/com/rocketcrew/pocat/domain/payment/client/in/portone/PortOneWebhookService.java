@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.payment.client.in.portone;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneSignatureVerifier;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
@@ -38,6 +39,7 @@ public class PortOneWebhookService {
     private final PortOneSignatureVerifier portOneSignatureVerifier;
     private final OrderQueryService orderQueryService;
     private final WebhookEventCommandService webhookEventCommandService;
+    private final SetExpireService expireService;
 
     /**
      * 6.4 PortOne Webhook 수신
@@ -154,7 +156,7 @@ public class PortOneWebhookService {
             if (paidAmount == null) {
                 log.error("웹훅 PortOne 응답 amount null paymentId={}", paymentId);
                 failureService.markFailed(payment.getOrderId(), PaymentErrorReason.AMOUNT_NULL);
-                failureService.cancelExpiry(payment.getOrderId());
+                expireService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
                 return;
             }
@@ -163,7 +165,7 @@ public class PortOneWebhookService {
                 log.error("웹훅 금액 불일치 paymentId={} expected={} actual={}",
                         paymentId, payment.getAmount(), paidAmount);
                 failureService.markFailed(payment.getOrderId(), PaymentErrorReason.AMOUNT_MISMATCH);
-                failureService.cancelExpiry(payment.getOrderId());
+                expireService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
                 return;  // 실패 처리 완료 — throw 시 non-200으로 PortOne 불필요 재전송 유발
 
@@ -179,14 +181,14 @@ public class PortOneWebhookService {
         } else if ("CANCELLED".equals(status)) {
             log.info("결제창 사용자 취소 웹훅 수신 paymentId={}", paymentId);
             failureService.markFailed(payment.getOrderId(), PaymentErrorReason.USER_CANCELLED);
-            failureService.cancelExpiry(payment.getOrderId());
+            expireService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
 
         } else {
             // FAILED 또는 미지원 상태 — 결제 실패 처리
             log.info("결제 실패 웹훅 수신 paymentId={} status={}", paymentId, status);
             failureService.markFailed(payment.getOrderId(), PaymentErrorReason.WEBHOOK_FAILED);
-            failureService.cancelExpiry(payment.getOrderId());
+            expireService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
         }
     }
