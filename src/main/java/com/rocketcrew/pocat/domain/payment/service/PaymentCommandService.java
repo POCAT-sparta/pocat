@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
+import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
@@ -23,17 +24,17 @@ import static com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.Paym
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class PaymentCommandService {
 
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
     private final PaymentRepository paymentRepository;
-    private final FailureService failureService;
     private final StringRedisTemplate redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxEventWriter;
+    private final SetExpireService setExpireService;
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createPayment(Order order, PaymentType paymentType) {
         Payment payment = Payment.builder()
                 .orderId(order.getId())
@@ -52,7 +53,7 @@ public class PaymentCommandService {
         order.completePayment();
         evictAvgPriceCache(order.getCardId());
 
-//        failureService.cancelExpiry(payment.getOrderId());
+        setExpireService.cancelExpiry(payment.getOrderId());
 
         PaymentCompletedEvent event = new PaymentCompletedEvent(
                 order.getOrderUid(),
