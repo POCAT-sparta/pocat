@@ -8,7 +8,6 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.card.document.CardDocument;
@@ -125,9 +124,12 @@ public class CardQueryService {
             List<Long> cardIds = documents.stream()
                     .map(doc -> Long.parseLong(doc.getId()))
                     .toList();
-            auctionCountMap = auctionRepository.findByCardIdInAndStatus(cardIds, AuctionStatus.ACTIVE)
+            auctionCountMap = auctionRepository.countGroupByCardId(cardIds, AuctionStatus.ACTIVE)
                     .stream()
-                    .collect(Collectors.groupingBy(Auction::getCardId, Collectors.counting()));
+                    .collect(Collectors.toMap(
+                            AuctionRepository.CardAuctionCountView::getCardId,
+                            AuctionRepository.CardAuctionCountView::getAuctionCount
+                    ));
         }
 
         final Map<Long, Long> countMap = auctionCountMap;
