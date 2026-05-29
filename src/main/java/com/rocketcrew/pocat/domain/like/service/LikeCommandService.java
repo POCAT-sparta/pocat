@@ -4,7 +4,10 @@ import com.rocketcrew.pocat.domain.like.dto.response.ToggleLikeResponse;
 import com.rocketcrew.pocat.domain.like.entity.Like;
 import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.LikeException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -27,8 +30,15 @@ public class LikeCommandService {
 
     private final LikeRepository likeRepository;
     private final RedissonClient redissonClient;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     public ToggleLikeResponse toggleLike(Long userId, Long auctionId) {
+        if (!redisRateLimiter.isAllowed("rate:user:like:" + userId,
+                rateLimitProperties.getLikeLimit(),
+                rateLimitProperties.getLikeWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         RLock lock = redissonClient.getLock(LIKE_LOCK_KEY_PREFIX + userId + ":" + auctionId);
         if (!acquireLock(lock)) {
             throw new LikeException(ErrorCode.LIKE_LOCK_FAILED);

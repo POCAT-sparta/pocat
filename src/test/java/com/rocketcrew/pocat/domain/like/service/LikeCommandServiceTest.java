@@ -2,6 +2,8 @@ package com.rocketcrew.pocat.domain.like.service;
 
 import com.rocketcrew.pocat.domain.like.repository.LikeRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,9 +41,14 @@ class LikeCommandServiceTest {
     @Mock
     private LikeRepository likeRepository;
 
-    // RedissonClient mock — @InjectMocks 가 필드 주입 시 사용하게 될 빈
     @Mock
     private RedissonClient redissonClient;
+
+    @Mock
+    private RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    private RateLimitProperties rateLimitProperties;
 
     // ---------------------------------------------------------------
     // T1-1: RedissonClient 필드 주입 확인 (리플렉션)

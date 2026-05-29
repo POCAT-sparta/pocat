@@ -91,6 +91,8 @@ rate-limit:
   comment-window-seconds: 60
   search-limit: 30
   search-window-seconds: 60
+  like-limit: 10
+  like-window-seconds: 60
 
 resilience4j:
   circuitbreaker:

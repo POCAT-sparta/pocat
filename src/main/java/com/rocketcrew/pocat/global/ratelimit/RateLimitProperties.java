@@ -20,4 +20,6 @@ public class RateLimitProperties {
     private long commentWindowSeconds = 60;
     private int searchLimit = 30;
     private long searchWindowSeconds = 60;
+    private int likeLimit = 10;
+    private long likeWindowSeconds = 60;
 }
