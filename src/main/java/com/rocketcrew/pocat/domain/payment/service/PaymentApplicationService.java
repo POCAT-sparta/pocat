@@ -148,13 +148,17 @@ public class PaymentApplicationService {
 
         if (!PortOneStatus.PAID.equals(portOneClientPayment.status())) {
             payment.fail();
-            failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+            if(order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+                failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+            }
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
         if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
             payment.fail();
-            failureService.markFailed(order.getId(), PaymentErrorReason.AMOUNT_MISMATCH);
+            if(order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+                failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+            }
             cancelPayment(payment.getPaymentUid(),portOneClientPayment.amount());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }

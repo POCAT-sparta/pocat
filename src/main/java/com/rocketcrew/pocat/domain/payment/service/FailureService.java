@@ -90,7 +90,7 @@ public class FailureService {
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
         // 스케줄러, ttl웹훅 어디서 호출해도 멱등하게 상태 처리를 해야함.
-        if (order.getStatus() == OrderStatus.PAYMENT_PENDING && order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+        if (order.getStatus() == OrderStatus.PAYMENT_PENDING) {
             order.failPayment();
             log.info("[OrderFailure] orderId={} reason={} → FAILED", orderId, reason);
             DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
