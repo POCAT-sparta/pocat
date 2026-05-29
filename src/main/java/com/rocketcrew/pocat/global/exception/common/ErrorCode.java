@@ -49,6 +49,7 @@ public enum ErrorCode {
     AUCTION_CANNOT_CANCEL(HttpStatus.CONFLICT, "취소할 수 없는 경매 상태입니다."),
     AUCTION_LOCK_FAILED(HttpStatus.CONFLICT, "다른 경매 처리가 진행 중입니다. 잠시 후 다시 시도해주세요."),
     AUCTION_INVALID_STATUS_TRANSITION(HttpStatus.CONFLICT, "변경할 수 없는 경매 상태입니다."),
+    AUCTION_EVENT_INVALID_PAYLOAD(HttpStatus.BAD_REQUEST, "경매 이벤트 필수 필드가 누락되었습니다."),
 
     // Bid
     BID_NOT_FOUND(HttpStatus.NOT_FOUND, "입찰을 찾을 수 없습니다."),
