@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.payment.client.out.kafka.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.order.consumer.OrderEvent;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +25,8 @@ public class PaymentKafkaConsumer {
     )
     public void consume(String message, Acknowledgment acknowledgment) {
         try {
-            PaymentEvent event = objectMapper.readValue(message, PaymentEvent.class);
-            if (event.getEventType().equals("order.created")) {
+            OrderEvent event = objectMapper.readValue(message, OrderEvent.class);
+            if ("order.created".equals(event.getEventType())) {
                 paymentApplicationService.autoPayment(event.getOrderUid());
             }
             acknowledgment.acknowledge();
