@@ -38,6 +38,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -98,6 +99,7 @@ public class AuctionController {
     }
 
     // 경매 목록 조회(관리자)
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/v1/admin/auctions")
     public ResponseEntity<ApiResponseDto<PageResponseDto<AdminAuctionResponse>>> getAdminAuctions(
             @RequestParam(required = false) String keyword,
@@ -139,6 +141,11 @@ public class AuctionController {
     public ResponseEntity<ApiResponseDto<CreateAuctionResponse>> createAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateAuctionRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:auction:" + userDetails.getUserId(),
+                rateLimitProperties.getAuctionLimit(),
+                rateLimitProperties.getAuctionWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         CreateAuctionResponse response = auctionCommandService.createAuction(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
@@ -150,6 +157,11 @@ public class AuctionController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,
             @Valid @RequestBody UpdateAuctionRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:auction:" + userDetails.getUserId(),
+                rateLimitProperties.getAuctionLimit(),
+                rateLimitProperties.getAuctionWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         UpdateAuctionResponse response = auctionCommandService.updateAuction(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
@@ -159,6 +171,11 @@ public class AuctionController {
     public ResponseEntity<ApiResponseDto<CancelAuctionResponse>> cancelAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId) {
+        if (!redisRateLimiter.isAllowed("rate:user:auction:" + userDetails.getUserId(),
+                rateLimitProperties.getAuctionLimit(),
+                rateLimitProperties.getAuctionWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         CancelAuctionResponse response = auctionCommandService.cancelAuction(userDetails.getUserId(), auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
@@ -167,11 +184,17 @@ public class AuctionController {
     public ResponseEntity<ApiResponseDto<BuyoutAuctionResponse>> buyoutAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId) {
+        if (!redisRateLimiter.isAllowed("rate:user:auction:" + userDetails.getUserId(),
+                rateLimitProperties.getAuctionLimit(),
+                rateLimitProperties.getAuctionWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         BuyoutAuctionResponse response = auctionBuyoutService.buyout(userDetails.getUserId(), auctionId);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
     // 경매 검수
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/v1/admin/auctions/{auctionId}/inspection")
     public ResponseEntity<ApiResponseDto<InspectAuctionResponse>> inspectAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -181,6 +204,7 @@ public class AuctionController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
     // 관리자 경매 취소
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/v1/admin/auctions/{auctionId}/cancel")
     public ResponseEntity<ApiResponseDto<AdminCancelAuctionResponse>> adminCancelAuction(
             @AuthenticationPrincipal CustomUserDetails userDetails,

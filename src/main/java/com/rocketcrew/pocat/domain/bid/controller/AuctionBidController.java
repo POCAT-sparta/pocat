@@ -9,6 +9,10 @@ import com.rocketcrew.pocat.domain.bid.service.AuctionBidCommandService;
 import com.rocketcrew.pocat.domain.bid.service.AuctionBidQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +38,8 @@ public class AuctionBidController {
 
     private final AuctionBidQueryService auctionBidQueryService;
     private final AuctionBidCommandService auctionBidCommandService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     // 경매 입찰 내역 조회
     @GetMapping("/v1/auctions/{auctionId}/bids")
@@ -63,6 +69,11 @@ public class AuctionBidController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long auctionId,
             @Valid @RequestBody CreateBidRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:bid:" + userDetails.getUserId(),
+                rateLimitProperties.getBidLimit(),
+                rateLimitProperties.getBidWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         CreateAuctionBidResponse response = auctionBidCommandService.createBid(userDetails.getUserId(), auctionId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

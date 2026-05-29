@@ -8,6 +8,10 @@ import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +31,8 @@ public class OrderController {
 
     private final OrderQueryService orderQueryService;
     private final OrderCommandService orderCommandService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @GetMapping("/v1/orders/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<OrderResponse>>> getMyOrders(
@@ -52,6 +58,11 @@ public class OrderController {
             @PathVariable String orderUid,
             @Valid @RequestBody CancelOrderRequest request
     ) {
+        if (!redisRateLimiter.isAllowed("rate:user:order:" + userDetails.getUserId(),
+                rateLimitProperties.getOrderLimit(),
+                rateLimitProperties.getOrderWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, orderCommandService.cancelOrder(userDetails.getUserId(), orderUid, request.reason())));
     }
 }

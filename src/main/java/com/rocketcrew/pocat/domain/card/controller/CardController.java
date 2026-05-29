@@ -12,6 +12,10 @@ import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +37,8 @@ public class CardController {
 
     private final CardQueryService cardQueryService;
     private final CardCommandService cardCommandService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @GetMapping("/v1/cards")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getCards(
@@ -68,6 +74,11 @@ public class CardController {
     public ResponseEntity<ApiResponseDto<CardResponse>> createCard(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateCardRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:card:" + userDetails.getUserId(),
+                rateLimitProperties.getCardLimit(),
+                rateLimitProperties.getCardWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         CardResponse response = cardCommandService.createCard(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

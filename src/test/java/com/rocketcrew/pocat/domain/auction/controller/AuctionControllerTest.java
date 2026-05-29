@@ -61,6 +61,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -337,6 +339,23 @@ class AuctionControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("실패: Rate Limit 초과 → 429")
+        void fail_429_rateLimitExceeded() throws Exception {
+            given(rateLimitProperties.getAuctionLimit()).willReturn(10);
+            given(rateLimitProperties.getAuctionWindowSeconds()).willReturn(60L);
+            given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(false);
+
+            CreateAuctionRequest request = new CreateAuctionRequest(1L, "리자몽 경매", "설명", 10000L, 100000L);
+
+            mockMvc.perform(post("/api/v1/auctions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"));
+            verify(commandService, never()).createAuction(anyLong(), any());
         }
     }
 
