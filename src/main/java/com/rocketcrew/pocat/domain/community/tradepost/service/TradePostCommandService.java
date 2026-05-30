@@ -12,6 +12,7 @@ import com.rocketcrew.pocat.global.cache.CacheNames;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class TradePostCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final RedisRateLimiter redisRateLimiter;
     private final RateLimitProperties rateLimitProperties;
+    private final BadWordFilterService badWordFilterService;
 
     public CreateTradePost createPost(Long userId, CreateTradePostRequest request) {
         if (!redisRateLimiter.isAllowed("rate:user:post:" + userId,
@@ -36,6 +38,7 @@ public class TradePostCommandService {
                 rateLimitProperties.getPostWindowSeconds())) {
             throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
+        badWordFilterService.validate(request.title(), request.content());
         TradePost tradePost = TradePost.builder()
                 .userId(userId)
                 .title(request.title())
@@ -59,6 +62,7 @@ public class TradePostCommandService {
         if (!tradePost.getUserId().equals(userId)) {
             throw new TradePostException(ErrorCode.USER_FORBIDDEN);
         }
+        badWordFilterService.validate(request.title(), request.content());
         tradePost.update(request.title(), request.content(), request.price(), request.thumbnail());
         eventPublisher.publishEvent(new TradePostEmbeddingEvent(tradePost.getId(), tradePost.getContent()));
         return UpdateTradePostResponse.from(tradePost);

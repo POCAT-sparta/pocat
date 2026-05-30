@@ -9,7 +9,9 @@ import com.rocketcrew.pocat.domain.community.tradepost.entity.TradePost;
 import com.rocketcrew.pocat.domain.community.tradepost.repository.TradePostRepository;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.TradePostException;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +37,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,11 +61,15 @@ class TradePostCommandServiceTest {
     @Mock
     private RateLimitProperties rateLimitProperties;
 
+    @Mock
+    private BadWordFilterService badWordFilterService;
+
     private TradePost tradePost;
 
     @BeforeEach
     void setUp() {
         given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
+        willDoNothing().given(badWordFilterService).validate(any());
 
         tradePost = TradePost.builder()
                 .userId(1L)
@@ -96,6 +104,19 @@ class TradePostCommandServiceTest {
             TradePostEmbeddingEvent capturedEvent = eventCaptor.getValue();
             assertThat(capturedEvent.postId()).isEqualTo(10L);
             assertThat(capturedEvent.content()).contains("내용");
+        }
+
+        @Test
+        @DisplayName("실패: 제목 또는 내용에 금지어 포함 → ServiceException(CONTAINS_BAD_WORD)")
+        void containsBadWord_throwsException() {
+            CreateTradePostRequest request = new CreateTradePostRequest(
+                    "욕설 제목", "정상 내용", 10000L, "thumb.jpg");
+            willThrow(new ServiceException(ErrorCode.CONTAINS_BAD_WORD))
+                    .given(badWordFilterService).validate(request.title(), request.content());
+
+            assertThatThrownBy(() -> tradePostCommandService.createPost(1L, request))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
         }
     }
 
@@ -141,6 +162,20 @@ class TradePostCommandServiceTest {
             assertThatThrownBy(() -> tradePostCommandService.updatePost(10L, 99L, request))
                     .isInstanceOf(TradePostException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_FORBIDDEN);
+        }
+
+        @Test
+        @DisplayName("실패: 제목 또는 내용에 금지어 포함 → ServiceException(CONTAINS_BAD_WORD)")
+        void containsBadWord_throwsException() {
+            UpdateTradePostRequest request = new UpdateTradePostRequest(
+                    "욕설 제목", "정상 내용", 20000L, "thumb.jpg");
+            given(tradePostRepository.findById(10L)).willReturn(Optional.of(tradePost));
+            willThrow(new ServiceException(ErrorCode.CONTAINS_BAD_WORD))
+                    .given(badWordFilterService).validate(request.title(), request.content());
+
+            assertThatThrownBy(() -> tradePostCommandService.updatePost(10L, 1L, request))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
         }
     }
 

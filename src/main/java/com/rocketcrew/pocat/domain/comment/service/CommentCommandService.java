@@ -13,6 +13,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.CommentException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class CommentCommandService {
     private final FreePostDetailCacheService freePostDetailCacheService;
     private final RedisRateLimiter redisRateLimiter;
     private final RateLimitProperties rateLimitProperties;
+    private final BadWordFilterService badWordFilterService;
 
     public CommentResponse createComment(Long userId, CreateCommentRequest request) {
         if (!redisRateLimiter.isAllowed("rate:user:comment:" + userId,
@@ -38,6 +40,7 @@ public class CommentCommandService {
                 rateLimitProperties.getCommentWindowSeconds())) {
             throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
+        badWordFilterService.validate(request.content());
         if (!freePostRepository.existsById(request.freePostId())) {
             throw new FreePostException(ErrorCode.FREE_POST_NOT_FOUND);
         }
@@ -67,6 +70,7 @@ public class CommentCommandService {
 
     public CommentResponse updateComment(Long id, Long userId, UpdateCommentRequest request) {
         Comment comment = findCommentAndVerifyOwner(id, userId);
+        badWordFilterService.validate(request.content());
         comment.update(request.content());
         postCommentCacheEvictor.evictAfterCommit(comment.getFreePostId());
         return CommentResponse.from(comment);
