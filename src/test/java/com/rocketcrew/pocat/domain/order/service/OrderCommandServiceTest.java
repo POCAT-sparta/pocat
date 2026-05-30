@@ -1,12 +1,12 @@
 package com.rocketcrew.pocat.domain.order.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
@@ -32,7 +32,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -61,6 +60,21 @@ class OrderCommandServiceTest {
     @Mock
     private PaymentApplicationService paymentApplicationService;
 
+    @Mock
+    private OutboxRepository outboxRepository;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
+    @Mock
+    private OrderSaveService orderSaveService;
+
+    @Mock
+    private AuctionBidRepository auctionBidRepository;
+
+    @Mock
+    private SetExpireService setExpireService;
+
     // ── createOrderFromAuction ─────────────────────────────────────────
 
     @Nested
@@ -74,7 +88,7 @@ class OrderCommandServiceTest {
             given(orderRepository.findByAuctionIdAndBidderRank(10L, 1)).willReturn(Optional.empty());
             given(orderRepository.save(any(Order.class))).willReturn(savedOrder);
 
-            orderCommandService.createOrderFromAuction(10L, 3L, 2L, 1L, 10000L);
+            orderCommandService.createOrderFromAuction(10L, 3L, 2L, 1L, 10000L, 1);
 
             verify(orderRepository).save(any(Order.class));
             verify(outboxEventWriter).write(eq("order"), any(), any(OrderCreatedEvent.class));
@@ -87,7 +101,7 @@ class OrderCommandServiceTest {
             Order existing = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             given(orderRepository.findByAuctionIdAndBidderRank(10L, 1)).willReturn(Optional.of(existing));
 
-            orderCommandService.createOrderFromAuction(10L, 3L, 2L, 1L, 10000L);
+            orderCommandService.createOrderFromAuction(10L, 3L, 2L, 1L, 10000L, 1);
 
             verify(orderRepository, never()).save(any());
             verify(outboxEventWriter, never()).write(any(), any(), any());
@@ -102,17 +116,17 @@ class OrderCommandServiceTest {
     class CreateOrderFromBuyout {
 
         @Test
-        @DisplayName("성공: BUYOUT 타입으로 주문 저장 후 autoPayment 호출")
+        @DisplayName("성공: saveBuyoutOrder 호출 후 autoPayment 호출")
         void success() {
             Order savedOrder = TestFixtures.anBuyoutOrder(OrderStatus.PAYMENT_PENDING);
             PaymentResponse paymentResponse = new PaymentResponse(
                     "PAY-001", 1L, 10000L, null, null, null, null, null);
-            given(orderRepository.save(any(Order.class))).willReturn(savedOrder);
+            given(orderSaveService.saveBuyoutOrder(10L, 3L, 2L, 1L, 10000L)).willReturn(savedOrder);
             given(paymentApplicationService.autoPayment("1")).willReturn(paymentResponse);
 
             PaymentResponse result = orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
 
-            verify(orderRepository).save(argThat(order -> order.getOrderType() == OrderType.BUYOUT));
+            verify(orderSaveService).saveBuyoutOrder(10L, 3L, 2L, 1L, 10000L);
             verify(paymentApplicationService).autoPayment("1");
             assertThat(result.paymentUid()).isEqualTo("PAY-001");
         }

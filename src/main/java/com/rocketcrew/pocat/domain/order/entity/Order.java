@@ -63,6 +63,11 @@ public class Order extends BaseEntity {
     @Column(name = "order_type", nullable = false, length = 20)
     private OrderType orderType;
 
+    public void startDirectPayment(LocalDateTime deadline) {
+        this.status = OrderStatus.AUTO_PAYMENT_FAILED;
+        this.paymentDeadline = deadline;
+    }
+
     public void cancel(String reason) {
         this.status = OrderStatus.CANCELLED;
         this.cancelReason = reason;

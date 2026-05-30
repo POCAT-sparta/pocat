@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.settlement.consumer;
+package com.rocketcrew.pocat.domain.settlement.consumer.paymentEvent;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
@@ -7,9 +7,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SettlementEvent {
+public class PaymentEvent {
     private String eventType;
-    private String settlementUid;
-    private Long sellerId;
-    private Long sellerAmount;
+    private String orderUid;
 }

@@ -99,6 +99,18 @@ public class AuctionBidRepositoryImpl implements AuctionBidRepositoryCustom {
                 .fetch();
     }
 
+    @Override
+    public List<Long> findLostBidderIdsByAuctionIdOrderedByMaxBidPrice(Long auctionId) {
+        QAuctionBid bid = QAuctionBid.auctionBid;
+        return queryFactory
+                .select(bid.userId)
+                .from(bid)
+                .where(bid.auctionId.eq(auctionId).and(bid.status.eq(BidStatus.LOST)))
+                .groupBy(bid.userId)
+                .orderBy(bid.bidPrice.max().desc())
+                .fetch();
+    }
+
     private BooleanBuilder myBidsCondition(Long userId, BidStatus status, QAuctionBid bid) {
         BooleanBuilder builder = new BooleanBuilder();
         builder.and(bid.userId.eq(userId));

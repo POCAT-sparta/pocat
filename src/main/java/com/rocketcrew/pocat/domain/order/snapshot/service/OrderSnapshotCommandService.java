@@ -6,11 +6,8 @@ import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.snapshot.entity.OrderSnapshot;
 import com.rocketcrew.pocat.domain.order.snapshot.repository.OrderSnapshotRepository;
-import com.rocketcrew.pocat.domain.settlement.entity.Settlement;
-import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +15,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -29,7 +28,6 @@ public class OrderSnapshotCommandService {
 
     private final OrderSnapshotRepository orderSnapshotRepository;
     private final OrderRepository orderRepository;
-    private final SettlementRepository settlementRepository;
     private final ObjectMapper objectMapper;
 
     public void createSnapshot(String orderUid) {
@@ -40,15 +38,18 @@ public class OrderSnapshotCommandService {
             return;
         }
 
-        Settlement settlement = settlementRepository.findByOrderId(order.getId())
-                .orElseThrow(() -> new OrderException(ErrorCode.SETTLEMENT_NOT_FOUND));
+        long fee = BigDecimal.valueOf(order.getFinalPrice())
+                .multiply(BigDecimal.valueOf(PlatformFeePolicy.RATE))
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                .longValue();
+        long sellerAmount = order.getFinalPrice() - fee;
 
         OrderSnapshot snapshot = OrderSnapshot.builder()
                 .orderUid(order.getOrderUid())
                 .finalPrice(order.getFinalPrice())
                 .feeRate(PlatformFeePolicy.RATE)
-                .fee(settlement.getPlatformFee())
-                .sellerAmount(settlement.getSellerAmount())
+                .fee(fee)
+                .sellerAmount(sellerAmount)
                 .snapshotJson(buildSnapshotJson(order))
                 .build();
 

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>알림 WebSocket 구조 분석</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f6f9; color: #333; padding: 32px; }
+    h1 { font-size: 24px; margin-bottom: 8px; color: #1a1a2e; }
+    .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+    h2 { font-size: 16px; margin-bottom: 12px; color: #16213e; border-left: 4px solid #4361ee; padding-left: 10px; }
+    .section { background: white; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+    /* 흐름도 */
+    .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 0; margin-top: 12px; }
+    .flow-item { display: flex; align-items: center; }
+    .node { background: #eef2ff; border: 1.5px solid #4361ee; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: #2d3a8c; white-space: nowrap; }
+    .node.green { background: #e8f5e9; border-color: #2e7d32; color: #1b5e20; }
+    .node.orange { background: #fff3e0; border-color: #e65100; color: #bf360c; }
+    .node.purple { background: #f3e5f5; border-color: #7b1fa2; color: #4a148c; }
+    .node.gray { background: #f5f5f5; border-color: #757575; color: #424242; }
+    .node.red { background: #fce4ec; border-color: #c62828; color: #880e4f; }
+    .arrow { font-size: 18px; color: #999; padding: 0 8px; }
+    .arrow-label { display: flex; flex-direction: column; align-items: center; padding: 0 4px; }
+    .arrow-label .label { font-size: 10px; color: #888; margin-bottom: 2px; white-space: nowrap; }
+
+    /* 컴포넌트 테이블 */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+    th { background: #f0f4ff; text-align: left; padding: 10px 12px; font-weight: 600; color: #2d3a8c; border-bottom: 2px solid #dde3f5; }
+    td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    td code, th code { background: #f0f4ff; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #3d52d5; }
+
+    /* 코드 블록 */
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 16px; border-radius: 8px; font-size: 12px; overflow-x: auto; margin-top: 12px; line-height: 1.6; }
+    .kw { color: #89b4fa; }
+    .str { color: #a6e3a1; }
+    .cmt { color: #6c7086; }
+    .cls { color: #f9e2af; }
+
+    /* 배지 */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+    .badge.blue { background: #dbeafe; color: #1d4ed8; }
+    .badge.green { background: #dcfce7; color: #15803d; }
+    .badge.orange { background: #ffedd5; color: #c2410c; }
+    .badge.red { background: #fee2e2; color: #dc2626; }
+
+    /* 구독/연결 정보 */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .info-box h3 { font-size: 13px; color: #475569; margin-bottom: 10px; font-weight: 600; }
+    .info-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    .info-key { color: #64748b; min-width: 80px; font-weight: 500; }
+    .info-val { color: #1e293b; font-family: monospace; }
+
+    /* TODO */
+    .todo { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #92400e; margin-top: 12px; }
+    .todo::before { content: "⚠️ TODO  "; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<h1>알림 WebSocket 구조 분석</h1>
+<p class="subtitle">notification 도메인의 Kafka → Redis Pub/Sub → WebSocket(STOMP) 실시간 알림 흐름</p>
+
+<!-- 전체 흐름 -->
+<div class="section">
+  <h2>전체 흐름</h2>
+  <div class="flow">
+    <div class="flow-item">
+      <div class="node green">비즈니스 로직<br><small>send() 호출</small></div>
+    </div>
+    <div class="arrow-label">
+      <span class="label">DB 저장</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="flow-item">
+      <div class="node orange">notification<br>Kafka 토픽</div>
+    </div>
+    <div class="arrow-label">
+      <span class="label">컨슘</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="flow-item">
+      <div class="node">NotificationKafkaConsumer</div>
+    </div>
+    <div class="arrow-label">
+      <span class="label">Pub/Sub 발행</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="flow-item">
+      <div class="node purple">Redis<br>notification:{userId}</div>
+    </div>
+    <div class="arrow-label">
+      <span class="label">구독</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="flow-item">
+      <div class="node">NotificationRedisSubscriber</div>
+    </div>
+    <div class="arrow-label">
+      <span class="label">WebSocket</span>
+      <span class="arrow">→</span>
+    </div>
+    <div class="flow-item">
+      <div class="node green">클라이언트<br>/sub/notifications/{userId}</div>
+    </div>
+  </div>
+</div>
+
+<!-- 컴포넌트별 역할 -->
+<div class="section">
+  <h2>컴포넌트별 역할</h2>
+  <table>
+    <tr>
+      <th>컴포넌트</th>
+      <th>위치</th>
+      <th>역할</th>
+    </tr>
+    <tr>
+      <td><code>NotificationCommandService</code></td>
+      <td>notification/service</td>
+      <td>
+        <code>sendInternal()</code> — DB에 알림 저장 후 <code>notification</code> Kafka 토픽으로 이벤트 발행<br>
+        <span class="badge blue">Kafka Producer</span>
+        <span class="badge green">DB 저장</span>
+      </td>
+    </tr>
+    <tr>
+      <td><code>NotificationKafkaConsumer</code></td>
+      <td>notification/consumer</td>
+      <td>
+        <code>notification</code> 토픽 구독 (groupId: <code>notification-ws-group</code>)<br>
+        알림 DB 존재 확인 후 Redis Pub/Sub 채널 <code>notification:{userId}</code>로 발행<br>
+        <span class="badge orange">Kafka Consumer</span>
+        <span class="badge blue">Redis Publisher</span>
+      </td>
+    </tr>
+    <tr>
+      <td><code>NotificationRedisSubscriber</code></td>
+      <td>notification/service</td>
+      <td>
+        Redis 패턴 <code>notification:*</code> 구독<br>
+        메시지 수신 시 <code>SimpMessagingTemplate</code>으로 <code>/sub/notifications/{userId}</code>에 WebSocket 전송<br>
+        <span class="badge blue">Redis Subscriber</span>
+        <span class="badge green">WebSocket Publisher</span>
+      </td>
+    </tr>
+    <tr>
+      <td><code>NotificationWebSocketEventListener</code></td>
+      <td>notification/service</td>
+      <td>
+        CONNECT: 연결 로그<br>
+        SUBSCRIBE <code>/sub/notifications/{userId}</code>: JWT userId 일치 검증 후 <strong>미읽음 알림 즉시 전송</strong><br>
+        DISCONNECT: 연결 해제 로그<br>
+        <span class="badge green">구독 즉시 미읽음 전송</span>
+      </td>
+    </tr>
+    <tr>
+      <td><code>WebSocketAuthChannelInterceptor</code></td>
+      <td>global/security</td>
+      <td>
+        CONNECT 프레임에서 <code>Authorization: Bearer {token}</code> 헤더로 JWT 검증<br>
+        검증 성공 시 <code>accessor.setUser(auth)</code>로 인증 정보 세션에 저장<br>
+        <span class="badge red">JWT 인증</span>
+      </td>
+    </tr>
+    <tr>
+      <td><code>WebSocketConfig</code></td>
+      <td>global/config</td>
+      <td>
+        STOMP 엔드포인트: <code>/ws</code> (SockJS 지원)<br>
+        메시지 브로커: <code>/sub</code> (구독 prefix)<br>
+        앱 prefix: <code>/pub</code> (서버로 메시지 발행 시)
+      </td>
+    </tr>
+    <tr>
+      <td><code>RedisConfig</code></td>
+      <td>global/config</td>
+      <td>
+        <code>RedisMessageListenerContainer</code>에 패턴 <code>notification:*</code> → <code>NotificationRedisSubscriber</code> 등록<br>
+        멀티 인스턴스 환경에서도 어느 서버든 알림 수신 가능
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 클라이언트 연결 가이드 -->
+<div class="section">
+  <h2>클라이언트 연결 가이드</h2>
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>WebSocket 연결 정보</h3>
+      <div class="info-row"><span class="info-key">Endpoint</span><span class="info-val">/ws (SockJS)</span></div>
+      <div class="info-row"><span class="info-key">프로토콜</span><span class="info-val">STOMP over SockJS</span></div>
+      <div class="info-row"><span class="info-key">인증 헤더</span><span class="info-val">Authorization: Bearer {JWT}</span></div>
+      <div class="info-row"><span class="info-key">구독 경로</span><span class="info-val">/sub/notifications/{userId}</span></div>
+    </div>
+    <div class="info-box">
+      <h3>구독 시 동작</h3>
+      <div class="info-row"><span class="info-key">즉시 응답</span><span class="info-val">미읽음 알림 목록 전송</span></div>
+      <div class="info-row"><span class="info-key">실시간</span><span class="info-val">새 알림 발생 시 즉시 푸시</span></div>
+      <div class="info-row"><span class="info-key">보안</span><span class="info-val">userId 본인 것만 구독 가능</span></div>
+    </div>
+  </div>
+
+  <pre><span class="cmt">// 클라이언트 연결 예시 (SockJS + stomp.js)</span>
+<span class="kw">const</span> socket = <span class="kw">new</span> <span class="cls">SockJS</span>(<span class="str">'/ws'</span>);
+<span class="kw">const</span> stompClient = <span class="cls">Stomp</span>.over(socket);
+
+stompClient.connect(
+  { <span class="str">Authorization</span>: <span class="str">`Bearer ${token}`</span> },  <span class="cmt">// CONNECT 헤더에 JWT</span>
+  () => {
+    stompClient.subscribe(<span class="str">`/sub/notifications/${userId}`</span>, (message) => {
+      <span class="kw">const</span> data = JSON.parse(message.body);
+      <span class="cmt">// 알림 처리</span>
+    });
+  }
+);</pre>
+</div>
+
+<!-- REST API -->
+<div class="section">
+  <h2>알림 REST API</h2>
+  <table>
+    <tr>
+      <th>메서드</th>
+      <th>경로</th>
+      <th>설명</th>
+    </tr>
+    <tr>
+      <td><span class="badge green">GET</span></td>
+      <td><code>/api/notifications?cursor={id}</code></td>
+      <td>알림 목록 조회 (커서 기반 페이지네이션)</td>
+    </tr>
+    <tr>
+      <td><span class="badge blue">PUT</span></td>
+      <td><code>/api/notifications/{id}/read</code></td>
+      <td>개별 읽음 처리</td>
+    </tr>
+    <tr>
+      <td><span class="badge blue">PUT</span></td>
+      <td><code>/api/notifications/read</code></td>
+      <td>전체 읽음 처리 (미읽음만)</td>
+    </tr>
+    <tr>
+      <td><span class="badge red">DELETE</span></td>
+      <td><code>/api/notifications/{id}</code></td>
+      <td>개별 알림 삭제</td>
+    </tr>
+    <tr>
+      <td><span class="badge red">DELETE</span></td>
+      <td><code>/api/notifications</code></td>
+      <td>전체 알림 삭제</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Redis Pub/Sub를 쓰는 이유 -->
+<div class="section">
+  <h2>Kafka → Redis Pub/Sub → WebSocket 구조를 쓰는 이유</h2>
+  <table>
+    <tr>
+      <th>이슈</th>
+      <th>해결</th>
+    </tr>
+    <tr>
+      <td>멀티 인스턴스 환경에서 WebSocket 세션이 특정 서버에만 존재</td>
+      <td>Redis Pub/Sub으로 전체 서버에 브로드캐스트 → 해당 유저가 연결된 서버가 WebSocket 전송</td>
+    </tr>
+    <tr>
+      <td>알림 발생 시점과 WebSocket 전송을 분리하고 싶음</td>
+      <td>Kafka <code>notification</code> 토픽으로 비동기 처리 → 발신 측이 블로킹되지 않음</td>
+    </tr>
+    <tr>
+      <td>알림 이력이 필요</td>
+      <td><code>sendInternal()</code>에서 DB 저장 후 Kafka 발행 — 이력과 실시간 푸시 동시 처리</td>
+    </tr>
+  </table>
+</div>
+
+<!-- TODO -->
+<div class="section">
+  <h2>미완성 항목</h2>
+  <div class="todo">
+    <code>NotificationKafkaConsumer</code>의 멱등성 보장 미구현 — 같은 <code>notificationId</code>로 중복 메시지가 들어올 경우 Redis Pub/Sub가 중복 발행될 수 있음. DB 조회로 존재 여부만 확인하고 있으나 중복 전송 방지 처리 필요.
+  </div>
+</div>
+
+</body>
+</html>

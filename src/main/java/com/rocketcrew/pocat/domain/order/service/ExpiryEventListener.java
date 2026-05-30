@@ -1,8 +1,7 @@
 package com.rocketcrew.pocat.domain.order.service;
 
-import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
-import com.rocketcrew.pocat.domain.payment.service.FailureService;
-import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.domain.order.entity.Order;
+import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -12,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Redis keyspace expired 이벤트를 수신하여 TTL이 만료된 PENDING 결제를 FAILED 처리한다.
+ * Redis keyspace expired 이벤트를 수신하여 1시간 결제 창이 만료된 주문을 다음 순위 입찰자에게 넘긴다.
  * Redis에 "notify-keyspace-events Ex" 설정이 필요하다.
  */
 @Slf4j
@@ -20,11 +19,9 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class ExpiryEventListener implements MessageListener {
 
-    private final SetExpireService setExpireService;
+    private final OrderRepository orderRepository;
+    private final OrderCommandService orderCommandService;
 
-    /**
-     * ttl 만료시 이벤트를 받아서 완전 실패 처리
-     */
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String expiredKey = new String(message.getBody(), StandardCharsets.UTF_8);
@@ -38,14 +35,17 @@ public class ExpiryEventListener implements MessageListener {
             log.warn("[PaymentExpiry] 파싱 불가 key={}", expiredKey);
             return;
         }
+
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            log.warn("[PaymentExpiry] 주문 없음 orderId={}", orderId);
+            return;
+        }
+
         try {
-//            setExpireService.markFailed(orderId, PaymentErrorReason.PAYMENT_EXPIRED);
-            setExpireService.cancelExpiry(orderId);
-        } catch (OrderException e) {
-            log.warn("[PaymentExpiry] 이미 처리된 주문 orderId={} reason={}", orderId, e.getMessage());
-            setExpireService.cancelExpiry(orderId);
+            orderCommandService.escalateToNextRank(order.getOrderUid());
         } catch (Exception e) {
-            log.error("[PaymentExpiry] 처리 실패 — shadow 키 보존 orderId={}", orderId, e);
+            log.error("[PaymentExpiry] 다음 순위 주문 생성 실패 orderId={}", orderId, e);
         }
     }
 }
