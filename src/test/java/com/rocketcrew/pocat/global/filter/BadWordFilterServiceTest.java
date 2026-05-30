@@ -6,19 +6,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.text.Normalizer;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("BadWordFilterService")
 class BadWordFilterServiceTest {
 
@@ -26,9 +21,9 @@ class BadWordFilterServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 생성자에서 badwords.txt를 읽은 후 ReflectionTestUtils로 테스트 세트 교체
         badWordFilterService = new BadWordFilterService();
-        // 파일 I/O 없이 테스트 가능하도록 금지어 세트를 직접 주입
-        ReflectionTestUtils.setField(badWordFilterService, "badWords", Set.of("욕설", "금지어", "비속어"));
+        ReflectionTestUtils.setField(badWordFilterService, "badWords", Set.of("욕설", "금지어", "비속어", "bad"));
     }
 
     @Nested
@@ -60,6 +55,23 @@ class BadWordFilterServiceTest {
         @DisplayName("실패: 금지어 포함 → ServiceException(CONTAINS_BAD_WORD)")
         void fail_containsBadWord() {
             assertThatThrownBy(() -> badWordFilterService.validate("이건 욕설 포함 텍스트"))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
+        }
+
+        @Test
+        @DisplayName("실패: NFD 분리된 금지어 → NFC 정규화 후 탐지")
+        void fail_nfdDecomposedBadWord() {
+            String nfdBadWord = Normalizer.normalize("욕설", Normalizer.Form.NFD);
+            assertThatThrownBy(() -> badWordFilterService.validate(nfdBadWord))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
+        }
+
+        @Test
+        @DisplayName("실패: 대소문자 혼합 금지어 → Locale.ROOT toLowerCase 후 탐지")
+        void fail_upperCaseBadWord() {
+            assertThatThrownBy(() -> badWordFilterService.validate("BAD word here"))
                     .isInstanceOf(ServiceException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
         }

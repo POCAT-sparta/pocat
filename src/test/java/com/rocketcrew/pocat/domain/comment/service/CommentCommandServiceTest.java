@@ -133,6 +133,7 @@ class CommentCommandServiceTest {
         @DisplayName("실패: 금지어 포함 - CONTAINS_BAD_WORD")
         void fail_containsBadWord() {
             CreateCommentRequest request = new CreateCommentRequest(10L, null, "욕설이 포함된 내용");
+            given(freePostRepository.existsById(10L)).willReturn(true);
             willThrow(new ServiceException(ErrorCode.CONTAINS_BAD_WORD))
                     .given(badWordFilterService).validate(request.content());
 
