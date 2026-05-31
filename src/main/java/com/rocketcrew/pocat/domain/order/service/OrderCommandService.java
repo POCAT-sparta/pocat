@@ -116,7 +116,11 @@ public class OrderCommandService {
     public void completePayment(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        // 이미 완료된 건은 리턴 (createSnapshot 실패 후 Kafka 재처리 시 멱등 보장)
+        if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) return;
         order.completePayment();
+        // 직접결제 창 만료 키 취소 — 미취소 시 1시간 후 ExpiryEventListener가 완료된 주문을 다음 순위로 잘못 승격
+        setExpireService.cancelExpiry(order.getId());
     }
 
     public OrderResponse cancelOrder(Long userId, String orderUid, String reason) {

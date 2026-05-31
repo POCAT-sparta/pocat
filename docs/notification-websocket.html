@@ -210,8 +210,8 @@
 
 stompClient.connect(
   { <span class="str">Authorization</span>: <span class="str">`Bearer ${token}`</span> },  <span class="cmt">// CONNECT 헤더에 JWT</span>
-  () => {
-    stompClient.subscribe(<span class="str">`/sub/notifications/${userId}`</span>, (message) => {
+  () =&gt; {
+    stompClient.subscribe(<span class="str">`/sub/notifications/${userId}`</span>, (message) =&gt; {
       <span class="kw">const</span> data = JSON.parse(message.body);
       <span class="cmt">// 알림 처리</span>
     });
@@ -235,7 +235,7 @@ stompClient.connect(
     </tr>
     <tr>
       <td><span class="badge blue">PUT</span></td>
-      <td><code>/api/notifications/{id}/read</code></td>
+      <td><code>/api/notifications/{notificationId}/read</code></td>
       <td>개별 읽음 처리</td>
     </tr>
     <tr>
@@ -245,7 +245,7 @@ stompClient.connect(
     </tr>
     <tr>
       <td><span class="badge red">DELETE</span></td>
-      <td><code>/api/notifications/{id}</code></td>
+      <td><code>/api/notifications/{notificationId}</code></td>
       <td>개별 알림 삭제</td>
     </tr>
     <tr>

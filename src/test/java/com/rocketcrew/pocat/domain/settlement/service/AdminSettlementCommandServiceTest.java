@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.settlement.service;
 
 import com.rocketcrew.pocat.domain.notification.dto.event.NotificationSendEvent;
+import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.settlement.dto.response.SettlementCompleteResponse;
 import com.rocketcrew.pocat.domain.settlement.entity.Settlement;
 import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
@@ -20,6 +21,10 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+
+import org.mockito.ArgumentCaptor;
+
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -76,8 +81,15 @@ class AdminSettlementCommandServiceTest {
             assertThat(response.settlementUid()).isEqualTo("SET-001");
             assertThat(response.status()).isEqualTo(SettlementStatus.COMPLETED);
 
-            // then — NotificationSendEvent 발행
-            verify(eventPublisher).publishEvent(any(NotificationSendEvent.class));
+            // then — NotificationSendEvent payload 검증
+            ArgumentCaptor<NotificationSendEvent> captor = ArgumentCaptor.forClass(NotificationSendEvent.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            NotificationSendEvent event = captor.getValue();
+            assertThat(event.getUserId()).isEqualTo(2L);
+            assertThat(event.getType()).isEqualTo(NotificationType.SETTLEMENT_COMPLETED);
+            Map<?, ?> relatedData = (Map<?, ?>) event.getRelatedData();
+            assertThat(relatedData.get("settlementUid")).isEqualTo("SET-001");
+            assertThat(relatedData.get("sellerAmount")).isEqualTo(9500L);
         }
 
         @Test
