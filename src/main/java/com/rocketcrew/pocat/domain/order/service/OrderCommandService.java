@@ -77,6 +77,21 @@ public class OrderCommandService {
             return false;
         }
 
+        // 결제 완료된 주문은 승격 차단 (completePayment와 Redis 만료 동시 발화 시 오주문 방지)
+        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
+                && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
+            log.info("[EscalateToNextRank] 승격 불가 상태 orderUid={}, status={}", orderUid, order.getStatus());
+            setExpireService.cancelExpiry(order.getId());
+            return false;
+        }
+
+        // 즉시구매 주문은 bidderRank가 null이므로 승격 불가
+        if (order.getBidderRank() == null) {
+            log.warn("[EscalateToNextRank] bidderRank 없음(즉시구매 주문) orderUid={}", orderUid);
+            setExpireService.cancelExpiry(order.getId());
+            return false;
+        }
+
         setExpireService.cancelExpiry(order.getId());
 
         int nextRank = order.getBidderRank() + 1;
