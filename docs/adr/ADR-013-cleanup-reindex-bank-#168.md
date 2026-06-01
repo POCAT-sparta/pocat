@@ -85,7 +85,7 @@ POST /api/v1/admin/ai/reindex
 | 진행 상태 | 별도 상태 조회 엔드포인트 없음. 페이지 단위 INFO 로그 + 완료 시 `성공=N건, 실패=M건` 로그로 운영자 확인 |
 | 타임아웃 | `@Async` 스레드 풀(`spring.task.execution.pool.keep-alive`)로 장기 실행 제어. 기본값 사용 |
 | 장애 에스컬레이션 | 완료 로그에 `failedCount > 0` 확인 시 운영자가 재색인 엔드포인트 재호출로 복구 |
-| 분산 락 (Redisson RLock) | `ai:reindex:lock` 키로 Redis 분산 락 획득. 다중 인스턴스 환경에서 동시에 1개 JVM만 재색인 실행. 락 획득 실패 시 즉시 silent 종료 |
+| 분산 락 (Redisson RLock) | `ai:reindex:lock` 키로 Redis 분산 락 획득. 다중 인스턴스 환경에서 동시에 1개 JVM만 재색인 실행. 락 획득 실패 시 즉시 종료(경고 로그 기록) |
 
 ### 3. User 계좌 컬럼 제거
 
@@ -199,7 +199,7 @@ ALTER TABLE users
 
 - **@Async 메서드 N+1 및 lazy load 위험**: `AdminAiService.reindexAll()`에서 `card.getSeries()`, `card.getPokemonSet()` 접근 시 N+1 쿼리 및 @Async 스레드 컨텍스트 lazy load 실패 가능. `CardRepository.findWithDetailsByStatus()` 메서드를 `@EntityGraph(attributePaths = {"series", "pokemonSet"})`로 추가하고 reindexAll()에서 사용.
 - **ReindexResponse DTO 미사용 제거**: void @Async 반환 방식으로 구현되어 실제 사용되지 않는 `ReindexResponse.java` 삭제.
-- **분산 락 (Redisson RLock)**: 다중 인스턴스 환경 고려. `AtomicBoolean` (단일 JVM 한정) 대신 `RedissonClient.getLock("ai:reindex:lock")`으로 Redis 분산 락 적용. `tryLock(0, TimeUnit.SECONDS)`로 대기 없이 즉시 락 획득 시도, 실패 시 silent 종료. Watchdog 자동 갱신으로 장시간 재색인 중 락 만료 방지.
+- **분산 락 (Redisson RLock)**: 다중 인스턴스 환경 고려. `AtomicBoolean` (단일 JVM 한정) 대신 `RedissonClient.getLock("ai:reindex:lock")`으로 Redis 분산 락 적용. `tryLock(0, TimeUnit.SECONDS)`로 대기 없이 즉시 락 획득 시도, 실패 시 즉시 종료(경고 로그 기록). Watchdog 자동 갱신으로 장시간 재색인 중 락 만료 방지.
 - **실패 카운터 추가**: `failedCount` 추적하여 완료 로그에 성공/실패 건수 분리 출력.
 
 ### 거부된 피드백 (근거 포함)
