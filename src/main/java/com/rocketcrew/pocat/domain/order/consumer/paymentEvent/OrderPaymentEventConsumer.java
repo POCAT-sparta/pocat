@@ -16,7 +16,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PaymentEventConsumer {
+public class OrderPaymentEventConsumer {
 
     private final NotificationCommandService notificationCommandService;
     private final OrderCommandService orderCommandService;
