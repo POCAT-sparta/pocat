@@ -299,6 +299,101 @@ class CardAnalysisServiceTest {
     }
 
     // ---------------------------------------------------------------
+    // [RED] #158 환각 방어 Layer1 — retry 및 latencyMs 실측
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("[RED #158] 환각 방어 Layer1 / latencyMs")
+    class HallucinationDefenseAndLatency {
+
+        @Test
+        @DisplayName("[RED] 파싱 실패 1회 후 재시도하여 2차 성공 → LLM 2회 호출")
+        void callLlm_parseFailOnce_retriesAndSucceeds() {
+            // given
+            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
+            given(valueOperations.get(anyString())).willReturn(null);
+            given(promptTemplateService.getPrompt("PSA_10")).willReturn(
+                    "카드 분석: {cardContext}\n{format}");
+
+            // 1차: 파싱 불가 문자열 → BeanOutputConverter.convert() 실패
+            // 2차: 유효한 JSON → 성공
+            String validJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
+                    + "\"summary\":\"재시도 성공\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
+                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
+                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
+            given(callResponseSpec.content())
+                    .willReturn("THIS_IS_NOT_JSON_WILL_FAIL_PARSING")
+                    .willReturn(validJson);
+
+            // when / then
+            // RED: 현재 callLlmForAnalysis에 retry 없음 → 1차 파싱 실패 시 즉시 ServiceException throw
+            // GREEN 조건: 재시도 로직 추가 후 result 반환 + LLM 2회 호출 확인
+            CardAnalysisResult result = cardAnalysisService.analyzeCard(1L);
+
+            assertThat(result).isNotNull();
+            assertThat(result.priceTrend()).isEqualTo("RISING");
+            verify(chatClient, org.mockito.Mockito.times(2))
+                    .prompt(any(org.springframework.ai.chat.prompt.Prompt.class));
+        }
+
+        @Test
+        @DisplayName("[RED] 파싱 2회 연속 실패 시 ServiceException + LLM 2회 호출 검증")
+        void callLlm_parseFailTwice_throwsAfterRetry() {
+            // given
+            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
+            given(valueOperations.get(anyString())).willReturn(null);
+            given(promptTemplateService.getPrompt("PSA_10")).willReturn(
+                    "카드 분석: {cardContext}\n{format}");
+
+            // 1차, 2차 모두 파싱 불가
+            given(callResponseSpec.content())
+                    .willReturn("INVALID_JSON_FIRST")
+                    .willReturn("INVALID_JSON_SECOND");
+
+            // when / then
+            // ServiceException 자체는 현재도 throw되지만,
+            // LLM 2회 호출(retry 로직) 검증이 RED: 현재는 1회만 호출됨
+            assertThatThrownBy(() -> cardAnalysisService.analyzeCard(1L))
+                    .isInstanceOf(ServiceException.class);
+            verify(chatClient, org.mockito.Mockito.times(2))
+                    .prompt(any(org.springframework.ai.chat.prompt.Prompt.class));
+        }
+
+        @Test
+        @DisplayName("[RED] analyzeCard 성공 시 recordUsage에 latencyMs > 0 이 전달되어야 한다")
+        void analyzeCard_recordsPositiveLatencyMs() {
+            // given
+            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
+            given(valueOperations.get(anyString())).willReturn(null);
+            given(promptTemplateService.getPrompt("PSA_10")).willReturn(
+                    "카드 분석: {cardContext}\n{format}");
+            String llmJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
+                    + "\"summary\":\"latency 테스트\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
+                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
+                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
+            given(callResponseSpec.content()).willReturn(llmJson);
+            given(cardAiAnalysisRepository.save(any(CardAiAnalysis.class)))
+                    .willAnswer(inv -> inv.getArgument(0));
+
+            // when
+            cardAnalysisService.analyzeCard(1L);
+
+            // then
+            // RED: 현재 코드는 항상 0L 하드코딩 → latencyMs > 0 검증 실패
+            org.mockito.ArgumentCaptor<Long> latencyCaptor =
+                    org.mockito.ArgumentCaptor.forClass(Long.class);
+            verify(aiUsageMetrics).recordUsage(
+                    anyInt(),
+                    anyInt(),
+                    latencyCaptor.capture(),
+                    anyString()
+            );
+            assertThat(latencyCaptor.getValue())
+                    .as("latencyMs must be > 0 (현재 구현 0L 하드코딩 → RED)")
+                    .isGreaterThan(0L);
+        }
+    }
+
+    // ---------------------------------------------------------------
     // CardAiAnalysis 영속화 + RateLimiter (infra-fix #116)
     // ---------------------------------------------------------------
     @Nested

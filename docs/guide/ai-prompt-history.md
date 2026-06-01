@@ -21,41 +21,98 @@ LLM 프롬프트는 출력 품질·토큰 비용·일관성에 직접 영향을 
 | **변경 동기** | 최초 프롬프트 설계 — 구조화 출력(Structured Output) 및 Tool Calling 기반 초안 |
 | **적용 대상** | 카드 시장 분석 API, AI 카드 어시스턴트 |
 | **작성자** | 개발팀 전체 |
+| **하이퍼파라미터** | temperature=0.3 / max_tokens=1024 (ADR-011 참조) |
 
 ### 프롬프트 구조
 
-> [구현 후 실제 System Prompt 및 User Prompt 템플릿 기록 예정]
+#### 카드 시장 분석 AI (Structured Output)
+
+프롬프트는 `ai_prompt_template` 테이블에서 카드 등급(`cardGrade`)을 키로 조회하며, 등급별 템플릿이 없을 경우 `DEFAULT` 템플릿으로 폴백한다(`AiPromptTemplateService`). 템플릿은 `{cardContext}`와 `{format}` 두 개의 변수를 치환한다.
 
 ```
-System Prompt (분석 AI):
-  - 역할 정의: [구현 후 기록]
-  - 출력 형식 지시 (JSON Schema): [구현 후 기록]
-  - 한국어 응답 강제: [구현 후 기록]
+[User Prompt 템플릿 구조 — PromptTemplate 치환 변수]
 
-User Prompt 템플릿:
-  - 카드 정보 주입 형식: [구현 후 기록]
-  - 거래 이력 요약 형식: [구현 후 기록]
+{cardContext}  ← CardAnalysisService.buildCardContext(card) 생성값
+  카드 이름: {card.getName()}
+  등급: {card.getGrade()}          ← PSA_10 / PSA_9 / BGS_10 등
+  시리즈: {series.getName()}        ← 없으면 "N/A"
+  세트: {pokemonSet.getName()}      ← 없으면 "N/A"
+  URL: {card.getImageUrl()}         ← 없으면 "N/A"
+  레어도: {card.getRarity()}
+
+{format}       ← BeanOutputConverter<CardAnalysisResult>.getFormat() 자동 생성
+  (Spring AI가 CardAnalysisResult 레코드 필드로부터 JSON Schema 지시문 생성)
+  포함 필드: priceTrend(RISING/STABLE/FALLING), fairValueEstimate(Long),
+             demandLevel(HIGH/MEDIUM/LOW), summary(String),
+             highlights(List<String>), riskFactors(List<String>),
+             keywords(List<String>), analysisModel(String),
+             promptTokens(Integer), completionTokens(Integer)
 ```
+
+등급별 `promptText` 본문은 DB 시드 데이터(`ai_prompt_template` 테이블)에서 관리하며, 초기 버전에서는 BACKEND 에이전트가 삽입한 DEFAULT 템플릿이 모든 등급에 적용된다.
+
+#### AI 카드 어시스턴트 (Tool Calling + RAG)
+
+System Prompt는 `AiAssistantService.chat()`에 하드코딩되어 있다.
+
+```
+[System Prompt — AiAssistantService v1.0]
+
+"당신은 POCAT 카드 거래 플랫폼 어시스턴트입니다.
+사용자가 카드, 경매, 입찰에 관한 질문을 할 때 정확하고 도움이 되는 정보를 제공하세요.
+다음의 RAG 컨텍스트를 활용하여 답변하세요:
+{ragContext}
+{historyContext}"
+
+RAG 컨텍스트 구성:
+  - RagService.search(query): Elasticsearch cosine 유사도 ≥0.7, Top-5 문서 검색
+  - RagService.buildContext(docs): "[{type} #{id}]: {text}" 형식으로 포맷팅
+  - 빈 결과 시: "관련 문서를 찾을 수 없습니다." (LLM 호출은 계속 진행)
+
+대화 이력 컨텍스트:
+  - 최근 10턴(MAX_HISTORY_TURNS) 메시지를 "\n대화 이력:\n" 접두사와 함께 System Prompt에 추가
+  - 이력 없을 경우 빈 문자열
+
+등록된 Tools:
+  - CardSearchTool: 카드 검색
+  - AuctionTool: 활성 경매 조회
+  - BidTool: 사용자 입찰 이력 조회
+```
+
+### 초기 프롬프트의 한계점
+
+1. **어시스턴트 System Prompt 하드코딩**: 분석 AI의 `promptText`는 DB 테이블(`ai_prompt_template`)에서 관리되어 재배포 없이 수정 가능하나, 어시스턴트의 System Prompt는 `AiAssistantService` 소스코드에 직접 삽입되어 있다. 변경 시 재배포가 필요하고, 등급별 분기가 불가능하다.
+
+2. **RAG 빈 결과 시 LLM 계속 호출**: `ragContext`가 "관련 문서를 찾을 수 없습니다." 문자열일 때에도 LLM 호출이 진행된다. Tool Calling으로 실시간 DB 조회가 보완되지만, RAG 미적중 시 응답 품질이 저하될 수 있으며 불필요한 토큰 비용이 발생한다.
+
+3. **분석 AI 프롬프트 시드 데이터 부재**: `V1__ai_tables.sql`은 `ai_prompt_template` 테이블 스키마만 정의하고 초기 시드 데이터(DEFAULT 프롬프트 본문)를 포함하지 않는다. 별도 데이터 삽입 없이 기동 시 `IllegalStateException("DEFAULT 프롬프트를 찾을 수 없습니다")`가 발생한다.
+
+4. **temperature 단일값 적용**: 분석 AI(구조화 출력)와 어시스턴트(자연어 대화) 모두 `temperature=0.3`을 사용한다. 어시스턴트의 대화 자연스러움이 제한될 수 있으며, 향후 기능별 `ChatClient` 분리를 통한 개별 설정 적용이 필요하다.
 
 ### 토큰 소비
 
 | 구분 | 평균 프롬프트 토큰 | 평균 완성 토큰 | 평균 총 토큰 |
 |------|-----------------|--------------|-------------|
-| 카드 시장 분석 | [구현 후 측정] | [구현 후 측정] | [구현 후 측정] |
-| AI 어시스턴트 (단일 턴) | [구현 후 측정] | [구현 후 측정] | [구현 후 측정] |
+| 카드 시장 분석 | 측정 대기 | ~405 (설계 추정) | 측정 대기 |
+| AI 어시스턴트 (단일 턴) | 측정 대기 | ~200~400 (설계 추정) | 측정 대기 |
+
+> 실측값은 `card_ai_analysis.prompt_tokens / completion_tokens` 컬럼 및 `AiUsageMetrics` Micrometer 메트릭으로 수집 예정.
 
 ### 출력 품질 평가
 
 | 평가 항목 | 점수 (1~5) | 비고 |
 |----------|-----------|------|
-| 구조화 출력 JSON 파싱 성공률 | [구현 후 평가] | — |
-| 한국어 자연스러움 | [구현 후 평가] | — |
-| 분석 정확도 (적정가 추정) | [구현 후 평가] | — |
-| Tool Calling 정확도 | [구현 후 평가] | — |
+| 구조화 출력 JSON 파싱 성공률 | 측정 대기 | BeanOutputConverter 파싱 실패율 추적 필요 |
+| 한국어 자연스러움 | 측정 대기 | temperature=0.3 제약으로 다소 단조로울 가능성 |
+| 분석 정확도 (적정가 추정) | 측정 대기 | 실거래 데이터 대비 fairValueEstimate 오차 측정 필요 |
+| Tool Calling 정확도 | 측정 대기 | CardSearchTool·AuctionTool·BidTool 호출 성공률 측정 필요 |
 
 ### 다음 개선 방향
 
-> [구현 후 실측 데이터 기반으로 결정 예정]
+1. 어시스턴트 System Prompt를 DB 테이블로 이전하여 재배포 없이 수정 가능하도록 개선
+2. `ai_prompt_template` 초기 시드 데이터 Flyway 마이그레이션 스크립트 추가
+3. RAG 미적중 시 LLM 호출 생략 여부 정책 재검토 (Layer 2 환각 방어 강화)
+4. 실측 토큰 데이터 수집 후 v2.0 프롬프트 개선 계획 수립
 
 ---
 

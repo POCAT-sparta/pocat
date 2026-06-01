@@ -242,6 +242,49 @@ class AiAssistantServiceTest {
     }
 
     // ---------------------------------------------------------------
+    // [RED] #158 환각 방어 Layer2 — RAG 빈 결과 시 LLM 미호출
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("[RED #158] 환각 방어 Layer2 — RAG 빈 결과")
+    class RagEmptyResultDefense {
+
+        @Test
+        @DisplayName("[RED] RAG 빈 결과 시 ChatClient.prompt() 미호출")
+        void chat_ragEmptyResult_doesNotCallLlm() {
+            // given: RAG 검색 결과 없음
+            given(ragService.search(anyString())).willReturn(List.of());
+            AiChatRequest request = new AiChatRequest("관련 카드 없는 질문", null);
+
+            // when
+            // RED: 현재 구현은 RAG 빈 결과에도 LLM 호출함
+            // GREEN 조건: ragResults.isEmpty() 시 LLM 미호출 + 안내 메시지 반환
+            AiChatResponse response = aiAssistantService.chat(USER_ID, request);
+
+            // then: LLM이 호출되지 않아야 함
+            verify(chatClient, org.mockito.Mockito.never()).prompt();
+            assertThat(response).isNotNull();
+        }
+
+        @Test
+        @DisplayName("[RED] RAG 빈 결과 시 응답 메시지에 '관련 카드 정보를 찾을 수 없습니다' 포함")
+        void chat_ragEmptyResult_returnsGuideMessage() {
+            // given: RAG 검색 결과 없음
+            given(ragService.search(anyString())).willReturn(List.of());
+            AiChatRequest request = new AiChatRequest("RAG 빈 결과 테스트", null);
+
+            // when
+            AiChatResponse response = aiAssistantService.chat(USER_ID, request);
+
+            // then
+            // RED: 현재 구현은 LLM 응답("피카츄 카드 현재 시세는 5만원입니다.")을 반환
+            // GREEN 조건: reply에 "관련 카드 정보를 찾을 수 없습니다" 포함
+            assertThat(response.reply())
+                    .as("RAG 빈 결과 시 안내 메시지 반환해야 함 (현재 LLM 응답 반환 → RED)")
+                    .contains("관련 카드 정보를 찾을 수 없습니다");
+        }
+    }
+
+    // ---------------------------------------------------------------
     // AI 장애 시나리오
     // ---------------------------------------------------------------
     @Nested
