@@ -10,10 +10,10 @@ import java.util.Arrays;
 @Getter
 @RequiredArgsConstructor
 public enum PortOneCancelStatus {
-    FAILED("FAILED", "결제 완료"),
-    REQUESTED("REQUESTED", "결제 완료"),
-    SUCCEEDED("SUCCEEDED", "결제 완료"),
-    HTTP_ERROR("HTTP_ERROR", "결제 완료"),
+    FAILED("FAILED", "취소 실패"),
+    REQUESTED("REQUESTED", "취소 요청됨"),
+    SUCCEEDED("SUCCEEDED", "취소 성공"),
+    HTTP_ERROR("HTTP_ERROR", "HTTP 오류"),
     NETWORK_ERROR("NETWORK_ERROR", "포트원 통신 에러");
 
     public static PortOneCancelStatus from(String code) {

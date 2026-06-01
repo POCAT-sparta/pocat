@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneSignatureVerifier;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
@@ -164,11 +166,16 @@ public class PortOneWebhookService {
             if (!payment.getAmount().equals(paidAmount)) {
                 log.error("웹훅 금액 불일치 paymentId={} expected={} actual={}",
                         paymentId, payment.getAmount(), paidAmount);
-                failureService.markFailed(payment.getPaymentUid(),payment.getOrderId(), PaymentErrorReason.AMOUNT_MISMATCH);
+                paymentCommandService.handelCancel(payment.getPaymentUid(), payment.getOrderId());
+                PortOneCancelResponse cancelResponse = portOneClientService.cancelPayment(
+                        payment.getPaymentUid(), paidAmount, "결제금액 불일치");
+                if (cancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
+                        || cancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)) {
+                    paymentCommandService.cancelFailPayment(payment.getPaymentUid());
+                }
                 setExpireService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
-                return;  // 실패 처리 완료 — throw 시 non-200으로 PortOne 불필요 재전송 유발
-
+                return;
             }
 
             Order order = orderQueryService.findByOrderid(payment.getOrderId());
