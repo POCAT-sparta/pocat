@@ -92,7 +92,9 @@ public class CardAnalysisService {
         String cardContext = buildCardContext(card);
 
         // LLM 호출
+        long startMs = System.currentTimeMillis();
         CardAnalysisResult result = callLlmForAnalysis(cardContext, prompt);
+        long latencyMs = System.currentTimeMillis() - startMs;
 
         // 캐시 저장 (TTL 24시간)
         String serializedResult = serializeAnalysisResult(result);
@@ -122,8 +124,8 @@ public class CardAnalysisService {
             aiUsageMetrics.recordUsage(
                     result.promptTokens(),
                     result.completionTokens(),
-                    0L,
-                    FALLBACK_MODEL
+                    latencyMs,
+                    result.analysisModel() != null ? result.analysisModel() : FALLBACK_MODEL
             );
         }
 
@@ -199,6 +201,7 @@ public class CardAnalysisService {
 
     /**
      * LLM 호출 및 응답 파싱.
+     * 파싱 실패 시 1회 재시도 (환각 방어 Layer1).
      */
     private CardAnalysisResult callLlmForAnalysis(String cardContext, String promptTemplate) {
         try {
@@ -214,7 +217,22 @@ public class CardAnalysisService {
             String response = chatClient.prompt(prompt).call().content();
 
             log.debug("LLM response received for card analysis");
-            return outputConverter.convert(response);
+            try {
+                return outputConverter.convert(response);
+            } catch (Exception firstEx) {
+                log.warn("BeanOutputConverter parsing failed on first attempt, retrying: {}", firstEx.getMessage());
+                // 1회 재시도
+                String retryResponse = chatClient.prompt(prompt).call().content();
+                try {
+                    return outputConverter.convert(retryResponse);
+                } catch (Exception retryEx) {
+                    log.error("BeanOutputConverter parsing failed after retry: {}", retryEx.getMessage(), retryEx);
+                    aiUsageMetrics.recordError("PARSE_FAILED_AFTER_RETRY", FALLBACK_MODEL);
+                    throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, retryEx);
+                }
+            }
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             log.error("LLM call failed: {}", e.getMessage(), e);
             aiUsageMetrics.recordError("LLM_CALL_FAILED", FALLBACK_MODEL);

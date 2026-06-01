@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.assistant.controller;
 
+import com.rocketcrew.pocat.domain.ai.assistant.AiAssistantConstants;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -71,6 +72,20 @@ public class AiStreamController {
 
         // RAG context
         List<Document> ragResults = ragService.search(message);
+
+        // 환각 방어 Layer2: RAG 결과 없으면 LLM 스트림 미호출
+        if (ragResults.isEmpty()) {
+            log.info("RAG returned empty results, returning guide SSE without LLM call for userId={}", userId);
+            String guideMessage = AiAssistantConstants.RAG_EMPTY_GUIDE_MESSAGE;
+            // 세션 저장 (blocking, 스트림 시작 전이므로 허용)
+            sessionService.addMessage(chatSessionId, "user", message, 0);
+            sessionService.addMessage(chatSessionId, "assistant", guideMessage, 0);
+            return Flux.just(
+                ServerSentEvent.<String>builder().id("1").event("message").data(guideMessage).build(),
+                ServerSentEvent.<String>builder().id("2").event("done").data("응답이 완료되었습니다").build()
+            );
+        }
+
         String ragContext = ragService.buildContext(ragResults);
 
         String historyContext = recentHistory.isEmpty() ? "" :
