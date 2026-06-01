@@ -10,6 +10,10 @@ import com.rocketcrew.pocat.domain.user.service.UserCommandService;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +32,8 @@ public class UserController {
 
     private final UserQueryService userQueryService;
     private final UserCommandService userCommandService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @GetMapping("/api/v1/users/me")
     public ResponseEntity<ApiResponseDto<UserResponse>> getUserMe(@AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -39,6 +45,11 @@ public class UserController {
     public ResponseEntity<ApiResponseDto<UserResponse>> updateUser(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateUserRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:user:" + userDetails.getUserId(),
+                rateLimitProperties.getUserLimit(),
+                rateLimitProperties.getUserWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         UserResponse response = userCommandService.updateUser(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
@@ -47,12 +58,22 @@ public class UserController {
     public ResponseEntity<ApiResponseDto<Void>> registerBillingKey(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody RegisterBillingKeyRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:user:" + userDetails.getUserId(),
+                rateLimitProperties.getUserLimit(),
+                rateLimitProperties.getUserWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         userCommandService.registerBillingKey(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 
     @DeleteMapping("/api/v1/users/me/billing-key")
     public ResponseEntity<ApiResponseDto<Void>> deleteBillingKey(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (!redisRateLimiter.isAllowed("rate:user:user:" + userDetails.getUserId(),
+                rateLimitProperties.getUserLimit(),
+                rateLimitProperties.getUserWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         userCommandService.deleteBillingKey(userDetails.getUserId());
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
@@ -61,6 +82,11 @@ public class UserController {
     public ResponseEntity<ApiResponseDto<Void>> updateBillingKey(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateBillingKeyRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:user:" + userDetails.getUserId(),
+                rateLimitProperties.getUserLimit(),
+                rateLimitProperties.getUserWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         userCommandService.updateBillingKey(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
@@ -69,6 +95,11 @@ public class UserController {
     public ResponseEntity<ApiResponseDto<Void>> updateBank(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateBankRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:user:" + userDetails.getUserId(),
+                rateLimitProperties.getUserLimit(),
+                rateLimitProperties.getUserWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         userCommandService.updateBank(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }

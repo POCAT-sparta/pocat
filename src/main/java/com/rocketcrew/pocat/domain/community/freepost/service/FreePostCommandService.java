@@ -63,6 +63,11 @@ public class FreePostCommandService {
 
     @CacheEvict(value = CacheNames.POST_FREE_DETAIL, key = "#postId")
     public void deletePost(Long postId, Long userId) {
+        if (!redisRateLimiter.isAllowed("rate:user:post:" + userId,
+                rateLimitProperties.getPostLimit(),
+                rateLimitProperties.getPostWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         FreePost freePost = findFreePostAndVerifyOwner(postId, userId);
         freePostRepository.delete(freePost);
         postCommentCacheEvictor.evictAfterCommit(postId);

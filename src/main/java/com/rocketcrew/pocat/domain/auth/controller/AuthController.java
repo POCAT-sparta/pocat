@@ -45,7 +45,15 @@ public class AuthController {
     }
 
     @PostMapping("/v1/auth/login")
-    public ResponseEntity<ApiResponseDto<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponseDto<TokenResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        String ip = HttpRequestUtils.resolveClientIp(httpRequest);
+        if (!redisRateLimiter.isAllowed("rate:ip:login:" + ip,
+                rateLimitProperties.getLoginLimit(),
+                rateLimitProperties.getLoginWindowSeconds())) {
+            throw new AuthException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         TokenResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }

@@ -66,11 +66,16 @@ public class TradePostCommandService {
 
     @CacheEvict(value = CacheNames.POST_TRADE_DETAIL, key = "#id")
     public void deletePost(Long id, Long userId, String role) {
+        boolean isAdmin = UserRole.ADMIN.name().equals(role);
+        if (!isAdmin && !redisRateLimiter.isAllowed("rate:user:post:" + userId,
+                rateLimitProperties.getPostLimit(),
+                rateLimitProperties.getPostWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         TradePost tradePost = tradePostRepository.findById(id)
                 .orElseThrow(() -> new TradePostException(ErrorCode.TRADE_POST_NOT_FOUND));
 
         boolean isOwner = tradePost.getUserId().equals(userId);
-        boolean isAdmin = UserRole.ADMIN.name().equals(role);
 
         if (!isOwner && !isAdmin) {
             throw new TradePostException(ErrorCode.USER_FORBIDDEN);
