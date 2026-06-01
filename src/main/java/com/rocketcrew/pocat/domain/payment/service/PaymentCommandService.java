@@ -37,7 +37,7 @@ public class PaymentCommandService {
     private final OutboxEventWriter outboxEventWriter;
     private final PaymentQueryService paymentQueryService;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Payment createPayment(Long orderId, PaymentType paymentType) {
         Order order = orderQueryService.findByOrderid(orderId);
 

@@ -75,8 +75,12 @@ public class OrderQueryService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
         Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.ORDER_COMPLETED, since);
+        // 거래 이력이 없으면 result 자체가 null이거나 집계값이 null로 오므로 방어 처리
+        if (result == null || result.length < 2) {
+            return new CardAveragePriceResponse(cardId, null, 0L, since, now);
+        }
         Double avg = (Double) result[0];
-        long count = (Long) result[1];
+        long count = result[1] != null ? (Long) result[1] : 0L;
         Long averagePrice = avg != null ? Math.round(avg) : null;
         return new CardAveragePriceResponse(cardId, averagePrice, count, since, now);
     }
