@@ -29,12 +29,13 @@ public class PaymentCommandService {
 
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
-    private final PaymentRepository paymentRepository;
     private final StringRedisTemplate redisTemplate;
-    private final ApplicationEventPublisher eventPublisher;
-    private final OutboxEventWriter outboxEventWriter;
+    private final PaymentRepository paymentRepository;
     private final SetExpireService setExpireService;
     private final OrderQueryService orderQueryService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventWriter outboxEventWriter;
+    private final PaymentQueryService paymentQueryService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createPayment(Long orderId, PaymentType paymentType) {
@@ -67,6 +68,28 @@ public class PaymentCommandService {
         );
         outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handelFailed(String paymentUId, Long orderId){
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        payment.fail();
+        order.failPayment();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handelCancel(String paymentUId, Long orderId){
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
+        payment.cancel();
+        order.failPayment();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cancelFailPayment(String paymentUid) {
+        Payment payment = paymentQueryService.findPaymentByUid(paymentUid);
+        payment.cancelFailed();
     }
 
     private String generatePaymentUid() {

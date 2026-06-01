@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse;
@@ -13,10 +14,9 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.domain.user.entity.User;
-import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
-import com.rocketcrew.pocat.global.exception.domain.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class PaymentApplicationService {
 
     private final PortOneClientService portOneClientService;
     private final FailureService failureService;
-    private final UserRepository userRepository;
+    private final UserQueryService userQueryService;
 
     private final PaymentCommandService paymentCommandService;
     private final PaymentQueryService paymentQueryService;
@@ -71,7 +71,7 @@ public class PaymentApplicationService {
             return paymentQueryService.findByOrderId(order.getId());
         }
 
-        User user = findUser(order.getBuyerId());
+        User user = userQueryService.getUserEntity(order.getBuyerId());
         String billingKey = user.getBillingKey();
 
         if (billingKey == null || billingKey.isEmpty()) {
@@ -94,14 +94,14 @@ public class PaymentApplicationService {
 
         // 이후 성공이 아니면 실패처리
         if (!PortOneStatus.PAID.equals(response.status())) {
-            failureService.persistBillingKeyFailure(payment.getId(), order.getId());
+            paymentCommandService.handelFailed(payment.getPaymentUid(), order.getId());
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
         // 금액이 맞지 않으면 취소
         if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
-            cancelPayment(payment.getPaymentUid(),response.amount());
-            failureService.persistBillingKeyFailure(payment.getId(), order.getId());
+            attemptCancelPayment(payment.getPaymentUid(),order.getId() ,response.amount());
+            failureService.autoPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
@@ -138,35 +138,29 @@ public class PaymentApplicationService {
         }
 
         if (!PortOneStatus.PAID.equals(portOneClientPayment.status())) {
-            payment.fail();
-            if(order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
-                failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
-            }
+            failureService.markFailed(paymentUid,order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
         if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
-            payment.fail();
-            if(order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
-                failureService.markFailed(order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
-            }
-            cancelPayment(payment.getPaymentUid(),portOneClientPayment.amount());
+            attemptCancelPayment(payment.getPaymentUid(),order.getId() ,portOneClientPayment.amount());
+            failureService.directPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
         paymentCommandService.completePayment(payment, order, portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
         return PaymentResponse.from(payment);
     }
 
-    private User findUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+    // resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요
+    private void attemptCancelPayment(String paymentUid, Long orderId,Long amount) {
+        paymentCommandService.handelCancel(paymentUid, orderId);
+        PortOneCancelResponse response = portOneClientService.cancelPayment(paymentUid, amount ,"결제금액 불일치");
+
+        if(response.status().equals(PortOneCancelStatus.HTTP_ERROR) || response.status().equals(PortOneCancelStatus.NETWORK_ERROR)) {
+            paymentCommandService.cancelFailPayment(paymentUid);
+        }
     }
 
-    private PortOneCancelResponse cancelPayment(String paymentUid, Long amount) {
-        // TODO : resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요
-        // TODO : 취소 메서드 수정 필요
-        return portOneClientService.cancelPayment(paymentUid, amount ,"결제금액 불일치");
-    }
 
     private PortOnePaymentResponse attemptWithRetry(String paymentUid) {
         int MAX_RETRY = 3;
@@ -198,6 +192,7 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED, ie);
         }
     }
+
 
 
 }

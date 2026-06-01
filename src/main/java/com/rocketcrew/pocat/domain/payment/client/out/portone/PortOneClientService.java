@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -63,18 +64,23 @@ public class PortOneClientService {
     public PortOneCancelResponse cancelPayment(String paymentUid, Long amount, String reason) {
         Map<String, Object> body = Map.of(
                 "reason", reason,
-                "amount", Map.of("total", amount)
+                "amount", Map.of("total", amount == null ? 0 : amount)
         );
         try {
             PortOneCancelRawResponse raw = portOneRestClient.post()
                     .uri("/payments/{paymentUid}/cancel", paymentUid)
                     .body(body)
                     .retrieve()
+                    .onStatus(HttpStatusCode::isError, ((request, response) -> {
+                        throw new PaymentException(ErrorCode.PORTONE_HTTP_CODE_ERROR);
+                    }))
                     .body(PortOneCancelRawResponse.class);
 
             return PortOneCancelRawResponse.toResponse(raw);
         } catch (RestClientException e) {
             return PortOneCancelRawResponse.toNetworkError();
+        } catch (PaymentException e) {
+            return PortOneCancelRawResponse.toStatusError();
         }
     }
 }

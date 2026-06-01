@@ -77,4 +77,17 @@ public class Payment extends BaseEntity {
                 || this.status == PaymentStatus.FAILED
                 || this.status == PaymentStatus.REFUNDED;
     }
+
+    public void cancel() {
+        if(this.status == PaymentStatus.FAILED || this.status == PaymentStatus.COMPLETED){
+            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_FAIL);
+        }
+        this.status = PaymentStatus.CANCELLED;
+    }
+
+    public void cancelFailed() {
+        if (this.status == PaymentStatus.CANCELLED) {
+            this.status = PaymentStatus.CANCEL_HTTP_ERROR;
+        }
+    }
 }

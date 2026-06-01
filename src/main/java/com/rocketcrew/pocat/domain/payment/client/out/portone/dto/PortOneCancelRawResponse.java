@@ -1,7 +1,7 @@
 package com.rocketcrew.pocat.domain.payment.client.out.portone.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +22,8 @@ public record PortOneCancelRawResponse(
             String pgCancellationId,
             Long totalAmount,
             Long taxFreeAmount,
+            Long vatAmount,
+            Long easyPayDiscountAmount,
             String reason,
             String cancelledAt,
             String requestedAt
@@ -44,7 +46,7 @@ public record PortOneCancelRawResponse(
         CancellationDetail c = raw.cancellation();
 
         return PortOneCancelResponse.builder()
-                .status(PortOneStatus.from(c.status()))
+                .status(PortOneCancelStatus.from(c.status()))
                 .pgId(c.id())
                 .pgCancellationId(c.pgCancellationId())
                 .totalAmount(c.totalAmount())
@@ -57,8 +59,15 @@ public record PortOneCancelRawResponse(
 
     public static PortOneCancelResponse toNetworkError() {
         return PortOneCancelResponse.builder()
-                .status(PortOneStatus.NETWORK_ERROR)
-                .reason(PortOneStatus.NETWORK_ERROR.getMessage())
+                .status(PortOneCancelStatus.NETWORK_ERROR)
+                .reason(PortOneCancelStatus.NETWORK_ERROR.getMessage())
+                .build();
+    }
+
+    public static PortOneCancelResponse toStatusError() {
+        return PortOneCancelResponse.builder()
+                .status(PortOneCancelStatus.HTTP_ERROR)
+                .reason(PortOneCancelStatus.HTTP_ERROR.getMessage())
                 .build();
     }
 }

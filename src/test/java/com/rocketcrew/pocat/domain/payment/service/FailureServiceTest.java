@@ -65,7 +65,7 @@ class FailureServiceTest {
             given(orderRepository.findById(1L)).willReturn(Optional.of(order));
             doNothing().when(outboxEventWriter).write(anyString(), anyString(), any());
 
-            failureService.markFailed(1L, PaymentErrorReason.PAYMENT_EXPIRED);
+            failureService.markFailed("",1L, PaymentErrorReason.PAYMENT_EXPIRED);
 
             assertThat(order.getStatus()).isEqualTo(OrderStatus.AUTO_PAYMENT_FAILED);
         }
@@ -75,7 +75,7 @@ class FailureServiceTest {
         void fail_orderNotFound() {
             given(orderRepository.findById(99L)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> failureService.markFailed(99L, PaymentErrorReason.PAYMENT_EXPIRED))
+            assertThatThrownBy(() -> failureService.markFailed("",99L, PaymentErrorReason.PAYMENT_EXPIRED))
                     .isInstanceOf(OrderException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_NOT_FOUND);
         }
