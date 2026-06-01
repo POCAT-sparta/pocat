@@ -250,7 +250,7 @@ public class AuctionCommandService {
     private void validateInspectable(Auction auction) {
         if (auction.getStatus() != AuctionStatus.PENDING
                 && auction.getStatus() != AuctionStatus.INSPECTING) {
-            throw new AuctionException(ErrorCode.AUCTION_NOT_INSPECTING);
+            throw new AuctionException(ErrorCode.AUCTION_INSPECTION_NOT_ALLOWED);
         }
     }
 

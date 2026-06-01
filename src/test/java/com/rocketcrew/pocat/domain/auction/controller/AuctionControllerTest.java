@@ -432,13 +432,13 @@ class AuctionControllerTest {
         void failNotInspecting() throws Exception {
             InspectAuctionRequest request = new InspectAuctionRequest(AuctionInspectionResult.PASSED, null);
             given(commandService.inspectAuction(anyLong(), anyLong(), any()))
-                    .willThrow(new AuctionException(ErrorCode.AUCTION_NOT_INSPECTING));
+                    .willThrow(new AuctionException(ErrorCode.AUCTION_INSPECTION_NOT_ALLOWED));
 
             mockMvc.perform(patch("/api/v1/admin/auctions/1/inspection")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.code").value("AUCTION_NOT_INSPECTING"));
+                    .andExpect(jsonPath("$.code").value("AUCTION_INSPECTION_NOT_ALLOWED"));
         }
     }
 
