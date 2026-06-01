@@ -5,7 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import com.rocketcrew.pocat.global.exception.domain.InvalidAuctionEventPayloadException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,7 +61,7 @@ class AuctionPostProcessConsumerTest {
 
     @Test
     @DisplayName("auction.activated 이벤트의 endedAt 누락은 실패 처리한다")
-    void consumeActivated_withoutEndedAt_throwsAuctionException() {
+    void consumeActivated_withoutEndedAt_throwsInvalidPayloadException() {
         String message = """
                 {
                   "eventType": "auction.activated",
@@ -70,7 +70,18 @@ class AuctionPostProcessConsumerTest {
                 """;
 
         assertThatThrownBy(() -> consumer.consume(message))
-                .isInstanceOf(AuctionException.class)
+                .isInstanceOf(InvalidAuctionEventPayloadException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+    }
+
+    @Test
+    @DisplayName("파싱할 수 없는 auction 이벤트 payload는 실패 처리한다")
+    void consumeMalformedJson_throwsInvalidPayloadException() {
+        String message = "{";
+
+        assertThatThrownBy(() -> consumer.consume(message))
+                .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
     }
@@ -110,7 +121,7 @@ class AuctionPostProcessConsumerTest {
 
     @Test
     @DisplayName("auction.buyout.completed 이벤트의 finalPrice 누락은 실패 처리한다")
-    void consumeBuyoutCompleted_withoutFinalPrice_throwsAuctionException() {
+    void consumeBuyoutCompleted_withoutFinalPrice_throwsInvalidPayloadException() {
         String message = """
                 {
                   "eventType": "auction.buyout.completed",
@@ -119,7 +130,7 @@ class AuctionPostProcessConsumerTest {
                 """;
 
         assertThatThrownBy(() -> consumer.consume(message))
-                .isInstanceOf(AuctionException.class)
+                .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
     }
@@ -141,8 +152,8 @@ class AuctionPostProcessConsumerTest {
     }
 
     @Test
-    @DisplayName("검수 이벤트는 후처리 대상이 아니므로 명시적으로 스킵한다")
-    void consumeInspectionEvent_skipsPostProcess() {
+    @DisplayName("auction.inspection.passed 이벤트는 후처리 대상이 아니므로 명시적으로 스킵한다")
+    void consumeInspectionPassedEvent_skipsPostProcess() {
         String message = """
                 {
                   "eventType": "auction.inspection.passed",
@@ -171,8 +182,8 @@ class AuctionPostProcessConsumerTest {
     }
 
     @Test
-    @DisplayName("알 수 없는 eventType은 실패 처리한다")
-    void consumeUnknownEventType_throwsAuctionException() {
+    @DisplayName("알 수 없는 eventType은 후처리 대상이 아니므로 스킵한다")
+    void consumeUnknownEventType_skipsPostProcess() {
         String message = """
                 {
                   "eventType": "auction.unknown",
@@ -180,15 +191,14 @@ class AuctionPostProcessConsumerTest {
                 }
                 """;
 
-        assertThatThrownBy(() -> consumer.consume(message))
-                .isInstanceOf(AuctionException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+        consumer.consume(message);
+
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
     }
 
     @Test
     @DisplayName("auctionId가 필요한 이벤트에서 auctionId가 없으면 실패 처리한다")
-    void consumeEventWithoutAuctionId_throwsAuctionException() {
+    void consumeEventWithoutAuctionId_throwsInvalidPayloadException() {
         String message = """
                 {
                   "eventType": "auction.ended"
@@ -196,7 +206,7 @@ class AuctionPostProcessConsumerTest {
                 """;
 
         assertThatThrownBy(() -> consumer.consume(message))
-                .isInstanceOf(AuctionException.class)
+                .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
     }

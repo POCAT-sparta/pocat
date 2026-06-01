@@ -1,11 +1,12 @@
 package com.rocketcrew.pocat.domain.auction.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.auction.event.AuctionEventType;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
-import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
+import com.rocketcrew.pocat.global.exception.domain.InvalidAuctionEventPayloadException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -36,8 +37,12 @@ public class AuctionPostProcessConsumer {
                 case AuctionEventType.INSPECTION_PASSED, AuctionEventType.INSPECTION_FAILED ->
                         log.debug("Auction postprocess skipped inspection event. eventType={}, auctionId={}",
                                 event.getEventType(), event.getAuctionId());
-                default -> throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+                default -> log.debug("Auction postprocess skipped unknown event. eventType={}, auctionId={}",
+                        event.getEventType(), event.getAuctionId());
             }
+        } catch (JsonProcessingException e) {
+            log.error("Auction postprocess invalid payload. message={}", message, e);
+            throw new InvalidAuctionEventPayloadException(e);
         } catch (AuctionException e) {
             log.error("Auction postprocess failed. message={}", message, e);
             throw e;
@@ -73,28 +78,28 @@ public class AuctionPostProcessConsumer {
 
     private void requireEventType(AuctionEventPayload event) {
         if (event == null) {
-            throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+            throw new InvalidAuctionEventPayloadException();
         }
         if (event.getEventType() == null || event.getEventType().isBlank()) {
-            throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+            throw new InvalidAuctionEventPayloadException();
         }
     }
 
     private void requireAuctionId(AuctionEventPayload event) {
         if (event.getAuctionId() == null) {
-            throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+            throw new InvalidAuctionEventPayloadException();
         }
     }
 
     private void requireFinalPrice(AuctionEventPayload event) {
         if (event.getFinalPrice() == null) {
-            throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+            throw new InvalidAuctionEventPayloadException();
         }
     }
 
     private void requireEndedAt(AuctionEventPayload event) {
         if (event.getEndedAt() == null) {
-            throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+            throw new InvalidAuctionEventPayloadException();
         }
     }
 }
