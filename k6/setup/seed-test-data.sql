@@ -18,7 +18,7 @@ DELETE FROM orders WHERE order_uid = 'K6-TEST-ORDER-001';
 -- buyer_id : 아래 @buyer_id 변수 (k6-buyer@test.com 회원가입 후 결정됨)
 -- card_id  : 시드 데이터 카드 1번 사용
 -- status   : AUTO_PAYMENT_FAILED (generatePayment 진입 조건)
--- payment_deadline : 현재 시각 + 1시간 (결제 윈도우 안)
+-- payment_deadline : 현재 시각 + 10시간 (KST +9h 오프셋 보정 + 1시간 여유)
 SET @buyer_id = (SELECT id FROM users WHERE email = 'k6-buyer@test.com' LIMIT 1);
 
 INSERT INTO orders

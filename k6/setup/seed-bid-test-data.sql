@@ -27,7 +27,7 @@ WHERE email IN (
 
 -- ACTIVE 경매 삽입
 -- started_at: 1시간 전 (Java가 과거로 읽도록 충분히 앞으로)
--- ended_at: +10시간 (KST +9h 오프셋 + 1시간 여유 → Java는 1시간 후로 읽음)
+-- ended_at: +20시간 (KST +9h 오프셋 보정 + 1시간 여유 → Java는 1시간 후로 읽음)
 INSERT INTO auctions
     (card_id, seller_id, title, starting_price, buyout_price,
      status, started_at, ended_at, created_at, updated_at)

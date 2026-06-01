@@ -31,8 +31,10 @@ SCENARIO="${1:-all}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # DB_PASSWORD 필요 시 .env에서 로드
+# xargs 대신 직접 파싱 — 비밀번호에 공백·특수문자 포함 시에도 안전
 if [ -z "$DB_PASSWORD" ] && [ -f "$SCRIPT_DIR/../.env" ]; then
-  export $(grep -E '^DB_PASSWORD=' "$SCRIPT_DIR/../.env" | xargs)
+  DB_PASSWORD=$(grep -E '^DB_PASSWORD=' "$SCRIPT_DIR/../.env" | cut -d '=' -f2-)
+  export DB_PASSWORD
 fi
 
 # ── 헬퍼 ──────────────────────────────────────────────────────────

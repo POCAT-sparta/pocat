@@ -1,4 +1,4 @@
-ㅋ`# k6 부하·동시성 테스트 결과
+# k6 부하·동시성 테스트 결과
 
 > 실행일: 2026-06-01  
 > 환경: 로컬 Docker Compose (pocat-backend, pocat-db, pocat-redis, pocat-elasticsearch)  

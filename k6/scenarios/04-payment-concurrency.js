@@ -28,12 +28,12 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
-import { signup, login, authOpts } from '../helpers/auth.js';
+import { login, authOpts } from '../helpers/auth.js';
 import { BASE_URL } from '../helpers/config.js';
 
 const TEST_EMAIL    = 'k6-buyer@test.com';
 const TEST_PASSWORD = 'Test1234!';
-const TEST_NICKNAME = 'k6테스트구매자';
+const TEST_NICKNAME = 'k6buyer';
 
 // 커스텀 메트릭 — 동시 성공/실패 건수 카운팅
 const concurrentSuccesses = new Counter('concurrent_successes');
@@ -55,13 +55,14 @@ export const options = {
 };
 
 // ── setup: 로그인하여 token 획득 ────────────────────────────────
+// 계정 생성은 run.sh setup_payment_test()의 curl에서 처리하므로 login만 수행.
+// (signup을 여기서 재호출하면 IP 기준 5회/60초 레이트리밋에 걸려 429 반환)
 export function setup() {
   const orderId = __ENV.ORDER_ID;
   if (!orderId) {
     console.warn('⚠️  ORDER_ID 미설정. setup/seed-test-data.sql 실행 후 -e ORDER_ID=<id> 로 전달하세요.');
   }
 
-  signup(TEST_EMAIL, TEST_PASSWORD, TEST_NICKNAME);
   const token = login(TEST_EMAIL, TEST_PASSWORD);
 
   if (!token) {
