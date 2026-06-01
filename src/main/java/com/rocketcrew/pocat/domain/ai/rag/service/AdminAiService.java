@@ -33,7 +33,7 @@ public class AdminAiService {
      * 기존 card 타입 벡터 삭제는 VectorStore filter-delete 미지원으로 생략하고
      * embedCard() 호출 시 동일 cardId Document가 upsert 된다.
      */
-    @Async
+    @Async("adminTaskExecutor")
     public void reindexAll() {
         if (!reindexRunning.compareAndSet(false, true)) {
             log.warn("[AdminAiService] 재색인이 이미 실행 중입니다. 중복 실행을 무시합니다.");
@@ -66,14 +66,21 @@ public class AdminAiService {
                             card.getRarity()
                     );
                     boolean indexed = false;
-                    for (int attempt = 1; attempt <= 2; attempt++) {
+                    for (int attempt = 1; attempt <= 3; attempt++) {
                         try {
                             embeddingService.embedCard(card.getId(), cardText);
                             indexed = true;
                             break;
                         } catch (Exception e) {
-                            if (attempt < 2) {
-                                log.warn("[AdminAiService] 카드 색인 재시도: cardId={}, attempt={}", card.getId(), attempt);
+                            if (attempt < 3) {
+                                log.warn("[AdminAiService] 카드 색인 재시도: cardId={}, attempt={}/{}", card.getId(), attempt, 3);
+                                try {
+                                    Thread.sleep(500L * attempt);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    log.warn("[AdminAiService] 재색인 스레드 인터럽트: cardId={}", card.getId());
+                                    return;
+                                }
                             } else {
                                 log.error("[AdminAiService] 카드 색인 최종 실패: cardId={}", card.getId(), e);
                                 failedCount++;
