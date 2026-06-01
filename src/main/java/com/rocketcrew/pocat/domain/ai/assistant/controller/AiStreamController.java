@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.assistant.controller;
 
+import com.rocketcrew.pocat.domain.ai.assistant.AiAssistantConstants;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
@@ -75,7 +76,7 @@ public class AiStreamController {
         // 환각 방어 Layer2: RAG 결과 없으면 LLM 스트림 미호출
         if (ragResults.isEmpty()) {
             log.info("RAG returned empty results, returning guide SSE without LLM call for userId={}", userId);
-            String guideMessage = "관련 카드 정보를 찾을 수 없습니다. 카드명, 등급(PSA_10/PSA_9 등), 또는 경매 번호를 더 구체적으로 알려주세요.";
+            String guideMessage = AiAssistantConstants.RAG_EMPTY_GUIDE_MESSAGE;
             // 세션 저장 (blocking, 스트림 시작 전이므로 허용)
             sessionService.addMessage(chatSessionId, "user", message, 0);
             sessionService.addMessage(chatSessionId, "assistant", guideMessage, 0);

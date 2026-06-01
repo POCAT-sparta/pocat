@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.assistant.service;
 
+import com.rocketcrew.pocat.domain.ai.assistant.AiAssistantConstants;
 import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatRequest;
 import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatResponse;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.AuctionTool;
@@ -77,7 +78,7 @@ public class AiAssistantService {
             if (ragResults.isEmpty()) {
                 log.info("RAG returned empty results for userId={}, returning guide message without LLM call", userId);
                 sessionService.addMessage(chatSessionId, "user", request.message(), 0);
-                String guideMessage = "관련 카드 정보를 찾을 수 없습니다. 카드명, 등급(PSA_10/PSA_9 등), 또는 경매 번호를 더 구체적으로 알려주세요.";
+                String guideMessage = AiAssistantConstants.RAG_EMPTY_GUIDE_MESSAGE;
                 sessionService.addMessage(chatSessionId, "assistant", guideMessage, 0);
                 return new AiChatResponse(guideMessage, sessionId, List.of(), 0, 0);
             }

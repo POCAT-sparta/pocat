@@ -29,7 +29,7 @@ LLM 프롬프트는 출력 품질·토큰 비용·일관성에 직접 영향을 
 
 프롬프트는 `ai_prompt_template` 테이블에서 카드 등급(`cardGrade`)을 키로 조회하며, 등급별 템플릿이 없을 경우 `DEFAULT` 템플릿으로 폴백한다(`AiPromptTemplateService`). 템플릿은 `{cardContext}`와 `{format}` 두 개의 변수를 치환한다.
 
-```
+```text
 [User Prompt 템플릿 구조 — PromptTemplate 치환 변수]
 
 {cardContext}  ← CardAnalysisService.buildCardContext(card) 생성값
@@ -55,7 +55,7 @@ LLM 프롬프트는 출력 품질·토큰 비용·일관성에 직접 영향을 
 
 System Prompt는 `AiAssistantService.chat()`에 하드코딩되어 있다.
 
-```
+```text
 [System Prompt — AiAssistantService v1.0]
 
 "당신은 POCAT 카드 거래 플랫폼 어시스턴트입니다.
@@ -130,7 +130,7 @@ RAG 컨텍스트 구성:
 
 `AiPromptTemplateService` 도입으로 `ai_prompt_template` DB 테이블에서 카드 등급(`cardGrade`)을 키로 프롬프트를 조회한다. 등급별 전용 템플릿이 없으면 `DEFAULT` 템플릿으로 폴백한다.
 
-```
+```text
 [등급별 프롬프트 분기 구조]
 
 PSA_10 템플릿:
@@ -194,7 +194,7 @@ v1.0 대비 변경점:
 
 LLM이 간헐적으로 JSON 형식을 벗어난 응답을 반환할 때 `BeanOutputConverter.convert()` 파싱이 실패한다. v3.0부터 첫 번째 파싱 실패 시 동일 프롬프트로 1회 즉시 재시도한다. 재시도에서도 파싱이 실패하면 `PARSE_FAILED_AFTER_RETRY` 에러 메트릭을 기록하고 `ServiceException(INTERNAL_SERVER_ERROR)`를 발생시킨다.
 
-```
+```text
 callLlmForAnalysis() 흐름:
   1. LLM 호출 → response 획득
   2. outputConverter.convert(response) 시도
@@ -208,7 +208,7 @@ callLlmForAnalysis() 흐름:
 
 `ragResults.isEmpty()` 체크를 LLM 호출 전에 수행한다. RAG 결과가 없으면 LLM을 호출하지 않고 안내 메시지를 즉시 반환한다. 세션 메시지는 정상적으로 저장하여 대화 이력 연속성을 유지한다.
 
-```
+```text
 안내 메시지:
   "관련 카드 정보를 찾을 수 없습니다. 카드명, 등급(PSA_10/PSA_9 등), 또는 경매 번호를 더 구체적으로 알려주세요."
 ```
