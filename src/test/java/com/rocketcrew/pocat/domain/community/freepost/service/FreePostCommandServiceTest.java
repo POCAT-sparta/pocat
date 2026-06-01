@@ -11,8 +11,12 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.domain.community.freepost.cache.PostCommentCacheEvictor;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +40,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,12 +70,22 @@ class FreePostCommandServiceTest {
     @Mock
     private RateLimitProperties rateLimitProperties;
 
+    @Mock
+    private PostCommentCacheEvictor postCommentCacheEvictor;
+
+    @Mock
+    private FreePostDetailCacheService freePostDetailCacheService;
+
+    @Mock
+    private BadWordFilterService badWordFilterService;
+
     private User user;
     private FreePost freePost;
 
     @BeforeEach
     void setUp() {
         given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
+        willDoNothing().given(badWordFilterService).validate(any());
 
         user = User.builder()
                 .email("user@test.com")
@@ -115,6 +131,19 @@ class FreePostCommandServiceTest {
             assertThatThrownBy(() -> freePostCommandService.createPost(99L, request))
                     .isInstanceOf(UserException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("실패: 제목 또는 내용에 금지어 포함 → ServiceException(CONTAINS_BAD_WORD)")
+        void fail_containsBadWord() {
+            CreateFreePostRequest request = new CreateFreePostRequest("욕설이 포함된 제목", "정상 내용");
+            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            willThrow(new ServiceException(ErrorCode.CONTAINS_BAD_WORD))
+                    .given(badWordFilterService).validate(request.title(), request.content());
+
+            assertThatThrownBy(() -> freePostCommandService.createPost(1L, request))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
         }
     }
 
@@ -166,6 +195,19 @@ class FreePostCommandServiceTest {
             assertThatThrownBy(() -> freePostCommandService.updatePost(10L, 1L, request))
                     .isInstanceOf(FreePostException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_CONTENT);
+        }
+
+        @Test
+        @DisplayName("실패: 제목 또는 내용에 금지어 포함 → ServiceException(CONTAINS_BAD_WORD)")
+        void containsBadWord_throwsException() {
+            UpdateFreePostRequest request = new UpdateFreePostRequest("욕설 제목", "정상 내용");
+            given(freePostRepository.findById(10L)).willReturn(Optional.of(freePost));
+            willThrow(new ServiceException(ErrorCode.CONTAINS_BAD_WORD))
+                    .given(badWordFilterService).validate(request.title(), request.content());
+
+            assertThatThrownBy(() -> freePostCommandService.updatePost(10L, 1L, request))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
         }
     }
 

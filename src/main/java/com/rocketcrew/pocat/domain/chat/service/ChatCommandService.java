@@ -15,6 +15,7 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.ChatException;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class ChatCommandService {
     private final ChatMessageRepository chatMessageRepository;
     private final TradePostRepository tradePostRepository;
     private final UserRepository userRepository;
+    private final BadWordFilterService badWordFilterService;
 
     public ChatResponse createChat(Long guestId, CreateChatRequest request) {
         TradePost post = tradePostRepository.findById(request.postId())
@@ -57,6 +59,8 @@ public class ChatCommandService {
     public ChatMessagePublishDto sendMessage(Long chatId, Long senderId, String message) {
         chatRepository.findByIdAndParticipant(chatId, senderId)
                 .orElseThrow(() -> new ChatException(ErrorCode.CHAT_FORBIDDEN));
+
+        badWordFilterService.validate(message);
 
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new ChatException(ErrorCode.USER_NOT_FOUND));

@@ -13,6 +13,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class FreePostCommandService {
     private final FreePostDetailCacheService freePostDetailCacheService;
     private final RedisRateLimiter redisRateLimiter;
     private final RateLimitProperties rateLimitProperties;
+    private final BadWordFilterService badWordFilterService;
 
     public FreePostResponse createPost(Long userId, CreateFreePostRequest request) {
         if (!redisRateLimiter.isAllowed("rate:user:post:" + userId,
@@ -38,6 +40,7 @@ public class FreePostCommandService {
                 rateLimitProperties.getPostWindowSeconds())) {
             throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
+        badWordFilterService.validate(request.title(), request.content());
         User user = findUserOrThrow(userId);
         FreePost freePost = FreePost.builder()
                 .userId(userId)
@@ -53,8 +56,9 @@ public class FreePostCommandService {
     public FreePostResponse updatePost(Long postId, Long userId, UpdateFreePostRequest request) {
         FreePost freePost = findFreePostAndVerifyOwner(postId, userId);
         validateIfPresent(request.title());
-        if (request.title() != null) freePost.updateTitle(request.title());
         validateIfPresent(request.content());
+        badWordFilterService.validate(request.title(), request.content());
+        if (request.title() != null) freePost.updateTitle(request.title());
         if (request.content() != null) freePost.updateContent(request.content());
         User user = findUserOrThrow(freePost.getUserId());
         postCommentCacheEvictor.evictAfterCommit(postId);
