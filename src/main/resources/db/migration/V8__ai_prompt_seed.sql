@@ -1,5 +1,15 @@
 -- V8: Add UNIQUE INDEX on ai_prompt_template(card_grade) and insert seed prompt data
 
+-- Remove duplicate card_grade rows before adding UNIQUE INDEX, keeping highest id per grade
+DELETE FROM ai_prompt_template
+WHERE id NOT IN (
+    SELECT max_id FROM (
+        SELECT MAX(id) AS max_id
+        FROM ai_prompt_template
+        GROUP BY card_grade
+    ) AS keep_ids
+);
+
 -- Add UNIQUE INDEX only if it does not already exist (idempotent for Flyway repair scenarios)
 SET @index_exists = (
     SELECT COUNT(*) FROM information_schema.STATISTICS

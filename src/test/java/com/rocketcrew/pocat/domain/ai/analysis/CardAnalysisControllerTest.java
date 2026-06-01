@@ -22,7 +22,6 @@ import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -32,7 +31,6 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -40,6 +38,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -140,15 +139,10 @@ class CardAnalysisControllerTest {
         void analyzeCard_response_excludes_analysisModel() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
-            MvcResult mvcResult = mockMvc.perform(get("/api/ai/cards/1/analysis")
+            mockMvc.perform(get("/api/ai/cards/1/analysis")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andReturn();
-
-            String responseBody = mvcResult.getResponse().getContentAsString();
-            assertThat(responseBody)
-                    .as("응답 JSON에 내부 필드 analysisModel이 포함되면 안 됩니다")
-                    .doesNotContain("analysisModel");
+                    .andExpect(jsonPath("$.data.analysisModel").doesNotExist());
         }
 
         @Test
@@ -156,15 +150,10 @@ class CardAnalysisControllerTest {
         void analyzeCard_response_excludes_promptTokens() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
-            MvcResult mvcResult = mockMvc.perform(get("/api/ai/cards/1/analysis")
+            mockMvc.perform(get("/api/ai/cards/1/analysis")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andReturn();
-
-            String responseBody = mvcResult.getResponse().getContentAsString();
-            assertThat(responseBody)
-                    .as("응답 JSON에 내부 필드 promptTokens가 포함되면 안 됩니다")
-                    .doesNotContain("promptTokens");
+                    .andExpect(jsonPath("$.data.promptTokens").doesNotExist());
         }
 
         @Test
@@ -172,15 +161,10 @@ class CardAnalysisControllerTest {
         void analyzeCard_response_excludes_completionTokens() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
-            MvcResult mvcResult = mockMvc.perform(get("/api/ai/cards/1/analysis")
+            mockMvc.perform(get("/api/ai/cards/1/analysis")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andReturn();
-
-            String responseBody = mvcResult.getResponse().getContentAsString();
-            assertThat(responseBody)
-                    .as("응답 JSON에 내부 필드 completionTokens가 포함되면 안 됩니다")
-                    .doesNotContain("completionTokens");
+                    .andExpect(jsonPath("$.data.completionTokens").doesNotExist());
         }
 
         @Test
@@ -188,15 +172,10 @@ class CardAnalysisControllerTest {
         void analyzeCard_response_excludes_analyzedAt() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
-            MvcResult mvcResult = mockMvc.perform(get("/api/ai/cards/1/analysis")
+            mockMvc.perform(get("/api/ai/cards/1/analysis")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andReturn();
-
-            String responseBody = mvcResult.getResponse().getContentAsString();
-            assertThat(responseBody)
-                    .as("응답 JSON에 내부 필드 analyzedAt가 포함되면 안 됩니다")
-                    .doesNotContain("analyzedAt");
+                    .andExpect(jsonPath("$.data.analyzedAt").doesNotExist());
         }
 
         @Test
@@ -206,17 +185,11 @@ class CardAnalysisControllerTest {
 
             mockMvc.perform(get("/api/ai/cards/1/analysis")
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk());
-
-            MvcResult mvcResult = mockMvc.perform(get("/api/ai/cards/1/analysis")
-                            .contentType(MediaType.APPLICATION_JSON))
-                    .andReturn();
-
-            String responseBody = mvcResult.getResponse().getContentAsString();
-            assertThat(responseBody).contains("priceTrend");
-            assertThat(responseBody).contains("fairValueEstimate");
-            assertThat(responseBody).contains("demandLevel");
-            assertThat(responseBody).contains("summary");
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.priceTrend").exists())
+                    .andExpect(jsonPath("$.data.fairValueEstimate").exists())
+                    .andExpect(jsonPath("$.data.demandLevel").exists())
+                    .andExpect(jsonPath("$.data.summary").exists());
         }
     }
 
@@ -233,18 +206,13 @@ class CardAnalysisControllerTest {
         void reanalyzeCard_response_excludes_internal_fields() throws Exception {
             given(cardAnalysisService.reanalyzeCard(1L)).willReturn(fullResult);
 
-            MvcResult mvcResult = mockMvc.perform(post("/api/ai/cards/1/analysis")
+            mockMvc.perform(post("/api/ai/cards/1/analysis")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
-                    .andReturn();
-
-            String responseBody = mvcResult.getResponse().getContentAsString();
-            assertThat(responseBody)
-                    .as("응답 JSON에 내부 필드가 포함되면 안 됩니다")
-                    .doesNotContain("analysisModel")
-                    .doesNotContain("promptTokens")
-                    .doesNotContain("completionTokens")
-                    .doesNotContain("analyzedAt");
+                    .andExpect(jsonPath("$.data.analysisModel").doesNotExist())
+                    .andExpect(jsonPath("$.data.promptTokens").doesNotExist())
+                    .andExpect(jsonPath("$.data.completionTokens").doesNotExist())
+                    .andExpect(jsonPath("$.data.analyzedAt").doesNotExist());
         }
     }
 }

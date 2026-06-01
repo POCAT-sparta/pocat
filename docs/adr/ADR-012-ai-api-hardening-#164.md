@@ -65,7 +65,7 @@ Issue #158(ADR-011) 구현 완료 후 Phase 4 코드리뷰에서 4개의 후속 
 
 **문제 분석**
 
-```
+```text
 reanalyzeCard()          ← @RateLimiter (토큰 1 소비)
     └─ self.analyzeCard() ← @RateLimiter (토큰 1 소비)
                            → 1회 호출에 토큰 2개 소비
