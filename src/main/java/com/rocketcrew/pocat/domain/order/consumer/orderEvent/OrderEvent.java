@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.order.consumer;
+package com.rocketcrew.pocat.domain.order.consumer.orderEvent;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;

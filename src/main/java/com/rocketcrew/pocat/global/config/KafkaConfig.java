@@ -10,6 +10,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.*;
@@ -76,7 +77,9 @@ public class KafkaConfig {
         factory.setConcurrency(3);
 
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(
-                new DeadLetterPublishingRecoverer(kafkaTemplate()), new FixedBackOff(1000L, 3));
+                new DeadLetterPublishingRecoverer(kafkaTemplate(),
+                        (record, ex) -> new TopicPartition(record.topic() + "-dlt", -1)),
+                new FixedBackOff(1000L, 3));
         errorHandler.addNotRetryableExceptions(InvalidAuctionEventPayloadException.class);
         factory.setCommonErrorHandler(errorHandler);
         return factory;
@@ -150,7 +153,9 @@ public class KafkaConfig {
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
         factory.setConcurrency(3);
         factory.setCommonErrorHandler(new DefaultErrorHandler(
-                new DeadLetterPublishingRecoverer(kafkaTemplate), new FixedBackOff(2000L, 5)));
+                new DeadLetterPublishingRecoverer(kafkaTemplate,
+                        (record, ex) -> new TopicPartition(record.topic() + "-dlt", -1)),
+                new FixedBackOff(2000L, 5)));
         return factory;
     }
 

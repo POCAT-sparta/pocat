@@ -1,8 +1,9 @@
 package com.rocketcrew.pocat.domain.order.service;
 
-import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
-import com.rocketcrew.pocat.domain.payment.service.FailureService;
-import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
+import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
+import com.rocketcrew.pocat.domain.order.entity.Order;
+import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -10,9 +11,10 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
- * Redis keyspace expired 이벤트를 수신하여 TTL이 만료된 PENDING 결제를 FAILED 처리한다.
+ * Redis keyspace expired 이벤트를 수신하여 1시간 결제 창이 만료된 주문을 다음 순위 입찰자에게 넘긴다.
  * Redis에 "notify-keyspace-events Ex" 설정이 필요하다.
  */
 @Slf4j
@@ -20,11 +22,10 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class ExpiryEventListener implements MessageListener {
 
-    private final SetExpireService setExpireService;
+    private final OrderRepository orderRepository;
+    private final OrderCommandService orderCommandService;
+    private final NotificationCommandService notificationCommandService;
 
-    /**
-     * ttl 만료시 이벤트를 받아서 완전 실패 처리
-     */
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String expiredKey = new String(message.getBody(), StandardCharsets.UTF_8);
@@ -38,14 +39,45 @@ public class ExpiryEventListener implements MessageListener {
             log.warn("[PaymentExpiry] 파싱 불가 key={}", expiredKey);
             return;
         }
+
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) {
+            log.warn("[PaymentExpiry] 주문 없음 orderId={}", orderId);
+            return;
+        }
+
         try {
-//            setExpireService.markFailed(orderId, PaymentErrorReason.PAYMENT_EXPIRED);
-            setExpireService.cancelExpiry(orderId);
-        } catch (OrderException e) {
-            log.warn("[PaymentExpiry] 이미 처리된 주문 orderId={} reason={}", orderId, e.getMessage());
-            setExpireService.cancelExpiry(orderId);
+            EscalationResult result = orderCommandService.escalateToNextRankWithDirectPayment(order.getOrderUid());
+
+            switch (result.status()) {
+                case ESCALATED -> {
+                    try {
+                        notificationCommandService.send(
+                                result.nextBidderId(),
+                                NotificationType.ESCALATED_PAYMENT_OPPORTUNITY,
+                                "낙찰 기회가 생겼습니다. 1시간 내에 직접 결제를 진행해 주세요.",
+                                Map.of("orderUid", result.nextOrderUid())
+                        );
+                    } catch (Exception e) {
+                        log.error("[PaymentExpiry] 승격 결제 기회 알림 실패: nextBidderId={}", result.nextBidderId(), e);
+                    }
+                }
+                case CANCELLED -> {
+                    try {
+                        notificationCommandService.send(
+                                order.getSellerId(),
+                                NotificationType.PAYMENT_FINAL_FAILED,
+                                "구매자의 결제가 최종 실패하여 경매가 취소되었습니다.",
+                                Map.of("orderUid", order.getOrderUid())
+                        );
+                    } catch (Exception e) {
+                        log.error("[PaymentExpiry] 최종 결제 실패 판매자 알림 실패: orderId={}", orderId, e);
+                    }
+                }
+                case SKIPPED -> log.info("[PaymentExpiry] 승격 처리 스킵 orderId={}", orderId);
+            }
         } catch (Exception e) {
-            log.error("[PaymentExpiry] 처리 실패 — shadow 키 보존 orderId={}", orderId, e);
+            log.error("[PaymentExpiry] 다음 순위 승격 실패 orderId={}", orderId, e);
         }
     }
 }

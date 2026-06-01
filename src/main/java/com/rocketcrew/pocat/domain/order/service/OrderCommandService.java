@@ -1,6 +1,9 @@
 package com.rocketcrew.pocat.domain.order.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.auction.entity.Auction;
+import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
@@ -14,13 +17,20 @@ import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -31,16 +41,19 @@ public class OrderCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentApplicationService paymentApplicationService;
     private final OutboxEventWriter outboxEventWriter;
+    private final OrderSaveService orderSaveService;
+    private final AuctionBidRepository auctionBidRepository;
+    private final SetExpireService setExpireService;
+    private final AuctionRepository auctionRepository;
 
-    // 경매 낙찰 주문 생성 — rank=1 Order 저장 후 order.created 이벤트 발행
-    // Payment 도메인이 이벤트를 컨슘해 자동결제 처리
+    // 경매 낙찰 주문 생성 — bidderRank 순위의 Order 저장 후 order.created 이벤트 발행
     public void createOrderFromAuction(Long auctionId, Long cardId, Long sellerId,
-                                       Long winnerId, Long finalPrice) {
-        if (orderRepository.findByAuctionIdAndBidderRank(auctionId, 1).isPresent()) {
+                                       Long winnerId, Long finalPrice, int bidderRank) {
+        if (orderRepository.findByAuctionIdAndBidderRank(auctionId, bidderRank).isPresent()) {
             return; // 중복 소비 방지
         }
         Order order = orderRepository.save(
-                Order.fromAuction(auctionId, cardId, sellerId, winnerId, finalPrice, 1));
+                Order.fromAuction(auctionId, cardId, sellerId, winnerId, finalPrice, bidderRank));
 
         OrderCreatedEvent event = new OrderCreatedEvent(
                 order.getOrderUid(),
@@ -52,12 +65,99 @@ public class OrderCommandService {
         eventPublisher.publishEvent(event);
     }
 
-    // 즉시구매 주문 생성 — 자동결제 시도, 실패 시 재시도 기회 없이 즉시 종료
+    // 즉시구매 주문 생성 — 주문 저장(별도 트랜잭션) 후 자동결제 시도
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentResponse createOrderFromBuyout(Long auctionId, Long cardId, Long sellerId,
                                                  Long buyerId, Long finalPrice) {
-        Order order = orderRepository.save(
-                Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
+        Order order = orderSaveService.saveBuyoutOrder(auctionId, cardId, sellerId, buyerId, finalPrice);
         return paymentApplicationService.autoPayment(order.getOrderUid());
+    }
+
+    // 자동결제 실패 시 1시간 직접결제 창 설정 — 주문 상태를 AUTO_PAYMENT_FAILED로 변경하고 Redis 만료 키 등록
+    public void schedulePaymentDeadline(String orderUid) {
+        Order order = orderRepository.findByOrderUid(orderUid)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        LocalDateTime deadline = LocalDateTime.now().plusHours(1);
+        order.startDirectPayment(deadline);
+        setExpireService.scheduleExpiry(order.getId(), Duration.ofHours(1));
+    }
+
+    // 결제 실패(직접결제 실패 또는 TTL 만료) 시 다음 순위 입찰자에게 1시간 직접결제 기간 부여 (최대 2등까지만)
+    public EscalationResult escalateToNextRankWithDirectPayment(String orderUid) {
+        Order order = orderRepository.findByOrderUid(orderUid).orElse(null);
+        if (order == null) {
+            log.warn("[EscalateDirectPayment] 주문 없음 orderUid={}", orderUid);
+            return EscalationResult.skipped();
+        }
+        // 결제 완료된 주문은 승격 차단 (completePayment와 Redis 만료 동시 발화 시 오주문 방지)
+        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
+                && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
+            log.info("[EscalateDirectPayment] 승격 불가 상태 orderUid={}, status={}", orderUid, order.getStatus());
+            setExpireService.cancelExpiry(order.getId());
+            return EscalationResult.skipped();
+        }
+        if (order.getBidderRank() == null) {
+            log.warn("[EscalateDirectPayment] bidderRank 없음(즉시구매) orderUid={}", orderUid);
+            setExpireService.cancelExpiry(order.getId());
+            return EscalationResult.skipped();
+        }
+
+        setExpireService.cancelExpiry(order.getId());
+
+        int nextRank = order.getBidderRank() + 1;
+
+        // 2등까지만 승격 허용
+        if (nextRank > 2) {
+            cancelAuction(order.getAuctionId());
+            log.info("[EscalateDirectPayment] 최대 승격 순위 초과 → 경매 취소 auctionId={}", order.getAuctionId());
+            return EscalationResult.cancelled();
+        }
+
+        List<Long> lostBidderIds = auctionBidRepository
+                .findLostBidderIdsByAuctionIdOrderedByMaxBidPrice(order.getAuctionId());
+        int nextBidderIndex = nextRank - 2;
+        if (nextBidderIndex >= lostBidderIds.size()) {
+            cancelAuction(order.getAuctionId());
+            log.info("[EscalateDirectPayment] 다음 입찰자 없음 → 경매 취소 auctionId={}", order.getAuctionId());
+            return EscalationResult.cancelled();
+        }
+
+        Long nextBidderId = lostBidderIds.get(nextBidderIndex);
+
+        // 멱등성: 해당 순위 주문이 이미 존재하면 스킵
+        Optional<Order> existingOrder = orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank);
+        if (existingOrder.isPresent()) {
+            log.info("[EscalateDirectPayment] 이미 주문 존재 auctionId={}, rank={}", order.getAuctionId(), nextRank);
+            return EscalationResult.escalated(nextBidderId, existingOrder.get().getOrderUid());
+        }
+
+        Order nextOrder = orderRepository.save(
+                Order.fromAuction(order.getAuctionId(), order.getCardId(), order.getSellerId(),
+                        nextBidderId, order.getFinalPrice(), nextRank));
+        schedulePaymentDeadline(nextOrder.getOrderUid());
+        log.info("[EscalateDirectPayment] {}순위 1시간 직접결제 기간 부여 auctionId={}, buyerId={}",
+                nextRank, order.getAuctionId(), nextBidderId);
+        return EscalationResult.escalated(nextBidderId, nextOrder.getOrderUid());
+    }
+
+    private void cancelAuction(Long auctionId) {
+        auctionRepository.findById(auctionId).ifPresent(auction -> auction.cancel("결제 최종 실패"));
+    }
+
+    public void failDirectPayment(String orderUid) {
+        Order order = orderRepository.findByOrderUid(orderUid)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        order.failPayment();
+    }
+
+    public void completePayment(String orderUid) {
+        Order order = orderRepository.findByOrderUid(orderUid)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        // 이미 완료된 건은 리턴 (createSnapshot 실패 후 Kafka 재처리 시 멱등 보장)
+        if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) return;
+        order.completePayment();
+        // 직접결제 창 만료 키 취소 — 미취소 시 1시간 후 ExpiryEventListener가 완료된 주문을 다음 순위로 잘못 승격
+        setExpireService.cancelExpiry(order.getId());
     }
 
     public OrderResponse cancelOrder(Long userId, String orderUid, String reason) {

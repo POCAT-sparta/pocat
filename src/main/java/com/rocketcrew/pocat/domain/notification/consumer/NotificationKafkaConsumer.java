@@ -26,7 +26,6 @@ public class NotificationKafkaConsumer {
         try {
             NotificationEvent event = objectMapper.readValue(message, NotificationEvent.class);
 
-            // TODO : 멱등성보장하기
             if (!notificationRepository.existsById(event.getNotificationId())) {
                 log.warn("알림 없음(삭제됨), WebSocket 전송 생략: notificationId={}", event.getNotificationId());
                 return;

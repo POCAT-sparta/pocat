@@ -1,19 +1,18 @@
 package com.rocketcrew.pocat.domain.settlement.service;
 
+import com.rocketcrew.pocat.domain.notification.dto.event.NotificationSendEvent;
+import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.settlement.dto.response.SettlementCompleteResponse;
 import com.rocketcrew.pocat.domain.settlement.entity.Settlement;
 import com.rocketcrew.pocat.domain.settlement.enums.SettlementStatus;
-import com.rocketcrew.pocat.domain.settlement.event.SettlementCompletedEvent;
 import com.rocketcrew.pocat.domain.settlement.repository.SettlementRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
-import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,12 +22,14 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
+import org.mockito.ArgumentCaptor;
+
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -44,9 +45,6 @@ class AdminSettlementCommandServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
-
-    @Mock
-    private OutboxEventWriter outboxEventWriter;
 
     private Settlement buildPendingSettlement() {
         Settlement settlement = Settlement.builder()
@@ -67,7 +65,7 @@ class AdminSettlementCommandServiceTest {
     class CompleteSettlement {
 
         @Test
-        @DisplayName("성공: PENDING → COMPLETED 상태 전이 + outbox 선기록 후 이벤트 발행")
+        @DisplayName("성공: PENDING → COMPLETED 상태 전이 + NotificationSendEvent 발행")
         void success() {
             // given
             Settlement settlement = buildPendingSettlement();
@@ -83,10 +81,15 @@ class AdminSettlementCommandServiceTest {
             assertThat(response.settlementUid()).isEqualTo("SET-001");
             assertThat(response.status()).isEqualTo(SettlementStatus.COMPLETED);
 
-            // then — outbox 선기록 후 publish 순서 보장
-            InOrder order = inOrder(outboxEventWriter, eventPublisher);
-            order.verify(outboxEventWriter).write(eq("settlement"), eq("SET-001"), any(SettlementCompletedEvent.class));
-            order.verify(eventPublisher).publishEvent(any(SettlementCompletedEvent.class));
+            // then — NotificationSendEvent payload 검증
+            ArgumentCaptor<NotificationSendEvent> captor = ArgumentCaptor.forClass(NotificationSendEvent.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            NotificationSendEvent event = captor.getValue();
+            assertThat(event.getUserId()).isEqualTo(2L);
+            assertThat(event.getType()).isEqualTo(NotificationType.SETTLEMENT_COMPLETED);
+            Map<?, ?> relatedData = (Map<?, ?>) event.getRelatedData();
+            assertThat(relatedData.get("settlementUid")).isEqualTo("SET-001");
+            assertThat(relatedData.get("sellerAmount")).isEqualTo(9500L);
         }
 
         @Test
@@ -101,12 +104,11 @@ class AdminSettlementCommandServiceTest {
                     .isInstanceOf(SettlementException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SETTLEMENT_NOT_FOUND);
 
-            verify(outboxEventWriter, never()).write(any(), any(), any());
             verify(eventPublisher, never()).publishEvent(any());
         }
 
         @Test
-        @DisplayName("실패: PENDING이 아닌 상태에서 complete() 호출 시 예외 → outbox·이벤트 미호출")
+        @DisplayName("실패: PENDING이 아닌 상태에서 complete() 호출 시 예외 → 이벤트 미호출")
         void fail_notPendingStatus() {
             // given
             Settlement settlement = Settlement.builder()
@@ -128,7 +130,6 @@ class AdminSettlementCommandServiceTest {
                     .isInstanceOf(SettlementException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.SETTLEMENT_CANNOT_COMPLETE);
 
-            verify(outboxEventWriter, never()).write(any(), any(), any());
             verify(eventPublisher, never()).publishEvent(any());
         }
     }
