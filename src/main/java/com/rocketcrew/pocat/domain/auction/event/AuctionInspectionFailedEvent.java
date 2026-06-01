@@ -13,7 +13,7 @@ public class AuctionInspectionFailedEvent extends BaseEvent {
 
     public AuctionInspectionFailedEvent(Long auctionId, Long sellerId,
                                         String auctionTitle, String failedReason) {
-        super("auction.inspection.failed");
+        super(AuctionEventType.INSPECTION_FAILED);
         this.auctionId = auctionId;
         this.sellerId = sellerId;
         this.auctionTitle = auctionTitle;

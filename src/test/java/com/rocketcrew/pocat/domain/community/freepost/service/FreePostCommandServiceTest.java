@@ -6,7 +6,6 @@ import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePost
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
-import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -14,8 +13,6 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.FreePostException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
-import com.rocketcrew.pocat.domain.community.freepost.cache.PostCommentCacheEvictor;
-import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
 import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
@@ -69,12 +66,6 @@ class FreePostCommandServiceTest {
 
     @Mock
     private RateLimitProperties rateLimitProperties;
-
-    @Mock
-    private PostCommentCacheEvictor postCommentCacheEvictor;
-
-    @Mock
-    private FreePostDetailCacheService freePostDetailCacheService;
 
     @Mock
     private BadWordFilterService badWordFilterService;

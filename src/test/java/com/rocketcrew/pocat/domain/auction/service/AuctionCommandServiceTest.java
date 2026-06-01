@@ -29,7 +29,6 @@ import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
-import com.rocketcrew.pocat.global.exception.domain.UserException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -544,7 +543,7 @@ class AuctionCommandServiceTest {
         }
 
         @Test
-        @DisplayName("실패: 검수 불가 상태(ACTIVE) → AUCTION_NOT_INSPECTING")
+        @DisplayName("실패: 검수 불가 상태(ACTIVE) → AUCTION_INSPECTION_NOT_ALLOWED")
         void failNotInspectable() {
             // given
             Auction auction = buildAuction(1L, 2L, AuctionStatus.ACTIVE);
@@ -554,7 +553,7 @@ class AuctionCommandServiceTest {
             // when / then
             assertThatThrownBy(() -> service.inspectAuction(1L, 1L, request))
                     .isInstanceOf(AuctionException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_NOT_INSPECTING);
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_INSPECTION_NOT_ALLOWED);
         }
 
         @Test
