@@ -157,7 +157,7 @@ public class PortOneWebhookService {
 
             if (paidAmount == null) {
                 log.error("웹훅 PortOne 응답 amount null paymentId={}", paymentId);
-                paymentCommandService.handelCancel(payment.getPaymentUid(), payment.getOrderId());
+                paymentCommandService.handleCancel(payment.getPaymentUid(), payment.getOrderId());
                 PortOneCancelResponse nullCancelResponse = portOneClientService.cancelPayment(
                         payment.getPaymentUid(), payment.getAmount(), "결제금액 불일치");
                 if (nullCancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
@@ -172,7 +172,7 @@ public class PortOneWebhookService {
             if (!payment.getAmount().equals(paidAmount)) {
                 log.error("웹훅 금액 불일치 paymentId={} expected={} actual={}",
                         paymentId, payment.getAmount(), paidAmount);
-                paymentCommandService.handelCancel(payment.getPaymentUid(), payment.getOrderId());
+                paymentCommandService.handleCancel(payment.getPaymentUid(), payment.getOrderId());
                 PortOneCancelResponse cancelResponse = portOneClientService.cancelPayment(
                         payment.getPaymentUid(), paidAmount, "결제금액 불일치");
                 if (cancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)

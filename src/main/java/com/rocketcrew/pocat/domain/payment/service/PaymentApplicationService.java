@@ -94,7 +94,7 @@ public class PaymentApplicationService {
 
         // 이후 성공이 아니면 실패처리
         if (!PortOneStatus.PAID.equals(response.status())) {
-            paymentCommandService.handelFailed(payment.getPaymentUid(), order.getId());
+            paymentCommandService.handleFailed(payment.getPaymentUid(), order.getId());
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
@@ -155,10 +155,10 @@ public class PaymentApplicationService {
 
     // resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요
     private void attemptCancelPayment(String paymentUid, Long orderId,Long amount) {
-        paymentCommandService.handelCancel(paymentUid, orderId);
+        paymentCommandService.handleCancel(paymentUid, orderId);
         PortOneCancelResponse response = portOneClientService.cancelPayment(paymentUid, amount ,"결제금액 불일치");
 
-        if(response.status().equals(PortOneCancelStatus.HTTP_ERROR) || response.status().equals(PortOneCancelStatus.NETWORK_ERROR)) {
+        if(PortOneCancelStatus.HTTP_ERROR.equals(response.status()) || PortOneCancelStatus.NETWORK_ERROR.equals(response.status())) {
             paymentCommandService.cancelFailPayment(paymentUid);
         }
     }

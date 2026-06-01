@@ -20,7 +20,7 @@ public enum PortOneCancelStatus {
         return Arrays.stream(values())
                 .filter(s -> s.code.equals(code))
                 .findFirst()
-                .orElseThrow(() -> new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED));
+                .orElseThrow(() -> new PaymentException(ErrorCode.PORTONE_CANCEL_STATUS_UNKNOWN));
     }
 
     private final String code;

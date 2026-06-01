@@ -75,7 +75,7 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handelFailed(String paymentUId, Long orderId){
+    public void handleFailed(String paymentUId, Long orderId){
         Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
         Order order = orderQueryService.findByOrderIdWithLock(orderId);
         payment.fail();
@@ -83,7 +83,7 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handelCancel(String paymentUId, Long orderId){
+    public void handleCancel(String paymentUId, Long orderId){
         Order order = orderQueryService.findByOrderIdWithLock(orderId);
         Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
         payment.cancel();
@@ -92,7 +92,7 @@ public class PaymentCommandService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void cancelFailPayment(String paymentUid) {
-        Payment payment = paymentQueryService.findPaymentByUid(paymentUid);
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
         payment.cancelFailed();
     }
 

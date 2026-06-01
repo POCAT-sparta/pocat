@@ -164,7 +164,7 @@ class PortOneWebhookServiceTest {
 
             portOneWebhookService.handleWebhook("valid-sig", body);
 
-            verify(paymentCommandService).handelCancel(eq("PAY-001"), eq(1L));
+            verify(paymentCommandService).handleCancel(eq("PAY-001"), eq(1L));
             verify(portOneClientService).cancelPayment(eq("PAY-001"), eq(15000L), anyString());
             verify(setExpireService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());

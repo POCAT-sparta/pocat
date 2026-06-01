@@ -82,15 +82,17 @@ public class Payment extends BaseEntity {
 
     public void cancel() {
         if (this.status == PaymentStatus.CANCELLED) return;
-        if(this.status == PaymentStatus.FAILED || this.status == PaymentStatus.COMPLETED){
-            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_FAIL);
+        if (this.status != PaymentStatus.PENDING) {
+            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_CANCEL);
         }
         this.status = PaymentStatus.CANCELLED;
     }
 
     public void cancelFailed() {
-        if (this.status == PaymentStatus.CANCELLED) {
-            this.status = PaymentStatus.CANCEL_HTTP_ERROR;
+        if (this.status == PaymentStatus.CANCEL_HTTP_ERROR) return;
+        if (this.status != PaymentStatus.CANCELLED) {
+            throw new PaymentException(ErrorCode.PAYMENT_CANNOT_CANCEL);
         }
+        this.status = PaymentStatus.CANCEL_HTTP_ERROR;
     }
 }

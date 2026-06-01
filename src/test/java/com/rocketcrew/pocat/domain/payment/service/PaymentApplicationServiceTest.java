@@ -230,7 +230,7 @@ class PaymentApplicationServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
 
-            verify(paymentCommandService).handelCancel(eq("PAY-001"), eq(1L));
+            verify(paymentCommandService).handleCancel(eq("PAY-001"), eq(1L));
         }
 
         @Test
@@ -251,7 +251,7 @@ class PaymentApplicationServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
 
-            verify(paymentCommandService).handelCancel(eq("PAY-001"), eq(1L));
+            verify(paymentCommandService).handleCancel(eq("PAY-001"), eq(1L));
         }
     }
 
@@ -326,7 +326,7 @@ class PaymentApplicationServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 
-            verify(paymentCommandService).handelFailed(eq("PAY-001"), eq(1L));
+            verify(paymentCommandService).handleFailed(eq("PAY-001"), eq(1L));
         }
     }
 }

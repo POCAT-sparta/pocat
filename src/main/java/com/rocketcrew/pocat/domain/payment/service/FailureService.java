@@ -53,7 +53,7 @@ public class FailureService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markFailed(String paymentUId,Long orderId, PaymentErrorReason reason) {
+    public void markFailed(String paymentUId, Long orderId, PaymentErrorReason reason) {
         Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
         Order order = orderQueryService.findByOrderIdWithLock(orderId);
         payment.fail();
