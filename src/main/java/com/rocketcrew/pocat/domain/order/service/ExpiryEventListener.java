@@ -47,30 +47,34 @@ public class ExpiryEventListener implements MessageListener {
         }
 
         try {
-            Long nextBidderId = orderCommandService.escalateToNextRankWithDirectPayment(order.getOrderUid());
+            EscalationResult result = orderCommandService.escalateToNextRankWithDirectPayment(order.getOrderUid());
 
-            if (nextBidderId != null) {
-                try {
-                    notificationCommandService.send(
-                            nextBidderId,
-                            NotificationType.ESCALATED_PAYMENT_OPPORTUNITY,
-                            "낙찰 기회가 생겼습니다. 1시간 내에 직접 결제를 진행해 주세요.",
-                            Map.of("orderUid", order.getOrderUid())
-                    );
-                } catch (Exception e) {
-                    log.error("[PaymentExpiry] 승격 결제 기회 알림 실패: nextBidderId={}", nextBidderId, e);
+            switch (result.status()) {
+                case ESCALATED -> {
+                    try {
+                        notificationCommandService.send(
+                                result.nextBidderId(),
+                                NotificationType.ESCALATED_PAYMENT_OPPORTUNITY,
+                                "낙찰 기회가 생겼습니다. 1시간 내에 직접 결제를 진행해 주세요.",
+                                Map.of("orderUid", order.getOrderUid())
+                        );
+                    } catch (Exception e) {
+                        log.error("[PaymentExpiry] 승격 결제 기회 알림 실패: nextBidderId={}", result.nextBidderId(), e);
+                    }
                 }
-            } else {
-                try {
-                    notificationCommandService.send(
-                            order.getSellerId(),
-                            NotificationType.PAYMENT_FINAL_FAILED,
-                            "구매자의 결제가 최종 실패하여 경매가 취소되었습니다.",
-                            Map.of("orderUid", order.getOrderUid())
-                    );
-                } catch (Exception e) {
-                    log.error("[PaymentExpiry] 최종 결제 실패 판매자 알림 실패: orderId={}", orderId, e);
+                case CANCELLED -> {
+                    try {
+                        notificationCommandService.send(
+                                order.getSellerId(),
+                                NotificationType.PAYMENT_FINAL_FAILED,
+                                "구매자의 결제가 최종 실패하여 경매가 취소되었습니다.",
+                                Map.of("orderUid", order.getOrderUid())
+                        );
+                    } catch (Exception e) {
+                        log.error("[PaymentExpiry] 최종 결제 실패 판매자 알림 실패: orderId={}", orderId, e);
+                    }
                 }
+                case SKIPPED -> log.info("[PaymentExpiry] 승격 처리 스킵 orderId={}", orderId);
             }
         } catch (Exception e) {
             log.error("[PaymentExpiry] 다음 순위 승격 실패 orderId={}", orderId, e);

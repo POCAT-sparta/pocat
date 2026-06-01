@@ -82,24 +82,23 @@ public class OrderCommandService {
     }
 
     // 결제 실패(직접결제 실패 또는 TTL 만료) 시 다음 순위 입찰자에게 1시간 직접결제 기간 부여 (최대 2등까지만)
-    // 다음 입찰자에게 기간을 부여했으면 해당 입찰자 ID 반환, 없거나 2등 초과 시 경매 취소 후 null 반환
-    public Long escalateToNextRankWithDirectPayment(String orderUid) {
+    public EscalationResult escalateToNextRankWithDirectPayment(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid).orElse(null);
         if (order == null) {
             log.warn("[EscalateDirectPayment] 주문 없음 orderUid={}", orderUid);
-            return null;
+            return EscalationResult.skipped();
         }
         // 결제 완료된 주문은 승격 차단 (completePayment와 Redis 만료 동시 발화 시 오주문 방지)
         if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
                 && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
             log.info("[EscalateDirectPayment] 승격 불가 상태 orderUid={}, status={}", orderUid, order.getStatus());
             setExpireService.cancelExpiry(order.getId());
-            return null;
+            return EscalationResult.skipped();
         }
         if (order.getBidderRank() == null) {
             log.warn("[EscalateDirectPayment] bidderRank 없음(즉시구매) orderUid={}", orderUid);
             setExpireService.cancelExpiry(order.getId());
-            return null;
+            return EscalationResult.skipped();
         }
 
         setExpireService.cancelExpiry(order.getId());
@@ -110,7 +109,7 @@ public class OrderCommandService {
         if (nextRank > 2) {
             cancelAuction(order.getAuctionId());
             log.info("[EscalateDirectPayment] 최대 승격 순위 초과 → 경매 취소 auctionId={}", order.getAuctionId());
-            return null;
+            return EscalationResult.cancelled();
         }
 
         List<Long> lostBidderIds = auctionBidRepository
@@ -119,7 +118,7 @@ public class OrderCommandService {
         if (nextBidderIndex >= lostBidderIds.size()) {
             cancelAuction(order.getAuctionId());
             log.info("[EscalateDirectPayment] 다음 입찰자 없음 → 경매 취소 auctionId={}", order.getAuctionId());
-            return null;
+            return EscalationResult.cancelled();
         }
 
         Long nextBidderId = lostBidderIds.get(nextBidderIndex);
@@ -127,7 +126,7 @@ public class OrderCommandService {
         // 멱등성: 해당 순위 주문이 이미 존재하면 스킵
         if (orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank).isPresent()) {
             log.info("[EscalateDirectPayment] 이미 주문 존재 auctionId={}, rank={}", order.getAuctionId(), nextRank);
-            return nextBidderId;
+            return EscalationResult.escalated(nextBidderId);
         }
 
         Order nextOrder = orderRepository.save(
@@ -136,7 +135,7 @@ public class OrderCommandService {
         schedulePaymentDeadline(nextOrder.getOrderUid());
         log.info("[EscalateDirectPayment] {}순위 1시간 직접결제 기간 부여 auctionId={}, buyerId={}",
                 nextRank, order.getAuctionId(), nextBidderId);
-        return nextBidderId;
+        return EscalationResult.escalated(nextBidderId);
     }
 
     private void cancelAuction(Long auctionId) {
