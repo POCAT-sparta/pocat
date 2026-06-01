@@ -72,11 +72,22 @@ public class AiAssistantService {
 
             // 4. RAG 검색으로 컨텍스트 구성
             List<Document> ragResults = ragService.search(request.message());
+
+            // 환각 방어 Layer2: RAG 결과 없으면 LLM 미호출
+            if (ragResults.isEmpty()) {
+                log.info("RAG returned empty results for userId={}, returning guide message without LLM call", userId);
+                sessionService.addMessage(chatSessionId, "user", request.message(), 0);
+                String guideMessage = "관련 카드 정보를 찾을 수 없습니다. 카드명, 등급(PSA_10/PSA_9 등), 또는 경매 번호를 더 구체적으로 알려주세요.";
+                sessionService.addMessage(chatSessionId, "assistant", guideMessage, 0);
+                return new AiChatResponse(guideMessage, sessionId, List.of(), 0, 0);
+            }
+
             String ragContext = ragService.buildContext(ragResults);
 
             // 5. ChatClient 호출 (Tool Calling + RAG)
             String historyContext = recentHistory.isEmpty() ? "" :
                     "\n\n대화 이력:\n" + String.join("\n", recentHistory);
+            long startMs = System.currentTimeMillis();
             ChatResponse chatResponse = chatClient.prompt()
                     .system("당신은 POCAT 카드 거래 플랫폼 어시스턴트입니다. 사용자가 카드, 경매, 입찰에 관한 질문을 할 때 정확하고 도움이 되는 정보를 제공하세요.\n"
                             + "다음의 RAG 컨텍스트를 활용하여 답변하세요:\n" + ragContext + historyContext)
@@ -84,6 +95,7 @@ public class AiAssistantService {
                     .tools(cardSearchTool, auctionTool, bidTool)
                     .call()
                     .chatResponse();
+            long latencyMs = System.currentTimeMillis() - startMs;
             String response = chatResponse.getResult().getOutput().getText();
             var usage = chatResponse.getMetadata().getUsage();
             int promptTokens = (usage != null && usage.getPromptTokens() != null) ? usage.getPromptTokens().intValue() : 0;
@@ -94,7 +106,7 @@ public class AiAssistantService {
             sessionService.addMessage(chatSessionId, "assistant", response, 0);
 
             // 7. 메트릭 기록
-            aiUsageMetrics.recordUsage(promptTokens, completionTokens, 0L, MODEL_NAME);
+            aiUsageMetrics.recordUsage(promptTokens, completionTokens, latencyMs, MODEL_NAME);
 
             // 8. 응답 반환
             return new AiChatResponse(
