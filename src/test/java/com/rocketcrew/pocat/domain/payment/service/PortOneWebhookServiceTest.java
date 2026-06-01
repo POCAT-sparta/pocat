@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.in.portone.WebhookEventCommandService;
@@ -53,6 +54,7 @@ class PortOneWebhookServiceTest {
     @Mock private PortOneSignatureVerifier portOneSignatureVerifier;
     @Mock private OrderQueryService orderQueryService;
     @Mock private WebhookEventCommandService webhookEventCommandService;
+    @Mock private SetExpireService setExpireService;
 
     // ── handleWebhook ──────────────────────────────────────────────────
 
@@ -102,7 +104,7 @@ class PortOneWebhookServiceTest {
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+                    new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "CARD", paidAt, "", null, null, null));
 
             portOneWebhookService.handleWebhook("valid-sig", body);
 
@@ -158,7 +160,7 @@ class PortOneWebhookServiceTest {
             portOneWebhookService.handleWebhook("valid-sig", body);
 
             verify(failureService).markFailed(eq(1L), eq(PaymentErrorReason.AMOUNT_MISMATCH));
-//            verify(failureService).cancelExpiry(1L);
+            verify(setExpireService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }
 
@@ -177,7 +179,7 @@ class PortOneWebhookServiceTest {
             portOneWebhookService.handleWebhook("valid-sig", body);
 
             verify(failureService).markFailed(eq(1L), eq(PaymentErrorReason.WEBHOOK_FAILED));
-//            verify(failureService).cancelExpiry(1L);
+            verify(setExpireService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }
 

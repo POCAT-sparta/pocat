@@ -113,6 +113,7 @@ public final class TestFixtures {
                 .status(status)
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.AUCTION)
+                .paymentDeadline(LocalDateTime.now().plusHours(1))
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(1));
@@ -155,6 +156,7 @@ public final class TestFixtures {
                 .status(OrderStatus.AUTO_PAYMENT_FAILED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.AUCTION)
+                .paymentDeadline(LocalDateTime.now().plusMinutes(30))
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(2));
@@ -176,6 +178,7 @@ public final class TestFixtures {
                 .status(OrderStatus.AUTO_PAYMENT_FAILED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.AUCTION)
+                .paymentDeadline(LocalDateTime.now().minusHours(1))
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(3));

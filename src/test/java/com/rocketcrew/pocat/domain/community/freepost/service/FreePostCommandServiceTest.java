@@ -1,10 +1,12 @@
 package com.rocketcrew.pocat.domain.community.freepost.service;
 
+import com.rocketcrew.pocat.domain.community.freepost.cache.PostCommentCacheEvictor;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.CreateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
 import com.rocketcrew.pocat.domain.community.freepost.entity.FreePost;
 import com.rocketcrew.pocat.domain.community.freepost.repository.FreePostRepository;
+import com.rocketcrew.pocat.domain.community.freepost.service.FreePostDetailCacheService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -49,6 +51,12 @@ class FreePostCommandServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PostCommentCacheEvictor postCommentCacheEvictor;
+
+    @Mock
+    private FreePostDetailCacheService freePostDetailCacheService;
 
     @Mock
     private RedisRateLimiter redisRateLimiter;

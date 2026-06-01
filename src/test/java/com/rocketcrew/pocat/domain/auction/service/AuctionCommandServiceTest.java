@@ -30,6 +30,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,6 +95,12 @@ class AuctionCommandServiceTest {
 
     @Mock
     ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    AuctionEsIndexService auctionEsIndexService;
+
+    @Mock
+    OutboxEventWriter outboxEventWriter;
 
     private Card activeCard;
 

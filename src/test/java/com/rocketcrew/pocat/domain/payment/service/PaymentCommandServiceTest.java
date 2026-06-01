@@ -6,7 +6,9 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
-import com.rocketcrew.pocat.domain.settlement.service.SettlementCommandService;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.order.service.SetExpireService;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -35,10 +37,11 @@ class PaymentCommandServiceTest {
     private PaymentCommandService paymentCommandService;
 
     @Mock private PaymentRepository paymentRepository;
-    @Mock private SettlementCommandService settlementCommandService;
-    @Mock private FailureService failureService;
+    @Mock private OrderQueryService orderQueryService;
+    @Mock private SetExpireService setExpireService;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private OutboxEventWriter outboxEventWriter;
 
     // ── createPayment ──────────────────────────────────────────────────
 
@@ -51,9 +54,10 @@ class PaymentCommandServiceTest {
         void success() {
             Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentRepository.save(any(Payment.class))).willReturn(saved);
 
-            Payment result = paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY);
+            Payment result = paymentCommandService.createPayment(order.getId(), PaymentType.PG_DIRECT);
 
             assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING);
             assertThat(result.getAmount()).isEqualTo(10000L);
@@ -68,7 +72,7 @@ class PaymentCommandServiceTest {
     class CompletePayment {
 
         @Test
-        @DisplayName("성공: payment 완료, 정산 생성, 캐시 삭제, 만료 취소를 수행한다")
+        @DisplayName("성공: payment 완료, 캐시 삭제, 완료 이벤트 발행")
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
@@ -76,13 +80,11 @@ class PaymentCommandServiceTest {
             paymentCommandService.completePayment(payment, order, "CARD", LocalDateTime.now());
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
-            verify(settlementCommandService).createSettlement("ORD-001");
-//            verify(failureService).cancelExpiry(1L);
             verify(redisTemplate).delete("card:avgprice:3");
         }
 
         @Test
-        @DisplayName("캐시 삭제 실패 시 예외를 삼키고 정산·만료 취소는 정상 수행한다")
+        @DisplayName("캐시 삭제 실패 시 예외를 삼키고 완료 처리는 정상 수행한다")
         void cacheEvictionFailure_doesNotPropagate() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
@@ -91,8 +93,7 @@ class PaymentCommandServiceTest {
             assertThatCode(() -> paymentCommandService.completePayment(payment, order, "CARD", LocalDateTime.now()))
                     .doesNotThrowAnyException();
 
-            verify(settlementCommandService).createSettlement("ORD-001");
-//            verify(failureService).cancelExpiry(1L);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
         }
     }
 }

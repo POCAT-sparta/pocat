@@ -108,12 +108,12 @@ class OrderCommandServiceTest {
             PaymentResponse paymentResponse = new PaymentResponse(
                     "PAY-001", 1L, 10000L, null, null, null, null, null);
             given(orderRepository.save(any(Order.class))).willReturn(savedOrder);
-            given(paymentApplicationService.autoPayment("1")).willReturn(paymentResponse);
+            given(paymentApplicationService.autoPayment("ORD-002")).willReturn(paymentResponse);
 
             PaymentResponse result = orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
 
             verify(orderRepository).save(argThat(order -> order.getOrderType() == OrderType.BUYOUT));
-            verify(paymentApplicationService).autoPayment("1");
+            verify(paymentApplicationService).autoPayment("ORD-002");
             assertThat(result.paymentUid()).isEqualTo("PAY-001");
         }
     }
