@@ -394,6 +394,25 @@ class CardAnalysisServiceTest {
     }
 
     // ---------------------------------------------------------------
+    // [RED #164] reanalyzeCard @RateLimiter 단일 진입점 검증
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("[RED #164] reanalyzeCard() @RateLimiter 없음 검증")
+    class RateLimiterSinglePoint {
+
+        @Test
+        @DisplayName("[RED] reanalyzeCard()에 @RateLimiter 어노테이션이 없어야 한다 (rate limit은 Controller에서만)")
+        void reanalyzeCard_hasNoRateLimiterAnnotation() throws NoSuchMethodException {
+            Method m = CardAnalysisService.class.getMethod("reanalyzeCard", Long.class);
+            io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =
+                    m.getAnnotation(io.github.resilience4j.ratelimiter.annotation.RateLimiter.class);
+            assertThat(rl)
+                    .as("reanalyzeCard()는 @RateLimiter 없이 Controller의 RedisRateLimiter에만 의존해야 한다")
+                    .isNull();
+        }
+    }
+
+    // ---------------------------------------------------------------
     // CardAiAnalysis 영속화 + RateLimiter (infra-fix #116)
     // ---------------------------------------------------------------
     @Nested
