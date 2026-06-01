@@ -11,6 +11,7 @@ import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
@@ -285,7 +286,7 @@ class AuctionBuyoutServiceTest {
     }
 
     @Test
-    @DisplayName("즉시구매 결제 실패 주문이 반환되면 경매를 ACTIVE로 되돌리고 입찰을 생성하지 않는다")
+    @DisplayName("즉시구매 자동결제 실패로 취소된 주문이 반환되면 경매를 ACTIVE로 되돌리고 입찰을 생성하지 않는다")
     void buyout_restoresAuctionWhenPaymentFailedOrderReturned() {
         // given
         User buyer = User.builder()
@@ -329,8 +330,9 @@ class AuctionBuyoutServiceTest {
                 .buyerId(1L)
                 .orderUid("ORD-FAILED")
                 .finalPrice(10000L)
-                .status(OrderStatus.AUTO_PAYMENT_FAILED)
+                .status(OrderStatus.CANCELLED)
                 .deliveryStatus(DeliveryStatus.PREPARING)
+                .orderType(OrderType.BUYOUT)
                 .build();
         ReflectionTestUtils.setField(failedOrder, "id", 20L);
         given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(failedOrder);
@@ -349,5 +351,6 @@ class AuctionBuyoutServiceTest {
         verify(orderQueryService).findByOrderid(20L);
         verify(rLock).unlock();
         verify(eventPublisher, never()).publishEvent(any());
+        verify(outboxEventWriter, never()).write(anyString(), anyString(), any());
     }
 }

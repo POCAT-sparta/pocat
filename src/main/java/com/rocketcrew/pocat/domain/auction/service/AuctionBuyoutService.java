@@ -56,7 +56,7 @@ public class AuctionBuyoutService {
 
         PaymentResponse paymentResponse;
         try {
-            // 즉시 구매 주문 생성 및 자동결제 요청
+            // 주문 커밋 이후 자동결제를 호출해 외부 PG 호출이 주문 생성 트랜잭션에 묶이지 않게 한다.
             Order createdOrder = orderCommandService.createOrderFromBuyout(
                     reservation.auctionId(),
                     reservation.cardId(),
