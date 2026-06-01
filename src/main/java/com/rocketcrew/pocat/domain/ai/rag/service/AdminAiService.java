@@ -5,7 +5,6 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
@@ -24,7 +23,6 @@ public class AdminAiService {
 
     private final CardRepository cardRepository;
     private final EmbeddingService embeddingService;
-    private final VectorStore vectorStore;
 
     private final java.util.concurrent.atomic.AtomicBoolean reindexRunning = new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -58,26 +56,37 @@ public class AdminAiService {
                 }
 
                 for (Card card : cardPage.getContent()) {
-                    try {
-                        String cardText = String.format(
-                                "카드 이름: %s\n등급: %s\n시리즈: %s\n세트: %s\nURL: %s\n레어도: %s",
-                                card.getName(),
-                                card.getGrade().toString(),
-                                card.getSeries() != null ? card.getSeries().getName() : "N/A",
-                                card.getPokemonSet() != null ? card.getPokemonSet().getName() : "N/A",
-                                card.getImageUrl() != null ? card.getImageUrl() : "N/A",
-                                card.getRarity()
-                        );
-                        embeddingService.embedCard(card.getId(), cardText);
+                    String cardText = String.format(
+                            "카드 이름: %s\n등급: %s\n시리즈: %s\n세트: %s\nURL: %s\n레어도: %s",
+                            card.getName(),
+                            card.getGrade().toString(),
+                            card.getSeries() != null ? card.getSeries().getName() : "N/A",
+                            card.getPokemonSet() != null ? card.getPokemonSet().getName() : "N/A",
+                            card.getImageUrl() != null ? card.getImageUrl() : "N/A",
+                            card.getRarity()
+                    );
+                    boolean indexed = false;
+                    for (int attempt = 1; attempt <= 2; attempt++) {
+                        try {
+                            embeddingService.embedCard(card.getId(), cardText);
+                            indexed = true;
+                            break;
+                        } catch (Exception e) {
+                            if (attempt < 2) {
+                                log.warn("[AdminAiService] 카드 색인 재시도: cardId={}, attempt={}", card.getId(), attempt);
+                            } else {
+                                log.error("[AdminAiService] 카드 색인 최종 실패: cardId={}", card.getId(), e);
+                                failedCount++;
+                            }
+                        }
+                    }
+                    if (indexed) {
                         totalIndexed++;
-                    } catch (Exception e) {
-                        log.error("[AdminAiService] 카드 색인 실패: cardId={}", card.getId(), e);
-                        failedCount++;
                     }
                 }
 
-                log.info("[AdminAiService] 페이지 {} 처리 완료 ({}/{})",
-                        page, totalIndexed, cardPage.getTotalElements());
+                log.info("[AdminAiService] 페이지 {} 처리 완료 ({}건)",
+                        page, cardPage.getNumberOfElements());
 
                 if (cardPage.isLast()) {
                     break;

@@ -67,15 +67,25 @@ POST /api/v1/admin/ai/reindex
     ├─ 202 Accepted 즉시 반환 (@Async — timeout 방지)
     │
     └─ [비동기]
-        ├─ vectorStore.delete(type=card)   ← 기존 카드 벡터 제거 (중복 방지)
         ├─ ACTIVE 카드 page size 100으로 순차 조회 (OOM 방지)
-        └─ CardAnalysisService.buildCardContext() 동일 포맷의 cardText 생성 → 임베딩
+        ├─ 임베딩 실패 시 최대 2회 재시도 후 failedCount 누적
+        └─ CardAnalysisService.buildCardContext() 동일 포맷의 cardText 생성 → embedCard() upsert
 ```
 
 **트레이드오프**
 
-- 장점: 벡터 스토어 초기화 후 어드민이 수동 재색인 가능; `@Async` + `202 Accepted`로 HTTP timeout 방지; page size 100 배치 처리로 OOM 방지; `vectorStore.delete` 선행으로 중복 임베딩 방지
+- 장점: 벡터 스토어 초기화 후 어드민이 수동 재색인 가능; `@Async` + `202 Accepted`로 HTTP timeout 방지; page size 100 배치 처리로 OOM 방지; upsert 방식으로 동일 cardId Document 중복 방지
 - 단점: 재색인 완료 여부를 클라이언트가 별도로 확인해야 함 (진행 상태 엔드포인트 미포함); 대용량 카드 데이터의 경우 재색인 소요 시간이 길 수 있음
+
+**운영 고려사항**
+
+| 항목 | 내용 |
+|------|------|
+| 재시도 정책 | 임베딩 API 일시 오류 시 최대 2회 재시도. 최종 실패 시 `failedCount` 누적 후 완료 로그에 집계 |
+| 진행 상태 | 별도 상태 조회 엔드포인트 없음. 페이지 단위 INFO 로그 + 완료 시 `성공=N건, 실패=M건` 로그로 운영자 확인 |
+| 타임아웃 | `@Async` 스레드 풀(`spring.task.execution.pool.keep-alive`)로 장기 실행 제어. 기본값 사용 |
+| 장애 에스컬레이션 | 완료 로그에 `failedCount > 0` 확인 시 운영자가 재색인 엔드포인트 재호출로 복구 |
+| AtomicBoolean 중복 방지 | 동시 요청 시 두 번째 요청은 202 반환 후 실제 작업 없이 silent 종료. 중복 실행 방지 |
 
 ### 3. User 계좌 컬럼 제거
 
@@ -97,7 +107,7 @@ POST /api/v1/admin/ai/reindex
 | `AdminSettlementResponse` | `bankName`, `bankAccount` 필드 제거 |
 | `SettlementRepositoryCustomImpl` | `seller.bankName`, `seller.bankAccount` 참조 제거 |
 | `UpdateBankRequest.java` | 파일 삭제 |
-| `V9__drop_bank_columns.sql` | `ALTER TABLE users DROP COLUMN bank_name, bank_account` |
+| `V9__remove_bank_columns.sql` | `ALTER TABLE users DROP COLUMN bank_name, bank_account` |
 
 **마이그레이션 내용**
 
@@ -106,6 +116,22 @@ ALTER TABLE users
     DROP COLUMN bank_name,
     DROP COLUMN bank_account;
 ```
+
+**운영 안전장치**
+
+| 항목 | 내용 |
+|------|------|
+| 사전 백업 | V9 마이그레이션 실행 전 프로덕션 DB 전체 백업 필수 |
+| 롤백 절차 | 백업 복원 또는 수동으로 `ALTER TABLE users ADD COLUMN bank_name VARCHAR(100), ADD COLUMN bank_account VARCHAR(100)` 후 데이터 복원 |
+| 스테이징 검증 | 프로덕션 배포 전 스테이징 DB에서 V9 마이그레이션 실행 후 정상 동작 확인 |
+| Flyway 상태 | `flyway:info`로 V9 적용 상태 확인 후 배포 진행 |
+
+**사전 배포 체크리스트**
+
+- [ ] 프로덕션 DB 백업 완료 및 복원 테스트 확인
+- [ ] 스테이징 환경에서 V9 마이그레이션 실행 검증
+- [ ] `bank_name`, `bank_account` 참조 코드 제거 확인 (컴파일 + 단위 테스트 PASS)
+- [ ] 클라이언트 사전 공지 완료 (Breaking Change: `PUT /api/v1/users/me/bank-account` 제거)
 
 **Breaking Change**
 
@@ -161,7 +187,7 @@ ALTER TABLE users
 - `UserResponse`, `AdminUserResponse`, `AdminSettlementResponse` — `bankName`, `bankAccount` 필드 제거
 - `SettlementRepositoryCustomImpl` — `seller.bankName`, `seller.bankAccount` 참조 제거
 - `UpdateBankRequest.java` — 파일 삭제
-- `V9__drop_bank_columns.sql` — 신규 Flyway 마이그레이션 (`bank_name`, `bank_account` 컬럼 DROP)
+- `V9__remove_bank_columns.sql` — 신규 Flyway 마이그레이션 (`bank_name`, `bank_account` 컬럼 DROP)
 - `AdminAiController` (또는 신규) — `POST /api/v1/admin/ai/reindex` 엔드포인트 추가
 - `EmbeddingService` (또는 신규 `ReindexService`) — `@Async` 벌크 재색인 로직
 

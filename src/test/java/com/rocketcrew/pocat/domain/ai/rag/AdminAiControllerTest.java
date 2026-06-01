@@ -24,13 +24,14 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * AdminAiController 슬라이스 테스트.
  *
- * <p>[RED #168] AdminAiController / AdminAiService 가 아직 존재하지 않으므로
- * 컴파일 오류로 FAIL 상태입니다.
+ * <p>POST /api/v1/admin/ai/reindex 엔드포인트가 202 Accepted를 반환하고
+ * 응답 body에 ApiResponseDto 형식을 포함하는지 검증한다. (GREEN)
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AdminAiController")
@@ -74,14 +75,15 @@ class AdminAiControllerTest {
     class ReindexAll {
 
         @Test
-        @DisplayName("[RED #168] ADMIN 권한으로 reindex 요청 시 202 Accepted 반환")
+        @DisplayName("ADMIN 권한으로 reindex 요청 시 202 Accepted 반환")
         void success_202_admin() throws Exception {
             // given
             doNothing().when(adminAiService).reindexAll();
 
             // when & then
             mockMvc.perform(post("/api/v1/admin/ai/reindex"))
-                    .andExpect(status().isAccepted());
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.data").doesNotExist());
         }
     }
 }
