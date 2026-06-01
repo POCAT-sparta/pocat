@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -124,9 +125,10 @@ public class OrderCommandService {
         Long nextBidderId = lostBidderIds.get(nextBidderIndex);
 
         // 멱등성: 해당 순위 주문이 이미 존재하면 스킵
-        if (orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank).isPresent()) {
+        Optional<Order> existingOrder = orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank);
+        if (existingOrder.isPresent()) {
             log.info("[EscalateDirectPayment] 이미 주문 존재 auctionId={}, rank={}", order.getAuctionId(), nextRank);
-            return EscalationResult.escalated(nextBidderId);
+            return EscalationResult.escalated(nextBidderId, existingOrder.get().getOrderUid());
         }
 
         Order nextOrder = orderRepository.save(
@@ -135,7 +137,7 @@ public class OrderCommandService {
         schedulePaymentDeadline(nextOrder.getOrderUid());
         log.info("[EscalateDirectPayment] {}순위 1시간 직접결제 기간 부여 auctionId={}, buyerId={}",
                 nextRank, order.getAuctionId(), nextBidderId);
-        return EscalationResult.escalated(nextBidderId);
+        return EscalationResult.escalated(nextBidderId, nextOrder.getOrderUid());
     }
 
     private void cancelAuction(Long auctionId) {

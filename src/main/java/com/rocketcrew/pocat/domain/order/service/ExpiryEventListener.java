@@ -56,7 +56,7 @@ public class ExpiryEventListener implements MessageListener {
                                 result.nextBidderId(),
                                 NotificationType.ESCALATED_PAYMENT_OPPORTUNITY,
                                 "낙찰 기회가 생겼습니다. 1시간 내에 직접 결제를 진행해 주세요.",
-                                Map.of("orderUid", order.getOrderUid())
+                                Map.of("orderUid", result.nextOrderUid())
                         );
                     } catch (Exception e) {
                         log.error("[PaymentExpiry] 승격 결제 기회 알림 실패: nextBidderId={}", result.nextBidderId(), e);
