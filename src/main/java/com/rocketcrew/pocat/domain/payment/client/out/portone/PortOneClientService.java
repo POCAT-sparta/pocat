@@ -64,7 +64,7 @@ public class PortOneClientService {
     public PortOneCancelResponse cancelPayment(String paymentUid, Long amount, String reason) {
         Map<String, Object> body = Map.of(
                 "reason", reason,
-                "amount", Map.of("total", amount == null ? 0 : amount)
+                "amount", Map.of("total", amount)
         );
         try {
             PortOneCancelRawResponse raw = portOneRestClient.post()

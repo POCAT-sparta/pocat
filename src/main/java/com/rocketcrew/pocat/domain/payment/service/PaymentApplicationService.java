@@ -100,7 +100,8 @@ public class PaymentApplicationService {
 
         // 금액이 맞지 않으면 취소
         if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
-            attemptCancelPayment(payment.getPaymentUid(),order.getId() ,response.amount());
+            Long cancelAmount = response.amount() != null ? response.amount() : payment.getAmount();
+            attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
             failureService.autoPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
@@ -143,7 +144,8 @@ public class PaymentApplicationService {
         }
 
         if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
-            attemptCancelPayment(payment.getPaymentUid(),order.getId() ,portOneClientPayment.amount());
+            Long cancelAmount = portOneClientPayment.amount() != null ? portOneClientPayment.amount() : payment.getAmount();
+            attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
             failureService.directPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
