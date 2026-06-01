@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.auction.event;
 
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,8 @@ class AuctionActivatedEventTest {
                 null,
                 2L,
                 LocalDateTime.of(2026, 6, 1, 19, 0)
-        )).isInstanceOf(AuctionException.class);
+        )).isInstanceOf(AuctionException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
     }
 
     @Test
@@ -27,6 +29,7 @@ class AuctionActivatedEventTest {
                 1L,
                 2L,
                 null
-        )).isInstanceOf(AuctionException.class);
+        )).isInstanceOf(AuctionException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
     }
 }

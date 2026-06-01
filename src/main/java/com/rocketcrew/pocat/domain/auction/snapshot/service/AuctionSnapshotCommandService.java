@@ -91,6 +91,8 @@ public class AuctionSnapshotCommandService {
     }
 
     private boolean isAuctionSnapshotDuplicateKey(Throwable throwable) {
+        // MySQL 중복 키 오류 코드(1062)와 예외 메시지의 제약 조건명을 기준으로 판단한다.
+        // DB 벤더를 변경하면 오류 코드와 메시지 형식이 달라질 수 있으므로 이 로직도 함께 수정해야 한다.
         if (throwable instanceof SQLException sqlException) {
             String message = sqlException.getMessage();
             return sqlException.getErrorCode() == MYSQL_DUPLICATE_KEY_ERROR_CODE
