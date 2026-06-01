@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
+import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
@@ -8,6 +9,9 @@ import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,7 @@ public class PaymentCommandService {
     private final OutboxEventWriter outboxEventWriter;
     private final SetExpireService setExpireService;
     private final OrderQueryService orderQueryService;
+    private final OrderRepository orderRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createPayment(Long orderId, PaymentType paymentType) {
@@ -52,7 +57,12 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void completePayment(Payment payment, Order order, String paymentMethod, LocalDateTime paidAt) {
+    public Payment completePayment(Long paymentId, Long orderId, String paymentMethod, LocalDateTime paidAt) {
+        Payment payment = paymentRepository.findByIdWithLock(paymentId)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
+        Order order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
         payment.complete(paymentMethod, paidAt);
         order.completePayment();
         evictAvgPriceCache(order.getCardId());
@@ -67,6 +77,8 @@ public class PaymentCommandService {
         );
         outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
+
+        return payment;
     }
 
     private String generatePaymentUid() {

@@ -147,10 +147,12 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "CARD", paidAt, "", null, null, null));
+            given(paymentCommandService.completePayment(payment.getId(), order.getId(), "CARD", paidAt))
+                    .willReturn(TestFixtures.aPayment(PaymentStatus.COMPLETED));
 
             paymentApplicationService.confirmPayment(1L, "PAY-001");
 
-            verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("CARD"), eq(paidAt));
+            verify(paymentCommandService).completePayment(eq(payment.getId()), eq(order.getId()), eq("CARD"), eq(paidAt));
         }
 
         @Test
@@ -266,10 +268,12 @@ class PaymentApplicationServiceTest {
             given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "BILLING_KEY", paidAt, null, null, null, null));
+            given(paymentCommandService.completePayment(payment.getId(), order.getId(), "BILLING_KEY", paidAt))
+                    .willReturn(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED));
 
             paymentApplicationService.autoPayment("ORD-001");
 
-            verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("BILLING_KEY"), eq(paidAt));
+            verify(paymentCommandService).completePayment(eq(payment.getId()), eq(order.getId()), eq("BILLING_KEY"), eq(paidAt));
         }
 
         @Test

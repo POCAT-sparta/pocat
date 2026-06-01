@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
@@ -21,6 +22,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -37,6 +39,7 @@ class PaymentCommandServiceTest {
     private PaymentCommandService paymentCommandService;
 
     @Mock private PaymentRepository paymentRepository;
+    @Mock private OrderRepository orderRepository;
     @Mock private OrderQueryService orderQueryService;
     @Mock private SetExpireService setExpireService;
     @Mock private StringRedisTemplate redisTemplate;
@@ -76,8 +79,10 @@ class PaymentCommandServiceTest {
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            given(paymentRepository.findByIdWithLock(1L)).willReturn(Optional.of(payment));
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
 
-            paymentCommandService.completePayment(payment, order, "CARD", LocalDateTime.now());
+            paymentCommandService.completePayment(1L, 1L, "CARD", LocalDateTime.now());
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
             verify(redisTemplate).delete("card:avgprice:3");
@@ -88,9 +93,11 @@ class PaymentCommandServiceTest {
         void cacheEvictionFailure_doesNotPropagate() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            given(paymentRepository.findByIdWithLock(1L)).willReturn(Optional.of(payment));
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
             given(redisTemplate.delete(anyString())).willThrow(new RuntimeException("Redis 연결 실패"));
 
-            assertThatCode(() -> paymentCommandService.completePayment(payment, order, "CARD", LocalDateTime.now()))
+            assertThatCode(() -> paymentCommandService.completePayment(1L, 1L, "CARD", LocalDateTime.now()))
                     .doesNotThrowAnyException();
 
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);

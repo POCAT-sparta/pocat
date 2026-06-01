@@ -105,7 +105,7 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
-        paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
+        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
         return PaymentResponse.from(payment);
     }
     /**
@@ -153,7 +153,7 @@ public class PaymentApplicationService {
             cancelPayment(payment.getPaymentUid(),portOneClientPayment.amount());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
-        paymentCommandService.completePayment(payment, order, portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
+        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
         return PaymentResponse.from(payment);
     }
 

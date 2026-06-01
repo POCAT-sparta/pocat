@@ -1,9 +1,6 @@
 package com.rocketcrew.pocat.domain.payment.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
@@ -52,7 +49,6 @@ class PortOneWebhookServiceTest {
     @Mock private PaymentCommandService paymentCommandService;
     @Mock private PortOneClientService portOneClientService;
     @Mock private PortOneSignatureVerifier portOneSignatureVerifier;
-    @Mock private OrderQueryService orderQueryService;
     @Mock private WebhookEventCommandService webhookEventCommandService;
     @Mock private SetExpireService setExpireService;
 
@@ -94,7 +90,6 @@ class PortOneWebhookServiceTest {
         void success_paid() throws Exception {
             byte[] body = validBody();
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             LocalDateTime paidAt = LocalDateTime.now();
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
@@ -102,13 +97,12 @@ class PortOneWebhookServiceTest {
             given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
                     .willReturn(TestFixtures.aWebhookEvent());
             given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
-            given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "CARD", paidAt, "", null, null, null));
 
             portOneWebhookService.handleWebhook("valid-sig", body);
 
-            verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("CARD"), eq(paidAt));
+            verify(paymentCommandService).completePayment(eq(payment.getId()), eq(payment.getOrderId()), eq("CARD"), eq(paidAt));
         }
 
         @Test

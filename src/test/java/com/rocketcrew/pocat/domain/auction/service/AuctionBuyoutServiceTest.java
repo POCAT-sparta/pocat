@@ -18,6 +18,7 @@ import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
@@ -77,6 +78,9 @@ class AuctionBuyoutServiceTest {
     OrderQueryService orderQueryService;
 
     @Mock
+    PaymentApplicationService paymentApplicationService;
+
+    @Mock
     UserQueryService userQueryService;
 
     @Mock
@@ -99,6 +103,7 @@ class AuctionBuyoutServiceTest {
                 paymentRepository,
                 orderCommandService,
                 orderQueryService,
+                paymentApplicationService,
                 userQueryService,
                 redissonClient,
                 eventPublisher,
@@ -175,7 +180,8 @@ class AuctionBuyoutServiceTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
-        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(payment);
+        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(order);
+        given(paymentApplicationService.autoPayment("ORD-001")).willReturn(payment);
         given(orderQueryService.findByOrderid(20L)).willReturn(order);
         given(auctionBidRepository.findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
                 10L, 1L, BidStatus.WON
@@ -210,6 +216,7 @@ class AuctionBuyoutServiceTest {
         assertThat(savedBid.getStatus()).isEqualTo(BidStatus.WON);
 
         verify(orderCommandService).createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
+        verify(paymentApplicationService).autoPayment("ORD-001");
         verify(rLock).unlock();
 
         ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
@@ -326,7 +333,8 @@ class AuctionBuyoutServiceTest {
                 .deliveryStatus(DeliveryStatus.PREPARING)
                 .build();
         ReflectionTestUtils.setField(failedOrder, "id", 20L);
-        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(payment);
+        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(failedOrder);
+        given(paymentApplicationService.autoPayment("ORD-FAILED")).willReturn(payment);
         given(orderQueryService.findByOrderid(20L)).willReturn(failedOrder);
 
         // when & then
@@ -337,6 +345,7 @@ class AuctionBuyoutServiceTest {
         assertThat(auction.getHighestPrice()).isEqualTo(5000L);
         verify(auctionBidRepository, never()).save(any(AuctionBid.class));
         verify(orderCommandService).createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L);
+        verify(paymentApplicationService).autoPayment("ORD-FAILED");
         verify(orderQueryService).findByOrderid(20L);
         verify(rLock).unlock();
         verify(eventPublisher, never()).publishEvent(any());
