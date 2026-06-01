@@ -26,6 +26,11 @@ public class PaymentKafkaConsumer {
     public void consume(String message, Acknowledgment acknowledgment) {
         try {
             OrderEvent event = objectMapper.readValue(message, OrderEvent.class);
+            if (event == null || event.getEventType() == null || event.getOrderUid() == null) {
+                log.warn("payment 이벤트 필드 누락 — skip-ack: {}", message);
+                acknowledgment.acknowledge();
+                return;
+            }
             if ("order.created".equals(event.getEventType())) {
                 paymentApplicationService.autoPayment(event.getOrderUid());
             }

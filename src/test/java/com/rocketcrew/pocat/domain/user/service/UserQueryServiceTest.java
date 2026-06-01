@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.global.cache.UserNicknameCacheService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +42,9 @@ class UserQueryServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserNicknameCacheService userNicknameCacheService;
 
     private User testUser;
 
@@ -164,6 +169,7 @@ class UserQueryServiceTest {
         void success() {
             // given
             given(userRepository.findAllById(List.of(1L))).willReturn(List.of(testUser));
+            given(userNicknameCacheService.getNicknames(List.of(1L))).willReturn(Map.of(1L, "tester"));
 
             // when
             var nicknameMap = userQueryService.getNicknamesByUserIds(List.of(1L));

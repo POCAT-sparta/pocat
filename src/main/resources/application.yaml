@@ -46,6 +46,9 @@ spring:
         similarity: cosine
         initialize-schema: true
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}
+
 view:
   ip-secret: ${VIEW_IP_SECRET}
 
@@ -89,6 +92,26 @@ rate-limit:
   search-window-seconds: 60
   like-limit: 10
   like-window-seconds: 60
+  login-limit: 10
+  login-window-seconds: 60
+  auction-limit: 10
+  auction-window-seconds: 60
+  bid-limit: 30
+  bid-window-seconds: 60
+  chat-limit: 20
+  chat-window-seconds: 60
+  order-limit: 10
+  order-window-seconds: 60
+  payment-limit: 10
+  payment-window-seconds: 60
+  refund-limit: 5
+  refund-window-seconds: 60
+  card-limit: 10
+  card-window-seconds: 60
+  user-limit: 10
+  user-window-seconds: 60
+  ai-limit: 10
+  ai-window-seconds: 60
 
 resilience4j:
   circuitbreaker:

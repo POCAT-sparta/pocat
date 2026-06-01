@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.global.cache.UserNicknameCacheService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,9 @@ class UserCommandServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserNicknameCacheService userNicknameCacheService;
 
     private User testUser;
 

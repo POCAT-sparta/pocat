@@ -143,6 +143,7 @@ public enum ErrorCode {
     // Validation
     INVALID_PARENT_COMMENT(HttpStatus.BAD_REQUEST, "유효하지 않은 부모 댓글입니다."),
     INVALID_CONTENT(HttpStatus.BAD_REQUEST, "내용은 비어 있을 수 없습니다."),
+    CONTAINS_BAD_WORD(HttpStatus.BAD_REQUEST, "금지어가 포함된 내용은 등록할 수 없습니다."),
 
     // AI
     AI_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "AI 요청 한도를 초과했습니다."),

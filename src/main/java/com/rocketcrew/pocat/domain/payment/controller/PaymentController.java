@@ -7,7 +7,10 @@ import com.rocketcrew.pocat.domain.payment.service.PaymentQueryService;
 import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import com.rocketcrew.pocat.global.util.HttpRequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +34,8 @@ public class PaymentController {
     private final PaymentQueryService paymentQueryService;
     private final PortOneWebhookService portOneWebhookService;
     private final PaymentApplicationService paymentApplicationService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @Value("${portone.webhook-allowed-ips:}")
     private String allowedIpsConfig;
@@ -40,6 +45,11 @@ public class PaymentController {
     public ResponseEntity<ApiResponseDto<PaymentResponse>> createPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreatePaymentRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:payment:" + userDetails.getUserId(),
+                rateLimitProperties.getPaymentLimit(),
+                rateLimitProperties.getPaymentWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         PaymentResponse response = paymentApplicationService.generatePayment(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
@@ -50,6 +60,11 @@ public class PaymentController {
     public ResponseEntity<ApiResponseDto<PaymentResponse>> confirmPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String paymentUid) {
+        if (!redisRateLimiter.isAllowed("rate:user:payment:" + userDetails.getUserId(),
+                rateLimitProperties.getPaymentLimit(),
+                rateLimitProperties.getPaymentWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         PaymentResponse response = paymentApplicationService.confirmPayment(userDetails.getUserId(), paymentUid);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }

@@ -61,14 +61,12 @@ class PaymentApplicationServiceTest {
             Payment saved = TestFixtures.aPayment(PaymentStatus.PENDING);
 
             given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
-            given(paymentQueryService.findByOrderIdAndStatus(1L, PaymentStatus.PENDING))
-                    .willReturn(Optional.empty());
-            given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(saved);
+            given(paymentCommandService.createPayment(order.getId(), PaymentType.PG_DIRECT)).willReturn(saved);
 
             PaymentResponse response = paymentApplicationService.generatePayment(1L, request);
 
             assertThat(response.status()).isEqualTo(PaymentStatus.PENDING);
-            verify(paymentCommandService).createPayment(order.getId(), PaymentType.BILLING_KEY);
+            verify(paymentCommandService).createPayment(order.getId(), PaymentType.PG_DIRECT);
         }
 
         @Test
@@ -116,19 +114,18 @@ class PaymentApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("멱등: 이미 PENDING 결제가 존재하면 기존 paymentUid를 반환한다")
+        @DisplayName("성공: PAYMENT_FAILED 주문에 PG_DIRECT 결제를 신규 생성한다")
         void idempotent_pendingAlreadyExists() {
             Order order = TestFixtures.aPaymentFailedOrder();
             Payment existing = TestFixtures.aPayment(PaymentStatus.PENDING);
 
             given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
-            given(paymentQueryService.findByOrderIdAndStatus(1L, PaymentStatus.PENDING))
-                    .willReturn(Optional.of(existing));
+            given(paymentCommandService.createPayment(order.getId(), PaymentType.PG_DIRECT)).willReturn(existing);
 
             PaymentResponse response = paymentApplicationService.generatePayment(1L, new CreatePaymentRequest(1L));
 
             assertThat(response.paymentUid()).isEqualTo("PAY-001");
-            verify(paymentCommandService, never()).createPayment(any(), PaymentType.BILLING_KEY);
+            verify(paymentCommandService).createPayment(eq(order.getId()), eq(PaymentType.PG_DIRECT));
         }
     }
 
@@ -149,7 +146,7 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+                    new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "CARD", paidAt, "", null, null, null));
 
             paymentApplicationService.confirmPayment(1L, "PAY-001");
 
@@ -207,8 +204,7 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
-
+                    new PortOnePaymentResponse(PortOneStatus.FAILED, 15000L, "CARD", LocalDateTime.now(), "", null, null, null));
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -225,7 +221,7 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+                    new PortOnePaymentResponse(PortOneStatus.PAID, 5000L, "CARD", LocalDateTime.now(), "", null, null, null));
 
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
@@ -243,7 +239,7 @@ class PaymentApplicationServiceTest {
             given(orderQueryService.findByOrderid(1L)).willReturn(order);
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+                    new PortOnePaymentResponse(PortOneStatus.PAID, 15000L, "CARD", LocalDateTime.now(), "", null, null, null));
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
@@ -265,13 +261,13 @@ class PaymentApplicationServiceTest {
             Payment payment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
             LocalDateTime paidAt = LocalDateTime.now();
 
-            given(orderQueryService.findByOrderid(1L)).willReturn(order);
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
-                    .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "BILLING_KEY", paidAt, null, null, null, null));
 
-            paymentApplicationService.autoPayment("1");
+            paymentApplicationService.autoPayment("ORD-001");
 
             verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("BILLING_KEY"), eq(paidAt));
         }
@@ -281,11 +277,11 @@ class PaymentApplicationServiceTest {
         void idempotent_alreadyCompleted() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED);
 
-            given(orderQueryService.findByOrderid(1L)).willReturn(order);
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
             given(paymentQueryService.findByOrderId(1L)).willReturn(
                     PaymentResponse.from(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED)));
 
-            PaymentResponse response = paymentApplicationService.autoPayment("1");
+            PaymentResponse response = paymentApplicationService.autoPayment("ORD-001");
 
             assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
             verify(portOneClientService, never()).attemptBillingKeyPayment(anyString(), anyString(), anyLong());
@@ -297,10 +293,10 @@ class PaymentApplicationServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             User user = TestFixtures.aUser(); // billingKey=null
 
-            given(orderQueryService.findByOrderid(1L)).willReturn(order);
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
-            assertThatThrownBy(() -> paymentApplicationService.autoPayment("1"))
+            assertThatThrownBy(() -> paymentApplicationService.autoPayment("ORD-001"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BILLING_KEY_NOT_FOUND);
         }
@@ -312,13 +308,13 @@ class PaymentApplicationServiceTest {
             User user = TestFixtures.aUserWithBillingKey();
             Payment payment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
 
-            given(orderQueryService.findByOrderid(1L)).willReturn(order);
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
             given(userRepository.findById(1L)).willReturn(Optional.of(user));
             given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
-                    .willReturn(new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 10000L, null, null , null,null,null,null));
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.FAILED, 10000L, null, null, null, null, null, null));
 
-            assertThatThrownBy(() -> paymentApplicationService.autoPayment("1"))
+            assertThatThrownBy(() -> paymentApplicationService.autoPayment("ORD-001"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 

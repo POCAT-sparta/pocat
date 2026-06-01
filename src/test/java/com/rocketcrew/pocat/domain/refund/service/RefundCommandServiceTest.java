@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.refund.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
@@ -22,6 +23,7 @@ import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.RefundException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -61,6 +64,12 @@ class RefundCommandServiceTest {
 
     @Mock
     private SettlementRepository settlementRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private PortOneClientService portOneClientService;
 
     private final Long buyerId = 3L;
     private final Long orderId = 100L;
@@ -133,9 +142,8 @@ class RefundCommandServiceTest {
             Refund savedRefund = buildRefund(RefundStatus.REQUESTED);
 
             given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
-            given(refundRepository.existsByOrderIdAndStatusIn(
-                    orderId, List.of(RefundStatus.REQUESTED, RefundStatus.COMPLETED))).willReturn(false);
-            given(paymentRepository.findByOrderId(orderId)).willReturn(Optional.of(payment));
+            given(refundRepository.existsByOrderIdAndStatusIn(eq(orderId), any())).willReturn(false);
+            given(paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.COMPLETED)).willReturn(Optional.of(payment));
             given(refundRepository.save(any(Refund.class))).willReturn(savedRefund);
 
             // when
@@ -199,8 +207,7 @@ class RefundCommandServiceTest {
             CreateRefundRequest request = new CreateRefundRequest(orderId, "사유");
             Order order = buildOrder(OrderStatus.PAYMENT_COMPLETED);
             given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
-            given(refundRepository.existsByOrderIdAndStatusIn(
-                    orderId, List.of(RefundStatus.REQUESTED, RefundStatus.COMPLETED))).willReturn(true);
+            given(refundRepository.existsByOrderIdAndStatusIn(eq(orderId), any())).willReturn(true);
 
             // when & then
             assertThatThrownBy(() -> refundCommandService.createRefund(buyerId, request))
@@ -290,8 +297,10 @@ class RefundCommandServiceTest {
         void success() {
             // given
             Refund refund = buildRefund(RefundStatus.REQUESTED);
+            Order order = buildOrder(OrderStatus.PAYMENT_COMPLETED);
             RejectRefundRequest request = new RejectRefundRequest("파손 없음");
             given(refundRepository.findByIdWithLock(refundId)).willReturn(Optional.of(refund));
+            given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
             // when
             RefundResponse response = refundCommandService.rejectRefund(refundId, request);
