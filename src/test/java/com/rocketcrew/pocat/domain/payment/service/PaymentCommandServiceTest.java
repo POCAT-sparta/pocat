@@ -68,6 +68,41 @@ class PaymentCommandServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("createBillingKeyPaymentIfAbsent()")
+    class CreateBillingKeyPaymentIfAbsent {
+
+        @Test
+        @DisplayName("성공: 기존 자동결제가 없으면 BILLING_KEY 결제를 생성한다")
+        void success_createNew() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            Payment saved = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentRepository.findByOrderIdAndPaymentType(1L, PaymentType.BILLING_KEY)).willReturn(Optional.empty());
+            given(paymentRepository.save(any(Payment.class))).willReturn(saved);
+
+            PaymentCommandService.BillingKeyPayment result = paymentCommandService.createBillingKeyPaymentIfAbsent(1L);
+
+            assertThat(result.created()).isTrue();
+            assertThat(result.payment()).isSameAs(saved);
+            verify(paymentRepository).save(any(Payment.class));
+        }
+
+        @Test
+        @DisplayName("멱등: 기존 자동결제가 있으면 새 결제를 생성하지 않는다")
+        void idempotent_returnExisting() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            Payment existing = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
+            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentRepository.findByOrderIdAndPaymentType(1L, PaymentType.BILLING_KEY)).willReturn(Optional.of(existing));
+
+            PaymentCommandService.BillingKeyPayment result = paymentCommandService.createBillingKeyPaymentIfAbsent(1L);
+
+            assertThat(result.created()).isFalse();
+            assertThat(result.payment()).isSameAs(existing);
+        }
+    }
+
     // ── completePayment ────────────────────────────────────────────────
 
     @Nested

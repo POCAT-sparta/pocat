@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.AutoPaymentFailedEvent;
@@ -39,6 +40,10 @@ public class FailureService {
         Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
         payment.fail();
+        if (order.getOrderType() == OrderType.BUYOUT) {
+            order.cancel("즉시구매 자동결제 실패");
+            return;
+        }
         order.failPayment();
         AutoPaymentFailedEvent event = new AutoPaymentFailedEvent(
                 order.getOrderUid(),

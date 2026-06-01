@@ -57,6 +57,22 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public BillingKeyPayment createBillingKeyPaymentIfAbsent(Long orderId) {
+        Order order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+
+        return paymentRepository.findByOrderIdAndPaymentType(orderId, PaymentType.BILLING_KEY)
+                .map(payment -> new BillingKeyPayment(payment, false))
+                .orElseGet(() -> new BillingKeyPayment(paymentRepository.save(Payment.builder()
+                        .orderId(order.getId())
+                        .paymentUid(generatePaymentUid())
+                        .amount(order.getFinalPrice())
+                        .paymentType(PaymentType.BILLING_KEY)
+                        .status(PaymentStatus.PENDING)
+                        .build()), true));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment completePayment(Long paymentId, Long orderId, String paymentMethod, LocalDateTime paidAt) {
         Payment payment = paymentRepository.findByIdWithLock(paymentId)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
@@ -91,5 +107,8 @@ public class PaymentCommandService {
         } catch (Exception e) {
             log.warn("[CardCache] 평균가 캐시 삭제 실패 cardId={}", cardId, e);
         }
+    }
+
+    public record BillingKeyPayment(Payment payment, boolean created) {
     }
 }

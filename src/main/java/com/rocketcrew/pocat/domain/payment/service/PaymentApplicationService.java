@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
@@ -10,6 +11,7 @@ import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePayment
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -50,6 +52,10 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
         }
 
+        if (order.getOrderType() == OrderType.BUYOUT) {
+            throw new PaymentException(ErrorCode.PAYMENT_BUYOUT_DIRECT_NOT_ALLOWED);
+        }
+
         // 자동결제 실패 시에만 직접 결제 생성.
         if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_NOT_FAILED);
@@ -78,7 +84,16 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
 
-        Payment payment = paymentCommandService.createPayment(order.getId() , PaymentType.BILLING_KEY);
+        PaymentCommandService.BillingKeyPayment billingKeyPayment =
+                paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId());
+        Payment payment = billingKeyPayment.payment();
+        if (!billingKeyPayment.created()) {
+            return PaymentResponse.from(payment);
+        }
+
+        if (payment.isFinalized() || payment.getStatus() != PaymentStatus.PENDING) {
+            return PaymentResponse.from(payment);
+        }
 
         PortOnePaymentResponse response = portOneClientService.attemptBillingKeyPayment(
                 payment.getPaymentUid(), billingKey, payment.getAmount()
