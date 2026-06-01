@@ -189,3 +189,14 @@ ADR-004(AI 기능 통합 전략)에서 LLM·벡터 DB·프레임워크 선택 �
 - `CardAnalysisService` — `callLlmForAnalysis()`, `BeanOutputConverter` 파싱, Circuit Breaker fallback
 - `RagService` — `SIMILARITY_THRESHOLD = 0.7`, `TOP_K = 5`, `buildContext()` 빈 결과 처리
 - `AiPromptTemplateService` — 카드 등급별 프롬프트 DB 조회 (`DEFAULT` 폴백)
+
+## Phase 4 코드리뷰 결과
+
+### 반영된 피드백
+- `recordUsage()` 호출 시 `FALLBACK_MODEL` 하드코딩 → `result.analysisModel()` 실값 사용으로 수정
+- 응답시간 테스트 `latencyMs > 0` → `>= 0` (CI 환경 flakiness 방지)
+
+### 별도 이슈로 분리된 항목
+- `CardAnalysisResult` DTO 클라이언트 노출 (`analysisModel`, `promptTokens` 등) — 기존 이슈
+- `reanalyzeCard()` → `self.analyzeCard()` 경로 Rate Limit 이중 소비 — 기존 이슈, 별도 이슈 제기 필요
+- `AiStreamController` Reactive 환경 블로킹 호출 — 기존 이슈
