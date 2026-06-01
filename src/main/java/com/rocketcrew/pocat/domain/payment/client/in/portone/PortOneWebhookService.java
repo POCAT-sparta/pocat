@@ -161,7 +161,8 @@ public class PortOneWebhookService {
                 PortOneCancelResponse nullCancelResponse = portOneClientService.cancelPayment(
                         payment.getPaymentUid(), payment.getAmount(), "결제금액 불일치");
                 if (nullCancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
-                        || nullCancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)) {
+                        || nullCancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)
+                        || nullCancelResponse.status().equals(PortOneCancelStatus.FAILED)) {
                     paymentCommandService.cancelFailPayment(payment.getPaymentUid());
                 }
                 setExpireService.cancelExpiry(payment.getOrderId());
@@ -176,7 +177,8 @@ public class PortOneWebhookService {
                 PortOneCancelResponse cancelResponse = portOneClientService.cancelPayment(
                         payment.getPaymentUid(), paidAmount, "결제금액 불일치");
                 if (cancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
-                        || cancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)) {
+                        || cancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)
+                        || cancelResponse.status().equals(PortOneCancelStatus.FAILED)) {
                     paymentCommandService.cancelFailPayment(payment.getPaymentUid());
                 }
                 setExpireService.cancelExpiry(payment.getOrderId());
