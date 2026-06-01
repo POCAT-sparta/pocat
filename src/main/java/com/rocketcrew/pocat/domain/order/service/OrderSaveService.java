@@ -16,4 +16,6 @@ public class OrderSaveService {
     public Order saveBuyoutOrder(Long auctionId, Long cardId, Long sellerId, Long buyerId, Long finalPrice) {
         return orderRepository.save(Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
     }
+
+
 }

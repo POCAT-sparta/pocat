@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.order.consumer.auctionEvent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.auction.event.AuctionEventType;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
@@ -29,8 +30,8 @@ public class AuctionEventConsumer {
         try {
             AuctionEvent event = objectMapper.readValue(message, AuctionEvent.class);
             switch (event.getEventType()) {
-                case "auction.ended"            -> handleAuctionEnded(event);
-                case "auction.buyout.completed" -> handleBuyoutCompleted(event);
+                case AuctionEventType.ENDED            -> handleAuctionEnded(event);
+                case AuctionEventType.BUYOUT_COMPLETED -> handleBuyoutCompleted(event);
                 default -> log.warn("알 수 없는 auction 이벤트: {}", event.getEventType());
             }
         } catch (Exception e) {
@@ -64,6 +65,17 @@ public class AuctionEventConsumer {
                 );
             } catch (Exception e) {
                 log.error("낙찰 알림 실패: auctionId={}, userId={}", event.getAuctionId(), event.getWinnerId(), e);
+            }
+
+            try {
+                notificationCommandService.send(
+                        event.getSellerId(),
+                        NotificationType.AUCTION_SOLD,
+                        "카드가 낙찰되었습니다.",
+                        Map.of("auctionId", event.getAuctionId(), "finalPrice", event.getFinalPrice())
+                );
+            } catch (Exception e) {
+                log.error("경매 종료 판매자 알림 실패: auctionId={}, sellerId={}", event.getAuctionId(), event.getSellerId(), e);
             }
         }
 

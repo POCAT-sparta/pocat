@@ -19,7 +19,13 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @Entity
-@Table(name = "orders")
+@Table(name = "orders",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_auction_id_bidder_rank",
+                        columnNames = {"auction_id", "bidder_rank"}
+                )
+        })
 @SQLDelete(sql = "UPDATE orders SET deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
 public class Order extends BaseEntity {
