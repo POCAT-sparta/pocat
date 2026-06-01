@@ -59,8 +59,8 @@ class AuctionPostProcessConsumerTest {
     }
 
     @Test
-    @DisplayName("auction.activated 이벤트의 endedAt 누락은 Redis 서비스의 skip 정책에 맡긴다")
-    void consumeActivated_withoutEndedAt_delegatesToExpirationService() {
+    @DisplayName("auction.activated 이벤트의 endedAt 누락은 실패 처리한다")
+    void consumeActivated_withoutEndedAt_throwsAuctionException() {
         String message = """
                 {
                   "eventType": "auction.activated",
@@ -68,10 +68,9 @@ class AuctionPostProcessConsumerTest {
                 }
                 """;
 
-        consumer.consume(message);
-
-        verify(auctionExpirationRedisService).setExpirationKeys(1L, null);
-        verifyNoInteractions(auctionSnapshotCommandService);
+        assertThatThrownBy(() -> consumer.consume(message))
+                .isInstanceOf(AuctionException.class);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
     }
 
     @Test

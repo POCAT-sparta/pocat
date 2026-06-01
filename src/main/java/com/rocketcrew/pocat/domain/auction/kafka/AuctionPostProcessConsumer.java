@@ -49,6 +49,7 @@ public class AuctionPostProcessConsumer {
 
     private void handleActivated(AuctionEventPayload event) {
         requireAuctionId(event);
+        requireEndedAt(event);
         auctionExpirationRedisService.setExpirationKeys(event.getAuctionId(), event.getEndedAt());
     }
 
@@ -87,6 +88,12 @@ public class AuctionPostProcessConsumer {
 
     private void requireFinalPrice(AuctionEventPayload event) {
         if (event.getFinalPrice() == null) {
+            throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
+        }
+    }
+
+    private void requireEndedAt(AuctionEventPayload event) {
+        if (event.getEndedAt() == null) {
             throw new AuctionException(ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
         }
     }
