@@ -94,7 +94,7 @@ class AdminSettlementControllerTest {
         void success_200() throws Exception {
             // given
             AdminSettlementResponse item = new AdminSettlementResponse(
-                    "SET-001", "ORD-001", "seller_nick", "신한은행", "110-123-456789",
+                    "SET-001", "ORD-001", "seller_nick",
                     "피카츄", "PSA_10", 10000L, 500L, 9500L,
                     SettlementStatus.PENDING, null, LocalDateTime.now()
             );

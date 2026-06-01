@@ -33,12 +33,6 @@ public class User extends BaseEntity {
     @Column(name = "user_role", nullable = false, length = 20)
     private UserRole userRole;
 
-    @Column(name = "bank_name", length = 50)
-    private String bankName;
-
-    @Column(name = "bank_account", length = 50)
-    private String bankAccount;
-
     @Column(name = "billing_key")
     private String billingKey;
 
@@ -57,11 +51,6 @@ public class User extends BaseEntity {
         this.nickname = nickname;
         this.phone = phone;
         this.address = address;
-    }
-
-    public void updateBank(String bankName, String bankAccount) {
-        this.bankName = bankName;
-        this.bankAccount = bankAccount;
     }
 
     public void registerBillingKey(String billingKey) {

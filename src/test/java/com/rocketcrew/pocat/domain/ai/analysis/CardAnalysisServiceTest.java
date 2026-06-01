@@ -299,14 +299,14 @@ class CardAnalysisServiceTest {
     }
 
     // ---------------------------------------------------------------
-    // [RED] #158 환각 방어 Layer1 — retry 및 latencyMs 실측
+    // 환각 방어 Layer1 — retry 및 latencyMs 실측
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("[RED #158] 환각 방어 Layer1 / latencyMs")
+    @DisplayName("환각 방어 Layer1 / latencyMs")
     class HallucinationDefenseAndLatency {
 
         @Test
-        @DisplayName("[RED] 파싱 실패 1회 후 재시도하여 2차 성공 → LLM 2회 호출")
+        @DisplayName("파싱 실패 1회 후 재시도하여 2차 성공 → LLM 2회 호출")
         void callLlm_parseFailOnce_retriesAndSucceeds() {
             // given
             given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
@@ -336,7 +336,7 @@ class CardAnalysisServiceTest {
         }
 
         @Test
-        @DisplayName("[RED] 파싱 2회 연속 실패 시 ServiceException + LLM 2회 호출 검증")
+        @DisplayName("파싱 2회 연속 실패 시 ServiceException + LLM 2회 호출 검증")
         void callLlm_parseFailTwice_throwsAfterRetry() {
             // given
             given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
@@ -394,14 +394,14 @@ class CardAnalysisServiceTest {
     }
 
     // ---------------------------------------------------------------
-    // [RED #164] reanalyzeCard @RateLimiter 단일 진입점 검증
+    // reanalyzeCard @RateLimiter 단일 진입점 검증
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("[RED #164] reanalyzeCard() @RateLimiter 없음 검증")
+    @DisplayName("reanalyzeCard() @RateLimiter 없음 검증")
     class RateLimiterSinglePoint {
 
         @Test
-        @DisplayName("[RED] reanalyzeCard()에 @RateLimiter 어노테이션이 없어야 한다 (rate limit은 Controller에서만)")
+        @DisplayName("reanalyzeCard()에 @RateLimiter 어노테이션이 없어야 한다 (rate limit은 Controller에서만)")
         void reanalyzeCard_hasNoRateLimiterAnnotation() throws NoSuchMethodException {
             Method m = CardAnalysisService.class.getMethod("reanalyzeCard", Long.class);
             io.github.resilience4j.ratelimiter.annotation.RateLimiter rl =

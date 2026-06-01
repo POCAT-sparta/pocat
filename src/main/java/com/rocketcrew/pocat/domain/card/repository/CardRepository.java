@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,9 @@ public interface CardRepository extends JpaRepository<Card, Long>, CardRepositor
     Page<Card> findByUserId(Long userId, Pageable pageable);
 
     Page<Card> findByStatus(CardStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"series", "pokemonSet"})
+    Page<Card> findWithDetailsByStatus(CardStatus status, Pageable pageable);
 
     Page<Card> findByUserIdAndStatus(Long userId, CardStatus status, Pageable pageable);
 

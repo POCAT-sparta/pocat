@@ -2,7 +2,6 @@ package com.rocketcrew.pocat.domain.user.service;
 
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
-import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -42,12 +41,6 @@ public class UserCommandService {
             userNicknameCacheService.evict(userId);
         }
         return UserResponse.from(user);
-    }
-
-    @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId")
-    public void updateBank(Long userId, UpdateBankRequest request) {
-        User user = findUserOrThrow(userId);
-        user.updateBank(request.bankName(), request.bankAccount());
     }
 
     @CacheEvict(value = CacheNames.USER_PROFILE, key = "#userId")
