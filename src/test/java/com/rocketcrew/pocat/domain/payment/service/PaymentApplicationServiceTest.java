@@ -3,8 +3,10 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
@@ -12,7 +14,7 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.user.entity.User;
-import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.support.TestFixtures;
@@ -25,7 +27,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,7 +43,7 @@ class PaymentApplicationServiceTest {
 
     @Mock private PortOneClientService portOneClientService;
     @Mock private FailureService failureService;
-    @Mock private UserRepository userRepository;
+    @Mock private UserQueryService userQueryService;
     @Mock private PaymentCommandService paymentCommandService;
     @Mock private PaymentQueryService paymentQueryService;
     @Mock private OrderQueryService orderQueryService;
@@ -227,9 +228,9 @@ class PaymentApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("실패: 금액 불일치(부족) → PAYMENT_AMOUNT_MISMATCH")
+        @DisplayName("실패: 금액 불일치(부족) → PAYMENT_AMOUNT_MISMATCH + handelCancel 호출")
         void fail_amountMismatch() {
-            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
@@ -237,17 +238,20 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse(PortOneStatus.PAID, 5000L, "CARD", LocalDateTime.now(), "", null, null, null));
-
+            given(portOneClientService.cancelPayment(eq("PAY-001"), eq(5000L), anyString()))
+                    .willReturn(PortOneCancelResponse.builder().status(PortOneCancelStatus.SUCCEEDED).build());
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+
+            verify(paymentCommandService).handleCancel(eq("PAY-001"), eq(1L));
         }
 
         @Test
-        @DisplayName("실패: 금액 불일치(초과) → PAYMENT_AMOUNT_MISMATCH")
+        @DisplayName("실패: 금액 불일치(초과) → PAYMENT_AMOUNT_MISMATCH + handelCancel 호출")
         void fail_amountMismatch_over() {
-            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUid("PAY-001")).willReturn(payment);
@@ -255,10 +259,14 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse(PortOneStatus.PAID, 15000L, "CARD", LocalDateTime.now(), "", null, null, null));
+            given(portOneClientService.cancelPayment(eq("PAY-001"), eq(15000L), anyString()))
+                    .willReturn(PortOneCancelResponse.builder().status(PortOneCancelStatus.SUCCEEDED).build());
 
             assertThatThrownBy(() -> paymentApplicationService.confirmPayment(1L, "PAY-001"))
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+
+            verify(paymentCommandService).handleCancel(eq("PAY-001"), eq(1L));
         }
     }
 
@@ -277,7 +285,7 @@ class PaymentApplicationServiceTest {
             LocalDateTime paidAt = LocalDateTime.now();
 
             given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
-            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
             given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
                     .willReturn(new PaymentCommandService.BillingKeyPayment(payment, true));
             given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
@@ -312,7 +320,7 @@ class PaymentApplicationServiceTest {
             User user = TestFixtures.aUser(); // billingKey=null
 
             given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
-            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
 
             assertThatThrownBy(() -> paymentApplicationService.autoPayment("ORD-001"))
                     .isInstanceOf(PaymentException.class)
@@ -320,14 +328,14 @@ class PaymentApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("실패: PortOne 결제 실패 → persistBillingKeyFailure 호출 후 PAYMENT_STATUS_NOT_PAID")
+        @DisplayName("실패: PortOne 결제 실패 → handelFailed 호출 후 PAYMENT_STATUS_NOT_PAID")
         void fail_portOnePaymentFailed() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             User user = TestFixtures.aUserWithBillingKey();
             Payment payment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
 
             given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
-            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
             given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
                     .willReturn(new PaymentCommandService.BillingKeyPayment(payment, true));
             given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
@@ -337,7 +345,7 @@ class PaymentApplicationServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 
-            verify(failureService).persistBillingKeyFailure(payment.getId(), order.getId());
+            verify(paymentCommandService).handleFailed(eq("PAY-001"), eq(1L));
         }
 
         @Test
@@ -348,7 +356,7 @@ class PaymentApplicationServiceTest {
             Payment existingPayment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
 
             given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
-            given(userRepository.findById(1L)).willReturn(Optional.of(user));
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
             given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
                     .willReturn(new PaymentCommandService.BillingKeyPayment(existingPayment, false));
 

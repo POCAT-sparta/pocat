@@ -11,8 +11,6 @@ public record AdminUserResponse(
         String nickname,
         String phone,
         UserRole role,
-        String bankName,
-        String bankAccount,
         String address,
         int unpaidStrike,
         boolean isBidBlocked,
@@ -26,8 +24,6 @@ public record AdminUserResponse(
                 user.getNickname(),
                 maskPhone(user.getPhone()),
                 user.getUserRole(),
-                user.getBankName(),
-                maskBankAccount(user.getBankAccount()),
                 user.getAddress(),
                 user.getUnpaidStrike(),
                 user.isBidBlocked(),
@@ -39,10 +35,5 @@ public record AdminUserResponse(
     private static String maskPhone(String phone) {
         if (phone == null || phone.length() < 4) return phone;
         return "***-****-" + phone.substring(phone.length() - 4);
-    }
-
-    private static String maskBankAccount(String account) {
-        if (account == null || account.length() < 4) return account;
-        return "***-" + account.substring(account.length() - 4);
     }
 }

@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.ai.analysis.controller;
 
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
+import com.rocketcrew.pocat.domain.ai.analysis.dto.response.CardAnalysisResponse;
 import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -35,10 +36,10 @@ public class CardAnalysisController {
      * @return 분석 결과
      */
     @GetMapping("/{cardId}/analysis")
-    public ResponseEntity<ApiResponseDto<CardAnalysisResult>> getCardAnalysis(
+    public ResponseEntity<ApiResponseDto<CardAnalysisResponse>> getCardAnalysis(
             @PathVariable @Positive Long cardId
     ) {
-        CardAnalysisResult result = cardAnalysisService.analyzeCard(cardId);
+        CardAnalysisResponse result = CardAnalysisResponse.from(cardAnalysisService.analyzeCard(cardId));
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, result));
     }
 
@@ -49,7 +50,7 @@ public class CardAnalysisController {
      * @return 새로운 분석 결과
      */
     @PostMapping("/{cardId}/analysis")
-    public ResponseEntity<ApiResponseDto<CardAnalysisResult>> reanalyzeCard(
+    public ResponseEntity<ApiResponseDto<CardAnalysisResponse>> reanalyzeCard(
             @PathVariable @Positive Long cardId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -58,7 +59,7 @@ public class CardAnalysisController {
                 rateLimitProperties.getAiWindowSeconds())) {
             throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
-        CardAnalysisResult result = cardAnalysisService.reanalyzeCard(cardId);
+        CardAnalysisResponse result = CardAnalysisResponse.from(cardAnalysisService.reanalyzeCard(cardId));
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, result));
     }
 }

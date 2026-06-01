@@ -3,7 +3,6 @@ package com.rocketcrew.pocat.domain.user.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
-import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.AdminUserResponse;
@@ -70,7 +69,7 @@ class UserControllerTest {
     private UserResponse buildUserResponse() {
         return new UserResponse(
                 1L, "test@example.com", "tester", "010-1234-5678",
-                UserRole.USER, "국민은행", "123-456-789", "서울시",
+                UserRole.USER, "서울시",
                 0, false, false, LocalDateTime.now()
         );
     }
@@ -259,25 +258,6 @@ class UserControllerTest {
     }
 
     @Nested
-    @DisplayName("PUT /api/v1/users/me/bank-account")
-    class UpdateBank {
-
-        @Test
-        @DisplayName("성공: 계좌 정보 업데이트 → 200 OK")
-        void success_200() throws Exception {
-            // given
-            UpdateBankRequest request = new UpdateBankRequest("국민은행", "123-456-789");
-            doNothing().when(userCommandService).updateBank(eq(1L), any(UpdateBankRequest.class));
-
-            // when & then
-            mockMvc.perform(put("/api/v1/users/me/bank-account")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk());
-        }
-    }
-
-    @Nested
     @DisplayName("GET /api/v1/admin/users")
     class GetAllUsers {
 
@@ -287,7 +267,7 @@ class UserControllerTest {
             // given
             AdminUserResponse adminResponse = new AdminUserResponse(
                     1L, "test@example.com", "tester", "***-****-5678",
-                    UserRole.USER, "국민은행", "***-789", "서울시",
+                    UserRole.USER, "서울시",
                     0, false, false, LocalDateTime.now()
             );
             Page<AdminUserResponse> page = new PageImpl<>(List.of(adminResponse));

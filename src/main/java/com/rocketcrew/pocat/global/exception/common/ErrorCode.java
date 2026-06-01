@@ -69,6 +69,7 @@ public enum ErrorCode {
     ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문 상태입니다."),
     ORDER_CANNOT_COMPLETE_PAYMENT(HttpStatus.CONFLICT, "결제 완료 처리가 불가능한 주문 상태입니다."),
     ORDER_CANNOT_FAIL_PAYMENT(HttpStatus.CONFLICT, "결제 실패 처리가 불가능한 주문 상태입니다."),
+    ORDER_CREATION_FAILED(HttpStatus.CONFLICT, "주문 생성에 실패했습니다."),
 
     // Payment
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),
@@ -82,6 +83,7 @@ public enum ErrorCode {
     PAYMENT_CANNOT_COMPLETE(HttpStatus.CONFLICT, "결제 완료 처리가 불가능한 결제 상태입니다."),
     PAYMENT_CANNOT_FAIL(HttpStatus.CONFLICT, "결제 실패 처리가 불가능한 결제 상태입니다."),
     PAYMENT_CANNOT_REFUND(HttpStatus.CONFLICT, "환불 처리가 불가능한 결제 상태입니다."),
+    PAYMENT_CANNOT_CANCEL(HttpStatus.CONFLICT, "취소 처리가 불가능한 결제 상태입니다."),
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.FORBIDDEN, "Webhook 서명 검증에 실패했습니다."),
     WEBHOOK_EMPTY_BODY(HttpStatus.BAD_REQUEST, "Webhook 요청 본문이 비어 있습니다. 인프라 설정을 확인하세요."),
     WEBHOOK_PARSE_FAILED(HttpStatus.BAD_REQUEST, "Webhook 요청 본문 파싱에 실패했습니다."),
@@ -92,6 +94,8 @@ public enum ErrorCode {
     BILLING_PAYMENT_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "자동 결제가 정상적으로 진행되지 않았습니다."),
     PAYMENT_STATUS_NOT_PAID(HttpStatus.BAD_REQUEST, "PortOne 결제 상태가 PAID가 아닙니다."),
     PORTONE_NETWORK_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PortOne 결제 네트워크 오류"),
+    PORTONE_HTTP_CODE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PortOne HTTP 상태값오류 관리자 확인 필요."),
+    PORTONE_CANCEL_STATUS_UNKNOWN(HttpStatus.INTERNAL_SERVER_ERROR, "PortOne 취소 상태값을 알 수 없습니다."),
 
     // Refund
     REFUND_NOT_FOUND(HttpStatus.NOT_FOUND, "환불을 찾을 수 없습니다."),

@@ -21,5 +21,6 @@ public enum NotificationType {
     REFUND_REJECTED,
     AUCTION_ACTIVATED,
     AUCTION_CANCELLED,
+    AUCTION_SOLD,
     BID_CREATED
 }

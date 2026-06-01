@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
@@ -23,7 +24,7 @@ import java.util.Optional;
 public class PaymentQueryService {
 
     private final PaymentRepository paymentRepository;
-    private final OrderRepository orderRepository;
+    private final OrderQueryService orderQueryService;
 
     /**
      * 6.3 결제 상세 조회
@@ -31,8 +32,9 @@ public class PaymentQueryService {
      */
     public PaymentResponse getPayment(Long requesterId, String paymentUid) {
         Payment payment = findPaymentByUid(paymentUid);
-        Order order = findOrder(payment.getOrderId());
+        Order order = orderQueryService.findByOrderid(payment.getOrderId());
 
+        // TODO : 관심사 분리
         if (!isAdmin() && !order.getBuyerId().equals(requesterId)) {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
         }
@@ -46,10 +48,6 @@ public class PaymentQueryService {
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
-    public Optional<Payment> findByOrderIdAndStatus(Long orderId, PaymentStatus status) {
-        return paymentRepository.findByOrderIdAndStatus(orderId, status);
-    }
-
     public Payment findPaymentByUid(String paymentUid) {
         return paymentRepository.findByPaymentUid(paymentUid)
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
@@ -60,11 +58,9 @@ public class PaymentQueryService {
                 .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
-    // ── 내부 헬퍼 ────────────────────────────────────────────────────
-
-    private Order findOrder(Long orderId) {
-        return orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+    public Payment findPaymentByIdWithLock(Long paymentId) {
+        return paymentRepository.findByIdWithLock(paymentId)
+                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
     private boolean isAdmin() {

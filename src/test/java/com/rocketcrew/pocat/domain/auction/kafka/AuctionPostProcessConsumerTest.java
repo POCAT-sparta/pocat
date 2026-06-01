@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
+import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.InvalidAuctionEventPayloadException;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,9 @@ class AuctionPostProcessConsumerTest {
     @Mock
     AuctionSnapshotCommandService auctionSnapshotCommandService;
 
+    @Mock
+    NotificationCommandService notificationCommandService;
+
     AuctionPostProcessConsumer consumer;
 
     @BeforeEach
@@ -37,7 +41,8 @@ class AuctionPostProcessConsumerTest {
         consumer = new AuctionPostProcessConsumer(
                 objectMapper,
                 auctionExpirationRedisService,
-                auctionSnapshotCommandService
+                auctionSnapshotCommandService,
+                notificationCommandService
         );
     }
 

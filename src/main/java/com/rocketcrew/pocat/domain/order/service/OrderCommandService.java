@@ -47,8 +47,7 @@ public class OrderCommandService {
         if (orderRepository.findByAuctionIdAndBidderRank(auctionId, bidderRank).isPresent()) {
             return; // 중복 소비 방지
         }
-        Order order = orderRepository.save(
-                Order.fromAuction(auctionId, cardId, sellerId, winnerId, finalPrice, bidderRank));
+        Order order = orderRepository.save(Order.fromAuction(auctionId, cardId, sellerId, winnerId, finalPrice, bidderRank));
 
         OrderCreatedEvent event = new OrderCreatedEvent(
                 order.getOrderUid(),
@@ -70,6 +69,11 @@ public class OrderCommandService {
     public void schedulePaymentDeadline(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        // 중복 수신 시 이미 AUTO_PAYMENT_FAILED면 스킵 (멱등 처리)
+        if (order.getStatus() == OrderStatus.AUTO_PAYMENT_FAILED) {
+            log.info("[schedulePaymentDeadline] 이미 처리된 주문 orderUid={}", orderUid);
+            return;
+        }
         LocalDateTime deadline = LocalDateTime.now().plusHours(1);
         order.startDirectPayment(deadline);
         setExpireService.scheduleExpiry(order.getId(), Duration.ofHours(1));

@@ -3,9 +3,11 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.in.portone.WebhookEventCommandService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneSignatureVerifier;
 import com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest;
@@ -96,7 +98,7 @@ class PortOneWebhookServiceTest {
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
             given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
                     .willReturn(TestFixtures.aWebhookEvent());
-            given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
+            given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
             given(portOneClientService.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "CARD", paidAt, "", null, null, null));
 
@@ -114,7 +116,7 @@ class PortOneWebhookServiceTest {
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
             given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
                     .willReturn(TestFixtures.aWebhookEvent());
-            given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.empty());
+            given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.empty());
 
             portOneWebhookService.handleWebhook("valid-sig", body);
 
@@ -131,7 +133,7 @@ class PortOneWebhookServiceTest {
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
             given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
                     .willReturn(TestFixtures.aWebhookEvent());
-            given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
+            given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
 
             portOneWebhookService.handleWebhook("valid-sig", body);
 
@@ -139,21 +141,25 @@ class PortOneWebhookServiceTest {
         }
 
         @Test
-        @DisplayName("성공: PAID이지만 금액 불일치 → markFailed 호출 후 리턴 (예외 발생 안함)")
+        @DisplayName("성공: PAID이지만 금액 불일치 → handelCancel + PortOne 취소 호출 후 리턴")
         void success_with_amountMismatch() throws Exception {
             byte[] body = validBody();
-            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING); // amount=10000L
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
 
             given(portOneSignatureVerifier.verify("valid-sig", body)).willReturn(true);
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(paidWebhookRequest());
             given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
                     .willReturn(TestFixtures.aWebhookEvent());
-            given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
+            given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
             given(portOneClientService.getPayment("PAY-001")).willReturn(
-                    new PortOnePaymentResponse(PortOneStatus.NETWORK_ERROR, 15000L, "CARD", LocalDateTime.now() , "",null,null,null));
+                    new PortOnePaymentResponse(PortOneStatus.PAID, 15000L, "CARD", LocalDateTime.now(), "", null, null, null));
+            given(portOneClientService.cancelPayment(eq("PAY-001"), eq(15000L), anyString()))
+                    .willReturn(PortOneCancelResponse.builder().status(PortOneCancelStatus.SUCCEEDED).build());
+
             portOneWebhookService.handleWebhook("valid-sig", body);
 
-            verify(failureService).markFailed(eq(1L), eq(PaymentErrorReason.AMOUNT_MISMATCH));
+            verify(paymentCommandService).handleCancel(eq("PAY-001"), eq(1L));
+            verify(portOneClientService).cancelPayment(eq("PAY-001"), eq(15000L), anyString());
             verify(setExpireService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }
@@ -168,11 +174,11 @@ class PortOneWebhookServiceTest {
             given(objectMapper.readValue(body, WebhookRequest.class)).willReturn(failedWebhookRequest());
             given(webhookEventCommandService.saveReceivedOrGet(anyString(), anyString(), anyString()))
                     .willReturn(TestFixtures.aWebhookEvent());
-            given(paymentRepository.findByPaymentUidWithLock("PAY-001")).willReturn(Optional.of(payment));
+            given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
 
             portOneWebhookService.handleWebhook("valid-sig", body);
 
-            verify(failureService).markFailed(eq(1L), eq(PaymentErrorReason.WEBHOOK_FAILED));
+            verify(failureService).markFailed(eq("PAY-001"), eq(1L), eq(PaymentErrorReason.WEBHOOK_FAILED));
             verify(setExpireService).cancelExpiry(1L);
             verify(paymentCommandService, never()).completePayment(any(), any(), any(), any());
         }

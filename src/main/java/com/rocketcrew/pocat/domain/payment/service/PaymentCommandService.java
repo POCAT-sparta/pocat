@@ -1,17 +1,13 @@
 package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
-import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
-import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
@@ -33,15 +29,15 @@ public class PaymentCommandService {
 
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
-    private final PaymentRepository paymentRepository;
     private final StringRedisTemplate redisTemplate;
-    private final ApplicationEventPublisher eventPublisher;
-    private final OutboxEventWriter outboxEventWriter;
+    private final PaymentRepository paymentRepository;
     private final SetExpireService setExpireService;
     private final OrderQueryService orderQueryService;
-    private final OrderRepository orderRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventWriter outboxEventWriter;
+    private final PaymentQueryService paymentQueryService;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Payment createPayment(Long orderId, PaymentType paymentType) {
         Order order = orderQueryService.findByOrderid(orderId);
 
@@ -58,8 +54,7 @@ public class PaymentCommandService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BillingKeyPayment createBillingKeyPaymentIfAbsent(Long orderId) {
-        Order order = orderRepository.findByIdWithLock(orderId)
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
 
         return paymentRepository.findByOrderIdAndPaymentType(orderId, PaymentType.BILLING_KEY)
                 .map(payment -> new BillingKeyPayment(payment, false))
@@ -74,11 +69,12 @@ public class PaymentCommandService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment completePayment(Long paymentId, Long orderId, String paymentMethod, LocalDateTime paidAt) {
-        Payment payment = paymentRepository.findByIdWithLock(paymentId)
-                .orElseThrow(() -> new PaymentException(ErrorCode.PAYMENT_NOT_FOUND));
-        Order order = orderRepository.findByIdWithLock(orderId)
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
+        Payment payment = paymentQueryService.findPaymentByIdWithLock(paymentId);
+        if (payment.isFinalized()) {
+            return payment;
+        }
 
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
         payment.complete(paymentMethod, paidAt);
         order.completePayment();
         evictAvgPriceCache(order.getCardId());
@@ -95,6 +91,28 @@ public class PaymentCommandService {
         eventPublisher.publishEvent(event);
 
         return payment;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleFailed(String paymentUid, Long orderId) {
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        payment.fail();
+        order.failPayment();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleCancel(String paymentUid, Long orderId) {
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+        payment.cancel();
+        order.failPayment();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cancelFailPayment(String paymentUid) {
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+        payment.cancelFailed();
     }
 
     private String generatePaymentUid() {

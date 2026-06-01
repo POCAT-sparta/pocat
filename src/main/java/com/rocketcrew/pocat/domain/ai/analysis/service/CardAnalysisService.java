@@ -139,7 +139,6 @@ public class CardAnalysisService {
      * @param cardId 카드 ID
      * @return 새로운 분석 결과
      */
-    @RateLimiter(name = "aiEndpoint", fallbackMethod = "reanalyzeCardRateLimitFallback")
     @CircuitBreaker(name = "aiService", fallbackMethod = "analyzeCardFallback")
     @CacheEvict(value = "cardAnalysis", key = "#cardId", beforeInvocation = true)
     @Transactional
@@ -278,8 +277,4 @@ public class CardAnalysisService {
         throw new ServiceException(ErrorCode.AI_RATE_LIMITED);
     }
 
-    private CardAnalysisResult reanalyzeCardRateLimitFallback(Long cardId, RequestNotPermitted ex) {
-        log.warn("Rate limit exceeded for reanalyzeCard cardId={}", cardId);
-        throw new ServiceException(ErrorCode.AI_RATE_LIMITED);
-    }
 }

@@ -63,6 +63,10 @@ portone:
   webhook-secret: ${PORTONE_WEBHOOK_SECRET}
   webhook-allowed-ips: ${PORTONE_WEBHOOK_ALLOWED_IPS:}
 
+outbox:
+  relay:
+    age-threshold-seconds: 10
+
 ranking:
   auction:
     like-weight: 1.0

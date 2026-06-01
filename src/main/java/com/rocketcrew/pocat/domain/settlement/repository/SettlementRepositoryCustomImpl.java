@@ -38,8 +38,6 @@ public class SettlementRepositoryCustomImpl implements SettlementRepositoryCusto
                         settlement.settlementUid,
                         order.orderUid,
                         seller.nickname,
-                        seller.bankName,
-                        seller.bankAccount,
                         card.name,
                         card.grade.stringValue(),
                         settlement.totalPrice,

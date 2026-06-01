@@ -2,8 +2,10 @@ package com.rocketcrew.pocat.domain.payment.client.in.portone;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneSignatureVerifier;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePaymentResponse;
 import com.rocketcrew.pocat.domain.payment.dto.request.WebhookRequest;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
@@ -131,8 +133,8 @@ public class PortOneWebhookService {
             }
         }
 
-        // ── 락 획득 후 상태 확정 ─────────────────────────────────────────────
-        Payment payment = paymentRepository.findByPaymentUidWithLock(paymentId).orElse(null);
+        // ── 결제 조회 (각 REQUIRES_NEW 메서드가 내부에서 개별 락 처리) ──────
+        Payment payment = paymentRepository.findByPaymentUid(paymentId).orElse(null);
 
         if (payment == null) {
             log.info("웹훅 수신 — 대응하는 결제 없음 paymentId={}", paymentId);
@@ -152,7 +154,14 @@ public class PortOneWebhookService {
 
             if (paidAmount == null) {
                 log.error("웹훅 PortOne 응답 amount null paymentId={}", paymentId);
-                failureService.markFailed(payment.getOrderId(), PaymentErrorReason.AMOUNT_NULL);
+                paymentCommandService.handleCancel(payment.getPaymentUid(), payment.getOrderId());
+                PortOneCancelResponse nullCancelResponse = portOneClientService.cancelPayment(
+                        payment.getPaymentUid(), payment.getAmount(), "결제금액 불일치");
+                if (nullCancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
+                        || nullCancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)
+                        || nullCancelResponse.status().equals(PortOneCancelStatus.FAILED)) {
+                    paymentCommandService.cancelFailPayment(payment.getPaymentUid());
+                }
                 setExpireService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
                 return;
@@ -161,11 +170,17 @@ public class PortOneWebhookService {
             if (!payment.getAmount().equals(paidAmount)) {
                 log.error("웹훅 금액 불일치 paymentId={} expected={} actual={}",
                         paymentId, payment.getAmount(), paidAmount);
-                failureService.markFailed(payment.getOrderId(), PaymentErrorReason.AMOUNT_MISMATCH);
+                paymentCommandService.handleCancel(payment.getPaymentUid(), payment.getOrderId());
+                PortOneCancelResponse cancelResponse = portOneClientService.cancelPayment(
+                        payment.getPaymentUid(), paidAmount, "결제금액 불일치");
+                if (cancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
+                        || cancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)
+                        || cancelResponse.status().equals(PortOneCancelStatus.FAILED)) {
+                    paymentCommandService.cancelFailPayment(payment.getPaymentUid());
+                }
                 setExpireService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
-                return;  // 실패 처리 완료 — throw 시 non-200으로 PortOne 불필요 재전송 유발
-
+                return;
             }
 
             paymentCommandService.completePayment(
@@ -176,14 +191,14 @@ public class PortOneWebhookService {
 
         } else if ("CANCELLED".equals(status)) {
             log.info("결제창 사용자 취소 웹훅 수신 paymentId={}", paymentId);
-            failureService.markFailed(payment.getOrderId(), PaymentErrorReason.USER_CANCELLED);
+            failureService.markFailed(payment.getPaymentUid(),payment.getOrderId(), PaymentErrorReason.USER_CANCELLED);
             setExpireService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
 
         } else {
             // FAILED 또는 미지원 상태 — 결제 실패 처리
             log.info("결제 실패 웹훅 수신 paymentId={} status={}", paymentId, status);
-            failureService.markFailed(payment.getOrderId(), PaymentErrorReason.WEBHOOK_FAILED);
+            failureService.markFailed(payment.getPaymentUid(),payment.getOrderId(), PaymentErrorReason.WEBHOOK_FAILED);
             setExpireService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
         }

@@ -21,6 +21,7 @@ public class AuctionEventPayload {
     private Long finalPrice;
     private Long cancelledBy;
     private String reason;
+    private String failedReason;
     private String orderUid;
     private List<Long> loserIds;
     private List<Long> bidderIds;

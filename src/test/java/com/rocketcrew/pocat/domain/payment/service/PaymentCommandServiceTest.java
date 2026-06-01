@@ -2,13 +2,12 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
-import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
-import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
@@ -39,14 +38,12 @@ class PaymentCommandServiceTest {
     private PaymentCommandService paymentCommandService;
 
     @Mock private PaymentRepository paymentRepository;
-    @Mock private OrderRepository orderRepository;
+    @Mock private PaymentQueryService paymentQueryService;
     @Mock private OrderQueryService orderQueryService;
     @Mock private SetExpireService setExpireService;
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private OutboxEventWriter outboxEventWriter;
-
-    // ── createPayment ──────────────────────────────────────────────────
 
     @Nested
     @DisplayName("createPayment()")
@@ -77,7 +74,7 @@ class PaymentCommandServiceTest {
         void success_createNew() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             Payment saved = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(paymentRepository.findByOrderIdAndPaymentType(1L, PaymentType.BILLING_KEY)).willReturn(Optional.empty());
             given(paymentRepository.save(any(Payment.class))).willReturn(saved);
 
@@ -93,7 +90,7 @@ class PaymentCommandServiceTest {
         void idempotent_returnExisting() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             Payment existing = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(paymentRepository.findByOrderIdAndPaymentType(1L, PaymentType.BILLING_KEY)).willReturn(Optional.of(existing));
 
             PaymentCommandService.BillingKeyPayment result = paymentCommandService.createBillingKeyPaymentIfAbsent(1L);
@@ -102,8 +99,6 @@ class PaymentCommandServiceTest {
             assertThat(result.payment()).isSameAs(existing);
         }
     }
-
-    // ── completePayment ────────────────────────────────────────────────
 
     @Nested
     @DisplayName("completePayment()")
@@ -114,8 +109,8 @@ class PaymentCommandServiceTest {
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
-            given(paymentRepository.findByIdWithLock(1L)).willReturn(Optional.of(payment));
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentQueryService.findPaymentByIdWithLock(1L)).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
 
             paymentCommandService.completePayment(1L, 1L, "CARD", LocalDateTime.now());
 
@@ -128,8 +123,8 @@ class PaymentCommandServiceTest {
         void cacheEvictionFailure_doesNotPropagate() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
-            given(paymentRepository.findByIdWithLock(1L)).willReturn(Optional.of(payment));
-            given(orderRepository.findByIdWithLock(1L)).willReturn(Optional.of(order));
+            given(paymentQueryService.findPaymentByIdWithLock(1L)).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(redisTemplate.delete(anyString())).willThrow(new RuntimeException("Redis 연결 실패"));
 
             assertThatCode(() -> paymentCommandService.completePayment(1L, 1L, "CARD", LocalDateTime.now()))
