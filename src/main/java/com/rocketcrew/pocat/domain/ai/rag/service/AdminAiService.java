@@ -9,6 +9,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 어드민용 AI RAG 관리 서비스.
@@ -24,7 +27,9 @@ public class AdminAiService {
     private final CardRepository cardRepository;
     private final EmbeddingService embeddingService;
 
-    private final java.util.concurrent.atomic.AtomicBoolean reindexRunning = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final RedissonClient redissonClient;
+
+    private static final String REINDEX_LOCK_KEY = "ai:reindex:lock";
 
     /**
      * 활성 카드 전체를 벡터 스토어에 재색인한다.
@@ -35,8 +40,17 @@ public class AdminAiService {
      */
     @Async("adminTaskExecutor")
     public void reindexAll() {
-        if (!reindexRunning.compareAndSet(false, true)) {
-            log.warn("[AdminAiService] 재색인이 이미 실행 중입니다. 중복 실행을 무시합니다.");
+        RLock lock = redissonClient.getLock(REINDEX_LOCK_KEY);
+        boolean acquired = false;
+        try {
+            acquired = lock.tryLock(0, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("[AdminAiService] 분산 락 획득 중 인터럽트: 재색인 중단");
+            return;
+        }
+        if (!acquired) {
+            log.warn("[AdminAiService] 재색인이 이미 실행 중입니다(분산 락). 중복 실행을 무시합니다.");
             return;
         }
         try {
@@ -103,7 +117,9 @@ public class AdminAiService {
 
             log.info("[AdminAiService] 전체 카드 재색인 완료: 성공={}건, 실패={}건", totalIndexed, failedCount);
         } finally {
-            reindexRunning.set(false);
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 }
