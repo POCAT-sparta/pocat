@@ -1,6 +1,8 @@
 package com.rocketcrew.pocat.domain.order.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.auction.entity.Auction;
+import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
@@ -41,6 +43,7 @@ public class OrderCommandService {
     private final OrderSaveService orderSaveService;
     private final AuctionBidRepository auctionBidRepository;
     private final SetExpireService setExpireService;
+    private final AuctionRepository auctionRepository;
 
     // 경매 낙찰 주문 생성 — bidderRank 순위의 Order 저장 후 order.created 이벤트 발행
     public void createOrderFromAuction(Long auctionId, Long cardId, Long sellerId,
@@ -69,50 +72,6 @@ public class OrderCommandService {
         return paymentApplicationService.autoPayment(order.getOrderUid());
     }
 
-    // 결제 실패(직접결제 실패 또는 TTL 만료) 시 다음 순위 입찰자에게 주문 생성. 다음 입찰자가 있으면 true, 없으면 false
-    public boolean escalateToNextRank(String orderUid) {
-        Order order = orderRepository.findByOrderUid(orderUid).orElse(null);
-        if (order == null) {
-            log.warn("[EscalateToNextRank] 주문 없음 orderUid={}", orderUid);
-            return false;
-        }
-
-        // 결제 완료된 주문은 승격 차단 (completePayment와 Redis 만료 동시 발화 시 오주문 방지)
-        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
-                && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
-            log.info("[EscalateToNextRank] 승격 불가 상태 orderUid={}, status={}", orderUid, order.getStatus());
-            setExpireService.cancelExpiry(order.getId());
-            return false;
-        }
-
-        // 즉시구매 주문은 bidderRank가 null이므로 승격 불가
-        if (order.getBidderRank() == null) {
-            log.warn("[EscalateToNextRank] bidderRank 없음(즉시구매 주문) orderUid={}", orderUid);
-            setExpireService.cancelExpiry(order.getId());
-            return false;
-        }
-
-        setExpireService.cancelExpiry(order.getId());
-
-        int nextRank = order.getBidderRank() + 1;
-        List<Long> lostBidderIds = auctionBidRepository
-                .findLostBidderIdsByAuctionIdOrderedByMaxBidPrice(order.getAuctionId());
-
-        int nextBidderIndex = nextRank - 2;
-        if (nextBidderIndex >= lostBidderIds.size()) {
-            log.info("[EscalateToNextRank] 다음 입찰자 없음 auctionId={}, currentRank={}",
-                    order.getAuctionId(), order.getBidderRank());
-            return false;
-        }
-
-        Long nextBidderId = lostBidderIds.get(nextBidderIndex);
-        createOrderFromAuction(order.getAuctionId(), order.getCardId(), order.getSellerId(),
-                nextBidderId, order.getFinalPrice(), nextRank);
-        log.info("[EscalateToNextRank] {}순위 주문 생성 auctionId={}, buyerId={}",
-                nextRank, order.getAuctionId(), nextBidderId);
-        return true;
-    }
-
     // 자동결제 실패 시 1시간 직접결제 창 설정 — 주문 상태를 AUTO_PAYMENT_FAILED로 변경하고 Redis 만료 키 등록
     public void schedulePaymentDeadline(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
@@ -120,6 +79,68 @@ public class OrderCommandService {
         LocalDateTime deadline = LocalDateTime.now().plusHours(1);
         order.startDirectPayment(deadline);
         setExpireService.scheduleExpiry(order.getId(), Duration.ofHours(1));
+    }
+
+    // 결제 실패(직접결제 실패 또는 TTL 만료) 시 다음 순위 입찰자에게 1시간 직접결제 기간 부여 (최대 2등까지만)
+    // 다음 입찰자에게 기간을 부여했으면 해당 입찰자 ID 반환, 없거나 2등 초과 시 경매 취소 후 null 반환
+    public Long escalateToNextRankWithDirectPayment(String orderUid) {
+        Order order = orderRepository.findByOrderUid(orderUid).orElse(null);
+        if (order == null) {
+            log.warn("[EscalateDirectPayment] 주문 없음 orderUid={}", orderUid);
+            return null;
+        }
+        // 결제 완료된 주문은 승격 차단 (completePayment와 Redis 만료 동시 발화 시 오주문 방지)
+        if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED
+                && order.getStatus() != OrderStatus.DIRECT_PAYMENT_FAILED) {
+            log.info("[EscalateDirectPayment] 승격 불가 상태 orderUid={}, status={}", orderUid, order.getStatus());
+            setExpireService.cancelExpiry(order.getId());
+            return null;
+        }
+        if (order.getBidderRank() == null) {
+            log.warn("[EscalateDirectPayment] bidderRank 없음(즉시구매) orderUid={}", orderUid);
+            setExpireService.cancelExpiry(order.getId());
+            return null;
+        }
+
+        setExpireService.cancelExpiry(order.getId());
+
+        int nextRank = order.getBidderRank() + 1;
+
+        // 2등까지만 승격 허용
+        if (nextRank > 2) {
+            cancelAuction(order.getAuctionId());
+            log.info("[EscalateDirectPayment] 최대 승격 순위 초과 → 경매 취소 auctionId={}", order.getAuctionId());
+            return null;
+        }
+
+        List<Long> lostBidderIds = auctionBidRepository
+                .findLostBidderIdsByAuctionIdOrderedByMaxBidPrice(order.getAuctionId());
+        int nextBidderIndex = nextRank - 2;
+        if (nextBidderIndex >= lostBidderIds.size()) {
+            cancelAuction(order.getAuctionId());
+            log.info("[EscalateDirectPayment] 다음 입찰자 없음 → 경매 취소 auctionId={}", order.getAuctionId());
+            return null;
+        }
+
+        Long nextBidderId = lostBidderIds.get(nextBidderIndex);
+
+        // 멱등성: 해당 순위 주문이 이미 존재하면 스킵
+        if (orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank).isPresent()) {
+            log.info("[EscalateDirectPayment] 이미 주문 존재 auctionId={}, rank={}", order.getAuctionId(), nextRank);
+            return nextBidderId;
+        }
+
+        Order nextOrder = orderRepository.save(
+                Order.fromAuction(order.getAuctionId(), order.getCardId(), order.getSellerId(),
+                        nextBidderId, order.getFinalPrice(), nextRank));
+        schedulePaymentDeadline(nextOrder.getOrderUid());
+        log.info("[EscalateDirectPayment] {}순위 1시간 직접결제 기간 부여 auctionId={}, buyerId={}",
+                nextRank, order.getAuctionId(), nextBidderId);
+        return nextBidderId;
+    }
+
+    private void cancelAuction(Long auctionId) {
+        auctionRepository.findById(auctionId).ifPresent(auction -> auction.cancel("결제 최종 실패"));
     }
 
     public void failDirectPayment(String orderUid) {

@@ -87,7 +87,7 @@ public class PaymentEventConsumer {
         }
     }
 
-    // 직접결제 실패 → 주문 상태 변경 → 구매자 알림 → 판매자 알림 TODO:  다음 순위 있으면 바로 주문 생성 후 자동결제? 없으면 판매자 알림 후 재등록??
+    // 직접결제 실패 → 주문 상태 변경 → 구매자 알림 (재시도 가능, 1시간 TTL 만료 시 ExpiryEventListener가 승격 처리)
     private void handlePaymentDirectFailed(PaymentEvent event) {
         orderCommandService.failDirectPayment(event.getOrderUid());
 
@@ -95,22 +95,11 @@ public class PaymentEventConsumer {
             notificationCommandService.send(
                     event.getBuyerId(),
                     NotificationType.DIRECT_PAYMENT_FAILED,
-                    "결제에 실패했습니다.",
+                    "결제에 실패했습니다. 1시간 내에 다시 시도해 주세요.",
                     Map.of("orderUid", event.getOrderUid())
             );
         } catch (Exception e) {
             log.error("직접결제 실패 구매자 알림 실패: orderUid={}", event.getOrderUid(), e);
-        }
-
-        try {
-            notificationCommandService.send(
-                    event.getSellerId(),
-                    NotificationType.DIRECT_PAYMENT_FAILED,
-                    "구매자의 결제가 최종 실패하였습니다.",
-                    Map.of("orderUid", event.getOrderUid())
-            );
-        } catch (Exception e) {
-            log.error("직접결제 실패 판매자 알림 실패: orderUid={}", event.getOrderUid(), e);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.rocketcrew.pocat.domain.order.service;
 
+import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
+import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,7 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * Redis keyspace expired 이벤트를 수신하여 1시간 결제 창이 만료된 주문을 다음 순위 입찰자에게 넘긴다.
@@ -21,6 +24,7 @@ public class ExpiryEventListener implements MessageListener {
 
     private final OrderRepository orderRepository;
     private final OrderCommandService orderCommandService;
+    private final NotificationCommandService notificationCommandService;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
@@ -43,9 +47,33 @@ public class ExpiryEventListener implements MessageListener {
         }
 
         try {
-            orderCommandService.escalateToNextRank(order.getOrderUid());
+            Long nextBidderId = orderCommandService.escalateToNextRankWithDirectPayment(order.getOrderUid());
+
+            if (nextBidderId != null) {
+                try {
+                    notificationCommandService.send(
+                            nextBidderId,
+                            NotificationType.ESCALATED_PAYMENT_OPPORTUNITY,
+                            "낙찰 기회가 생겼습니다. 1시간 내에 직접 결제를 진행해 주세요.",
+                            Map.of("orderUid", order.getOrderUid())
+                    );
+                } catch (Exception e) {
+                    log.error("[PaymentExpiry] 승격 결제 기회 알림 실패: nextBidderId={}", nextBidderId, e);
+                }
+            } else {
+                try {
+                    notificationCommandService.send(
+                            order.getSellerId(),
+                            NotificationType.PAYMENT_FINAL_FAILED,
+                            "구매자의 결제가 최종 실패하여 경매가 취소되었습니다.",
+                            Map.of("orderUid", order.getOrderUid())
+                    );
+                } catch (Exception e) {
+                    log.error("[PaymentExpiry] 최종 결제 실패 판매자 알림 실패: orderId={}", orderId, e);
+                }
+            }
         } catch (Exception e) {
-            log.error("[PaymentExpiry] 다음 순위 주문 생성 실패 orderId={}", orderId, e);
+            log.error("[PaymentExpiry] 다음 순위 승격 실패 orderId={}", orderId, e);
         }
     }
 }
