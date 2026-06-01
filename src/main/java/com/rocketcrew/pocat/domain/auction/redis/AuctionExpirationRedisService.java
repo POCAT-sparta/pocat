@@ -22,16 +22,16 @@ public class AuctionExpirationRedisService {
 
     private final StringRedisTemplate redisTemplate;
 
-    // 경매 종료 시각에 맞춰 만료 이벤트용 TTL 키와 미처리 추적용 shadow key를 저장한다.
     public void setExpirationKeys(Long auctionId, LocalDateTime endedAt) {
         if (endedAt == null) {
-            log.warn("경매 종료 TTL 설정 생략: endedAt 없음, auctionId={}", auctionId);
+            log.warn("Auction expiration key skipped. endedAt is null. auctionId={}", auctionId);
             return;
         }
 
         long ttlSeconds = Duration.between(LocalDateTime.now(AUCTION_ZONE), endedAt).getSeconds();
         if (ttlSeconds <= 0) {
-            log.warn("경매 종료 TTL 설정 생략: 이미 종료 시각 경과, auctionId={}, endedAt={}", auctionId, endedAt);
+            log.warn("Auction expiration key skipped. endedAt already passed. auctionId={}, endedAt={}",
+                    auctionId, endedAt);
             return;
         }
 
@@ -40,30 +40,26 @@ public class AuctionExpirationRedisService {
         redisTemplate.opsForValue().set(shadowKey(auctionId), auctionIdValue);
     }
 
-    // Redis 만료 이벤트에서 받은 key가 경매 종료 TTL 키인지 확인한다.
     public boolean isAuctionEndKey(String key) {
         return key != null && END_KEY_PATTERN.matcher(key).matches();
     }
 
-    // 경매 종료 TTL 키에서 auctionId를 추출한다.
     public Long parseAuctionId(String key) {
         if (!isAuctionEndKey(key)) {
-            throw new IllegalArgumentException("경매 종료 키 형식이 아닙니다: " + key);
+            throw new IllegalArgumentException("Invalid auction expiration key: " + key);
         }
         return Long.parseLong(key.substring(END_KEY_PREFIX.length()));
     }
 
-    // 종료 처리가 성공한 경매의 shadow key를 삭제한다.
-    public void deleteShadowKey(Long auctionId) {
+    public void deleteExpirationKeys(Long auctionId) {
+        redisTemplate.delete(endKey(auctionId));
         redisTemplate.delete(shadowKey(auctionId));
     }
 
-    // Redis TTL 만료 이벤트를 발생시키는 경매 종료 키를 만든다.
     private String endKey(Long auctionId) {
         return END_KEY_PREFIX + auctionId;
     }
 
-    // 종료 처리 성공 전까지 남겨둘 shadow key를 만든다.
     private String shadowKey(Long auctionId) {
         return SHADOW_KEY_PREFIX + auctionId;
     }

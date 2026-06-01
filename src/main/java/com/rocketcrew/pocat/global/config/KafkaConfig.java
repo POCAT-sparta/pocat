@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.config;
 
+import com.rocketcrew.pocat.global.exception.domain.InvalidAuctionEventPayloadException;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -74,8 +75,10 @@ public class KafkaConfig {
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
         factory.setConcurrency(3);
 
-        factory.setCommonErrorHandler(new DefaultErrorHandler(
-                new DeadLetterPublishingRecoverer(kafkaTemplate()), new FixedBackOff(1000L, 3)));
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
+                new DeadLetterPublishingRecoverer(kafkaTemplate()), new FixedBackOff(1000L, 3));
+        errorHandler.addNotRetryableExceptions(InvalidAuctionEventPayloadException.class);
+        factory.setCommonErrorHandler(errorHandler);
         return factory;
     }
 
