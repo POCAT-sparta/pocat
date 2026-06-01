@@ -8,8 +8,6 @@ public record AdminSettlementResponse(
         String settlementUid,
         String orderUid,
         String sellerNickname,
-        String bankName,
-        String bankAccount,
         String cardName,
         String cardGrade,
         Long totalPrice,

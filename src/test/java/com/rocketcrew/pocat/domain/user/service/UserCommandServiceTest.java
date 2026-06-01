@@ -1,7 +1,6 @@
 package com.rocketcrew.pocat.domain.user.service;
 
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
-import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
@@ -101,39 +100,6 @@ class UserCommandServiceTest {
             assertThatThrownBy(() -> userCommandService.updateUser(1L, request))
                     .isInstanceOf(UserException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_CONTENT);
-        }
-    }
-
-    @Nested
-    @DisplayName("updateBank()")
-    class UpdateBank {
-
-        @Test
-        @DisplayName("성공: 은행명/계좌번호 업데이트")
-        void success() {
-            // given
-            UpdateBankRequest request = new UpdateBankRequest("국민은행", "123-456-789");
-            given(userRepository.findById(1L)).willReturn(Optional.of(testUser));
-
-            // when
-            userCommandService.updateBank(1L, request);
-
-            // then
-            assertThat(testUser.getBankName()).isEqualTo("국민은행");
-            assertThat(testUser.getBankAccount()).isEqualTo("123-456-789");
-        }
-
-        @Test
-        @DisplayName("실패: 유저 없음 → USER_NOT_FOUND")
-        void fail_userNotFound() {
-            // given
-            UpdateBankRequest request = new UpdateBankRequest("국민은행", "123-456-789");
-            given(userRepository.findById(999L)).willReturn(Optional.empty());
-
-            // when & then
-            assertThatThrownBy(() -> userCommandService.updateBank(999L, request))
-                    .isInstanceOf(UserException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
         }
     }
 

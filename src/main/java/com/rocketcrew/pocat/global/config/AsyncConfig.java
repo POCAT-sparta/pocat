@@ -29,4 +29,21 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * 어드민 AI 작업 전용 스레드 풀.
+     * RAG 재색인 등 장시간 실행 어드민 작업에 사용한다.
+     * - corePoolSize 1: AtomicBoolean 중복 방지와 일관성 유지
+     * - queueCapacity 1: 재색인 중 추가 요청 최대 1개 대기
+     */
+    @Bean(name = "adminTaskExecutor")
+    public Executor adminTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(1);
+        executor.setThreadNamePrefix("ai-admin-");
+        executor.initialize();
+        return executor;
+    }
 }

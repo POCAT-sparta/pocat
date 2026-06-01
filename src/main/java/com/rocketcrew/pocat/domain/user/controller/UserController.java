@@ -2,7 +2,6 @@ package com.rocketcrew.pocat.domain.user.controller;
 
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
-import com.rocketcrew.pocat.domain.user.dto.request.UpdateBankRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
 import com.rocketcrew.pocat.domain.user.dto.response.AdminUserResponse;
 import com.rocketcrew.pocat.domain.user.dto.response.UserResponse;
@@ -88,19 +87,6 @@ public class UserController {
             throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
         userCommandService.updateBillingKey(userDetails.getUserId(), request);
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
-    }
-
-    @PutMapping("/api/v1/users/me/bank-account")
-    public ResponseEntity<ApiResponseDto<Void>> updateBank(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody UpdateBankRequest request) {
-        if (!redisRateLimiter.isAllowed("rate:user:user:" + userDetails.getUserId(),
-                rateLimitProperties.getUserLimit(),
-                rateLimitProperties.getUserWindowSeconds())) {
-            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
-        }
-        userCommandService.updateBank(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, null));
     }
 

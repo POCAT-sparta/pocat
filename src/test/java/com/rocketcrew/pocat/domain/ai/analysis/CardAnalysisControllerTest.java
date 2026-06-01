@@ -117,11 +117,11 @@ class CardAnalysisControllerTest {
     }
 
     // ---------------------------------------------------------------
-    // [RED #164 Issue 1] GET /api/ai/cards/{cardId}/analysis
+    // GET /api/ai/cards/{cardId}/analysis
     // 응답 JSON에 내부 필드 미포함 검증
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("[RED #164] analyzeCard() 응답 — 내부 필드 미노출")
+    @DisplayName("analyzeCard() 응답 — 내부 필드 미노출")
     class AnalyzeCardResponseFields {
 
         /**
@@ -129,7 +129,7 @@ class CardAnalysisControllerTest {
          * completionTokens, analyzedAt)가 응답에서 제외됩니다.
          */
         @Test
-        @DisplayName("[RED] GET /api/ai/cards/1/analysis 응답에 analysisModel 필드 없어야 한다")
+        @DisplayName("GET /api/ai/cards/1/analysis 응답에 analysisModel 필드 없어야 한다")
         void analyzeCard_response_excludes_analysisModel() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
@@ -140,7 +140,7 @@ class CardAnalysisControllerTest {
         }
 
         @Test
-        @DisplayName("[RED] GET /api/ai/cards/1/analysis 응답에 promptTokens 필드 없어야 한다")
+        @DisplayName("GET /api/ai/cards/1/analysis 응답에 promptTokens 필드 없어야 한다")
         void analyzeCard_response_excludes_promptTokens() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
@@ -151,7 +151,7 @@ class CardAnalysisControllerTest {
         }
 
         @Test
-        @DisplayName("[RED] GET /api/ai/cards/1/analysis 응답에 completionTokens 필드 없어야 한다")
+        @DisplayName("GET /api/ai/cards/1/analysis 응답에 completionTokens 필드 없어야 한다")
         void analyzeCard_response_excludes_completionTokens() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
@@ -162,7 +162,7 @@ class CardAnalysisControllerTest {
         }
 
         @Test
-        @DisplayName("[RED] GET /api/ai/cards/1/analysis 응답에 analyzedAt 필드 없어야 한다")
+        @DisplayName("GET /api/ai/cards/1/analysis 응답에 analyzedAt 필드 없어야 한다")
         void analyzeCard_response_excludes_analyzedAt() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
@@ -191,15 +191,15 @@ class CardAnalysisControllerTest {
     }
 
     // ---------------------------------------------------------------
-    // [RED #164 Issue 1] POST /api/ai/cards/{cardId}/analysis
+    // POST /api/ai/cards/{cardId}/analysis
     // reanalyzeCard 응답도 동일하게 내부 필드 미포함 검증
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("[RED #164] reanalyzeCard() 응답 — 내부 필드 미노출")
+    @DisplayName("reanalyzeCard() 응답 — 내부 필드 미노출")
     class ReanalyzeCardResponseFields {
 
         @Test
-        @DisplayName("[RED] POST /api/ai/cards/1/analysis 응답에 내부 필드 없어야 한다 (analysisModel, promptTokens, completionTokens, analyzedAt)")
+        @DisplayName("POST /api/ai/cards/1/analysis 응답에 내부 필드 없어야 한다 (analysisModel, promptTokens, completionTokens, analyzedAt)")
         void reanalyzeCard_response_excludes_internal_fields() throws Exception {
             given(cardAnalysisService.reanalyzeCard(1L)).willReturn(fullResult);
 

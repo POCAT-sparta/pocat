@@ -76,7 +76,7 @@ class TradePostQueryServiceTest {
 
         userResponse = new UserResponse(
                 1L, "user@test.com", "테스터", "010-1234-5678",
-                UserRole.USER, null, null, null,
+                UserRole.USER, null,
                 0, false, false, LocalDateTime.now()
         );
     }
