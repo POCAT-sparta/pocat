@@ -9,6 +9,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +39,10 @@ public class OutboxRelayScheduler {
     @Scheduled(fixedDelay = 5000)
     public void relay() {
         List<OutboxEvent> pendingEvents = outboxRepository
-                .findTop100ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
+                .findTop100ByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(
+                        OutboxStatus.PENDING,
+                        LocalDateTime.now().minusSeconds(10)
+                );
 
         for (OutboxEvent event : pendingEvents) {
             if (Thread.currentThread().isInterrupted()) {

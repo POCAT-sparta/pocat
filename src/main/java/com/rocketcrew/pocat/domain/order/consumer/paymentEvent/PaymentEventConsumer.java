@@ -5,12 +5,14 @@ import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.snapshot.service.OrderSnapshotCommandService;
+import com.rocketcrew.pocat.domain.payment.event.PaymentEventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -31,9 +33,9 @@ public class PaymentEventConsumer {
         try {
             PaymentEvent event = objectMapper.readValue(message, PaymentEvent.class);
             switch (event.getEventType()) {
-                case "payment.completed"     -> handlePaymentCompleted(event);
-                case "payment.auto.failed"   -> handlePaymentAutoFailed(event);
-                case "payment.direct.failed" -> handlePaymentDirectFailed(event);
+                case PaymentEventType.COMPLETED     -> handlePaymentCompleted(event);
+                case PaymentEventType.AUTO_FAILED   -> handlePaymentAutoFailed(event);
+                case PaymentEventType.DIRECT_FAILED -> handlePaymentDirectFailed(event);
                 default -> log.debug("처리 대상 아닌 payment 이벤트: {}", event.getEventType());
             }
             acknowledgment.acknowledge();
@@ -48,12 +50,18 @@ public class PaymentEventConsumer {
         orderCommandService.completePayment(event.getOrderUid());
         orderSnapshotCommandService.createSnapshot(event.getOrderUid());
 
+        Map<String, Object> completedPayload = new HashMap<>();
+        completedPayload.put("orderUid", event.getOrderUid());
+        if (event.getFinalPrice() != null) {
+            completedPayload.put("finalPrice", event.getFinalPrice());
+        }
+
         try {
             notificationCommandService.send(
                     event.getBuyerId(),
                     NotificationType.PAYMENT_COMPLETED,
                     "결제가 완료되었습니다.",
-                    Map.of("orderUid", event.getOrderUid(), "finalPrice", event.getFinalPrice())
+                    completedPayload
             );
         } catch (Exception e) {
             log.error("결제완료 구매자 알림 실패: orderUid={}", event.getOrderUid(), e);
@@ -64,7 +72,7 @@ public class PaymentEventConsumer {
                     event.getSellerId(),
                     NotificationType.PAYMENT_COMPLETED,
                     "구매자의 결제가 완료되었습니다.",
-                    Map.of("orderUid", event.getOrderUid(), "finalPrice", event.getFinalPrice())
+                    completedPayload
             );
         } catch (Exception e) {
             log.error("결제완료 판매자 알림 실패: orderUid={}", event.getOrderUid(), e);
