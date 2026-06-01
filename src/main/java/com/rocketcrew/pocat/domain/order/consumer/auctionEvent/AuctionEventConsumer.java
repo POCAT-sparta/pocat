@@ -65,6 +65,17 @@ public class AuctionEventConsumer {
             } catch (Exception e) {
                 log.error("낙찰 알림 실패: auctionId={}, userId={}", event.getAuctionId(), event.getWinnerId(), e);
             }
+
+            try {
+                notificationCommandService.send(
+                        event.getSellerId(),
+                        NotificationType.AUCTION_SOLD,
+                        "카드가 낙찰되었습니다.",
+                        Map.of("auctionId", event.getAuctionId(), "finalPrice", event.getFinalPrice())
+                );
+            } catch (Exception e) {
+                log.error("경매 종료 판매자 알림 실패: auctionId={}, sellerId={}", event.getAuctionId(), event.getSellerId(), e);
+            }
         }
 
         List<Long> loserIds = event.getLoserIds();
