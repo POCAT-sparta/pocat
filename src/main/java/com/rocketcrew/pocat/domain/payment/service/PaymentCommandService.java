@@ -54,19 +54,23 @@ public class PaymentCommandService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completePayment(Payment payment, Order order, String paymentMethod, LocalDateTime paidAt) {
-        payment.complete(paymentMethod, paidAt);
-        order.completePayment();
-        evictAvgPriceCache(order.getCardId());
+        Payment fresh = paymentQueryService.findPaymentByUidWithLock(payment.getPaymentUid());
+        if (fresh.isFinalized()) return;
+        fresh.complete(paymentMethod, paidAt);
 
-        setExpireService.cancelExpiry(payment.getOrderId());
+        Order freshOrder = orderQueryService.findByOrderIdWithLock(fresh.getOrderId());
+        freshOrder.completePayment();
+        evictAvgPriceCache(freshOrder.getCardId());
+
+        setExpireService.cancelExpiry(fresh.getOrderId());
 
         PaymentCompletedEvent event = new PaymentCompletedEvent(
-                order.getOrderUid(),
-                order.getBuyerId(),
-                order.getSellerId(),
-                order.getFinalPrice()
+                freshOrder.getOrderUid(),
+                freshOrder.getBuyerId(),
+                freshOrder.getSellerId(),
+                freshOrder.getFinalPrice()
         );
-        outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+        outboxEventWriter.write(PAYMENT_TOPIC, freshOrder.getOrderUid(), event);
         eventPublisher.publishEvent(event);
     }
 

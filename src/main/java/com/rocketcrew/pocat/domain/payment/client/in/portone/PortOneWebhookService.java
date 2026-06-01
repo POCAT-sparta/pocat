@@ -136,8 +136,8 @@ public class PortOneWebhookService {
             }
         }
 
-        // ── 락 획득 후 상태 확정 ─────────────────────────────────────────────
-        Payment payment = paymentRepository.findByPaymentUidWithLock(paymentId).orElse(null);
+        // ── 결제 조회 (각 REQUIRES_NEW 메서드가 내부에서 개별 락 처리) ──────
+        Payment payment = paymentRepository.findByPaymentUid(paymentId).orElse(null);
 
         if (payment == null) {
             log.info("웹훅 수신 — 대응하는 결제 없음 paymentId={}", paymentId);
@@ -157,7 +157,13 @@ public class PortOneWebhookService {
 
             if (paidAmount == null) {
                 log.error("웹훅 PortOne 응답 amount null paymentId={}", paymentId);
-                failureService.markFailed(payment.getPaymentUid(),payment.getOrderId(), PaymentErrorReason.AMOUNT_NULL);
+                paymentCommandService.handelCancel(payment.getPaymentUid(), payment.getOrderId());
+                PortOneCancelResponse nullCancelResponse = portOneClientService.cancelPayment(
+                        payment.getPaymentUid(), payment.getAmount(), "결제금액 불일치");
+                if (nullCancelResponse.status().equals(PortOneCancelStatus.HTTP_ERROR)
+                        || nullCancelResponse.status().equals(PortOneCancelStatus.NETWORK_ERROR)) {
+                    paymentCommandService.cancelFailPayment(payment.getPaymentUid());
+                }
                 setExpireService.cancelExpiry(payment.getOrderId());
                 webhookEventCommandService.markFailed(webhookEvent.getId());
                 return;

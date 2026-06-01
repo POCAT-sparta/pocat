@@ -81,6 +81,7 @@ public class Payment extends BaseEntity {
     }
 
     public void cancel() {
+        if (this.status == PaymentStatus.CANCELLED) return;
         if(this.status == PaymentStatus.FAILED || this.status == PaymentStatus.COMPLETED){
             throw new PaymentException(ErrorCode.PAYMENT_CANNOT_FAIL);
         }

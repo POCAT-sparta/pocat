@@ -2,7 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
@@ -43,7 +43,7 @@ class PaymentQueryServiceTest {
     private PaymentRepository paymentRepository;
 
     @Mock
-    private OrderRepository orderRepository;
+    private OrderQueryService orderQueryService;
 
     @AfterEach
     void clearSecurityContext() {
@@ -63,7 +63,7 @@ class PaymentQueryServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED); // buyerId=1L
 
             given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
 
             // SecurityContext: 일반 USER (ROLE_ADMIN 없음)
             SecurityContextHolder.getContext().setAuthentication(
@@ -83,7 +83,7 @@ class PaymentQueryServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED); // buyerId=1L
 
             given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
 
             // SecurityContext: ADMIN
             SecurityContextHolder.getContext().setAuthentication(
@@ -104,7 +104,7 @@ class PaymentQueryServiceTest {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_COMPLETED); // buyerId=1L
 
             given(paymentRepository.findByPaymentUid("PAY-001")).willReturn(Optional.of(payment));
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(orderQueryService.findByOrderid(1L)).willReturn(order);
 
             // SecurityContext: 일반 USER
             SecurityContextHolder.getContext().setAuthentication(

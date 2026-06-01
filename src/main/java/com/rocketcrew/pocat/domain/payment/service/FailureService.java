@@ -54,8 +54,8 @@ public class FailureService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(String paymentUId,Long orderId, PaymentErrorReason reason) {
-        Payment payment = paymentQueryService.findPaymentByUid(paymentUId);
-        Order order = orderQueryService.findByOrderid(orderId);
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
         payment.fail();
 
         // 시간이 지나고 주문이 아직 pending인 경우

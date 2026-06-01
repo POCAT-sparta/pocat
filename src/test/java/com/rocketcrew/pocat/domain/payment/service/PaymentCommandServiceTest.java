@@ -37,6 +37,7 @@ class PaymentCommandServiceTest {
     private PaymentCommandService paymentCommandService;
 
     @Mock private PaymentRepository paymentRepository;
+    @Mock private PaymentQueryService paymentQueryService;
     @Mock private OrderQueryService orderQueryService;
     @Mock private SetExpireService setExpireService;
     @Mock private StringRedisTemplate redisTemplate;
@@ -76,6 +77,8 @@ class PaymentCommandServiceTest {
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
 
             paymentCommandService.completePayment(payment, order, "CARD", LocalDateTime.now());
 
@@ -88,6 +91,8 @@ class PaymentCommandServiceTest {
         void cacheEvictionFailure_doesNotPropagate() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             given(redisTemplate.delete(anyString())).willThrow(new RuntimeException("Redis 연결 실패"));
 
             assertThatCode(() -> paymentCommandService.completePayment(payment, order, "CARD", LocalDateTime.now()))
