@@ -1,9 +1,12 @@
 -- (auction_id, bidder_rank) 중복 행 제거: 각 그룹에서 id가 가장 큰 행만 보존
+-- bidder_rank IS NULL인 행(즉시구매 등)은 MySQL UNIQUE가 NULL 중복을 허용하므로 제외
 DELETE FROM orders
-WHERE id NOT IN (
+WHERE bidder_rank IS NOT NULL
+  AND id NOT IN (
     SELECT max_id FROM (
         SELECT MAX(id) AS max_id
         FROM orders
+        WHERE bidder_rank IS NOT NULL
         GROUP BY auction_id, bidder_rank
     ) AS keep
 );
