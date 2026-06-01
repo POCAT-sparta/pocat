@@ -7,6 +7,10 @@ import com.rocketcrew.pocat.domain.refund.service.RefundCommandService;
 import com.rocketcrew.pocat.domain.refund.service.RefundQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,12 +30,19 @@ public class RefundController {
 
     private final RefundCommandService refundCommandService;
     private final RefundQueryService refundQueryService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     /** 7.1 환불 요청 */
     @PostMapping("/v1/refunds")
     public ResponseEntity<ApiResponseDto<RefundResponse>> createRefund(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateRefundRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:refund:" + userDetails.getUserId(),
+                rateLimitProperties.getRefundLimit(),
+                rateLimitProperties.getRefundWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         RefundResponse response = refundCommandService.createRefund(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

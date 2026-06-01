@@ -14,7 +14,9 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import com.rocketcrew.pocat.global.exception.domain.ChatException;
+import com.rocketcrew.pocat.global.filter.BadWordFilterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -35,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -57,6 +60,9 @@ class ChatCommandServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private BadWordFilterService badWordFilterService;
 
     private TradePost tradePost;
     private User owner;
@@ -100,6 +106,7 @@ class ChatCommandServiceTest {
                 .guestLeft(false)
                 .build();
         ReflectionTestUtils.setField(chat, "id", 100L);
+        willDoNothing().given(badWordFilterService).validate(any());
     }
 
     @Nested
@@ -209,6 +216,19 @@ class ChatCommandServiceTest {
             assertThatThrownBy(() -> chatCommandService.sendMessage(100L, 99L, "메시지"))
                     .isInstanceOf(ChatException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CHAT_FORBIDDEN);
+        }
+
+        @Test
+        @DisplayName("실패: 금지어 포함 메시지 - CONTAINS_BAD_WORD")
+        void containsBadWord_throwsException() {
+            given(chatRepository.findByIdAndParticipant(100L, 2L)).willReturn(Optional.of(chat));
+            given(userRepository.findById(2L)).willReturn(Optional.of(guest));
+            willThrow(new ServiceException(ErrorCode.CONTAINS_BAD_WORD))
+                    .given(badWordFilterService).validate(any());
+
+            assertThatThrownBy(() -> chatCommandService.sendMessage(100L, 2L, "욕설이포함된메시지"))
+                    .isInstanceOf(ServiceException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONTAINS_BAD_WORD);
         }
     }
 

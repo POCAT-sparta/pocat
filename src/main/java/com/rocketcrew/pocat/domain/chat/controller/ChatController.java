@@ -8,6 +8,10 @@ import com.rocketcrew.pocat.domain.chat.service.ChatCommandService;
 import com.rocketcrew.pocat.domain.chat.service.ChatQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.common.ServiceException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,11 +32,18 @@ public class ChatController {
 
     private final ChatCommandService chatCommandService;
     private final ChatQueryService chatQueryService;
+    private final RedisRateLimiter redisRateLimiter;
+    private final RateLimitProperties rateLimitProperties;
 
     @PostMapping("/v1/chats")
     public ResponseEntity<ApiResponseDto<ChatResponse>> createChat(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateChatRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:chat:" + userDetails.getUserId(),
+                rateLimitProperties.getChatLimit(),
+                rateLimitProperties.getChatWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
         ChatResponse response = chatCommandService.createChat(userDetails.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));

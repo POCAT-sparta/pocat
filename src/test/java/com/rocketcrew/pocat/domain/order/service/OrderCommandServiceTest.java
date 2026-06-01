@@ -1,7 +1,5 @@
 package com.rocketcrew.pocat.domain.order.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
@@ -13,7 +11,6 @@ import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
-import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
@@ -61,19 +58,7 @@ class OrderCommandServiceTest {
     private PaymentApplicationService paymentApplicationService;
 
     @Mock
-    private OutboxRepository outboxRepository;
-
-    @Mock
-    private ObjectMapper objectMapper;
-
-    @Mock
     private OrderSaveService orderSaveService;
-
-    @Mock
-    private AuctionBidRepository auctionBidRepository;
-
-    @Mock
-    private SetExpireService setExpireService;
 
     // ── createOrderFromAuction ─────────────────────────────────────────
 

@@ -2,7 +2,9 @@ package com.rocketcrew.pocat.domain.bid.service;
 
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionQueryService;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.domain.bid.dto.request.CreateBidRequest;
 import com.rocketcrew.pocat.domain.bid.dto.response.CreateAuctionBidResponse;
 import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
@@ -75,6 +77,12 @@ class AuctionBidCommandServiceTest {
 
     @Mock
     ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    AuctionEsIndexService auctionEsIndexService;
+
+    @Mock
+    OutboxEventWriter outboxEventWriter;
 
     // ---------------------------------------------------------------
     // Test fixtures

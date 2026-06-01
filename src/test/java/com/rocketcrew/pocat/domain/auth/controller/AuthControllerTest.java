@@ -150,6 +150,42 @@ class AuthControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        @DisplayName("실패: Rate Limit 초과 → 429 Too Many Requests")
+        void fail_429_rateLimitExceeded() throws Exception {
+            // given
+            lenient().when(rateLimitProperties.getLoginLimit()).thenReturn(10);
+            lenient().when(rateLimitProperties.getLoginWindowSeconds()).thenReturn(60L);
+            given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(false);
+            LoginRequest request = new LoginRequest("test@example.com", "Password1!");
+
+            // when & then
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.code").value("RATE_LIMIT_EXCEEDED"));
+        }
+
+        @Test
+        @DisplayName("실패: Rate Limit 초과 시 authService.login() 미호출")
+        void fail_429_authService_neverCalled() throws Exception {
+            // given
+            lenient().when(rateLimitProperties.getLoginLimit()).thenReturn(10);
+            lenient().when(rateLimitProperties.getLoginWindowSeconds()).thenReturn(60L);
+            given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(false);
+            LoginRequest request = new LoginRequest("test@example.com", "Password1!");
+
+            // when
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isTooManyRequests());
+
+            // then
+            verify(authService, never()).login(any(LoginRequest.class));
+        }
     }
 
     @Nested

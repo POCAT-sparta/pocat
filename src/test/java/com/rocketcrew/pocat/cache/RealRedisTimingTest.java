@@ -11,6 +11,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * 전제 조건: Docker Desktop 실행 중, Redis 컨테이너 localhost:6379 리스닝.
  */
+@Disabled("Requires live Redis on localhost:6379")
 @Tag("bulk")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
@@ -49,9 +51,17 @@ class RealRedisTimingTest {
     private org.springframework.ai.vectorstore.VectorStore vectorStore;
 
     // Kafka Mock
-    @SuppressWarnings("rawtypes")
-    @MockBean
-    private KafkaTemplate kafkaTemplate;
+    @MockBean(name = "kafkaTemplate")
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    @MockBean(name = "paymentKafkaTemplate")
+    private KafkaTemplate<String, String> paymentKafkaTemplate;
+
+    @MockBean(name = "refundKafkaTemplate")
+    private KafkaTemplate<String, String> refundKafkaTemplate;
+
+    @MockBean(name = "settlementKafkaTemplate")
+    private KafkaTemplate<String, String> settlementKafkaTemplate;
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
