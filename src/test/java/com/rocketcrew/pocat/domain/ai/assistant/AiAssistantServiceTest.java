@@ -28,6 +28,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import org.springframework.ai.document.Document;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -96,7 +97,7 @@ class AiAssistantServiceTest {
         given(callResponseSpec.chatResponse()).willReturn(defaultChatResponse);
 
         // stub RAG
-        given(ragService.search(anyString())).willReturn(List.of());
+        given(ragService.search(anyString())).willReturn(List.of(new Document("test card context")));
         given(ragService.buildContext(any())).willReturn("관련 문서를 찾을 수 없습니다.");
 
         // stub sessionService defaults
