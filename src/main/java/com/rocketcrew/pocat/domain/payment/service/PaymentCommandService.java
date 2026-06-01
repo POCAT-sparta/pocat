@@ -29,12 +29,13 @@ public class PaymentCommandService {
 
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
 
-    private final PaymentRepository paymentRepository;
     private final StringRedisTemplate redisTemplate;
-    private final ApplicationEventPublisher eventPublisher;
-    private final OutboxEventWriter outboxEventWriter;
+    private final PaymentRepository paymentRepository;
     private final SetExpireService setExpireService;
     private final OrderQueryService orderQueryService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventWriter outboxEventWriter;
+    private final PaymentQueryService paymentQueryService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment createPayment(Long orderId, PaymentType paymentType) {
@@ -53,20 +54,46 @@ public class PaymentCommandService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void completePayment(Payment payment, Order order, String paymentMethod, LocalDateTime paidAt) {
-        payment.complete(paymentMethod, paidAt);
-        order.completePayment();
-        evictAvgPriceCache(order.getCardId());
+        Payment fresh = paymentQueryService.findPaymentByUidWithLock(payment.getPaymentUid());
+        if (fresh.isFinalized()) return;
+        fresh.complete(paymentMethod, paidAt);
 
-        setExpireService.cancelExpiry(payment.getOrderId());
+        Order freshOrder = orderQueryService.findByOrderIdWithLock(fresh.getOrderId());
+        freshOrder.completePayment();
+        evictAvgPriceCache(freshOrder.getCardId());
+
+        setExpireService.cancelExpiry(fresh.getOrderId());
 
         PaymentCompletedEvent event = new PaymentCompletedEvent(
-                order.getOrderUid(),
-                order.getBuyerId(),
-                order.getSellerId(),
-                order.getFinalPrice()
+                freshOrder.getOrderUid(),
+                freshOrder.getBuyerId(),
+                freshOrder.getSellerId(),
+                freshOrder.getFinalPrice()
         );
-        outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
+        outboxEventWriter.write(PAYMENT_TOPIC, freshOrder.getOrderUid(), event);
         eventPublisher.publishEvent(event);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleFailed(String paymentUId, Long orderId){
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        payment.fail();
+        order.failPayment();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleCancel(String paymentUId, Long orderId){
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
+        payment.cancel();
+        order.failPayment();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void cancelFailPayment(String paymentUid) {
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+        payment.cancelFailed();
     }
 
     private String generatePaymentUid() {

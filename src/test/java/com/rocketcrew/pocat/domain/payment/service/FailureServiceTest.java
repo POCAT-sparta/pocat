@@ -2,7 +2,9 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
+import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
@@ -16,11 +18,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,10 +41,10 @@ class FailureServiceTest {
     private FailureService failureService;
 
     @Mock
-    private StringRedisTemplate redisTemplate;
+    private OrderQueryService orderQueryService;
 
     @Mock
-    private OrderRepository orderRepository;
+    private PaymentQueryService paymentQueryService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -58,24 +59,46 @@ class FailureServiceTest {
     class MarkFailed {
 
         @Test
-        @DisplayName("성공: order.failPayment() 가 호출되어 PAYMENT_FAILED 로 전이한다")
+        @DisplayName("성공: 기한 초과 + PAYMENT_PENDING → order.failPayment() 호출")
         void success() {
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);  // id=1L
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            // 결제 기한을 과거로 설정해 failPayment() 분기 진입
+            ReflectionTestUtils.setField(order, "paymentDeadline", LocalDateTime.now().minusHours(1));
 
-            given(orderRepository.findById(1L)).willReturn(Optional.of(order));
+            given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
             doNothing().when(outboxEventWriter).write(anyString(), anyString(), any());
 
-            failureService.markFailed(1L, PaymentErrorReason.PAYMENT_EXPIRED);
+            failureService.markFailed("PAY-001", 1L, PaymentErrorReason.PAYMENT_EXPIRED);
 
             assertThat(order.getStatus()).isEqualTo(OrderStatus.AUTO_PAYMENT_FAILED);
         }
 
         @Test
+        @DisplayName("성공: 기한 미초과 → order 상태 변경 없이 payment만 FAILED")
+        void success_deadlineNotExpired() {
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+
+            given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
+
+            failureService.markFailed("PAY-001", 1L, PaymentErrorReason.PAYMENT_EXPIRED);
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PAYMENT_PENDING);
+        }
+
+        @Test
         @DisplayName("실패: orderId 에 해당하는 주문이 없음 → ORDER_NOT_FOUND")
         void fail_orderNotFound() {
-            given(orderRepository.findById(99L)).willReturn(Optional.empty());
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
+            given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(99L))
+                    .willThrow(new OrderException(ErrorCode.ORDER_NOT_FOUND));
 
-            assertThatThrownBy(() -> failureService.markFailed(99L, PaymentErrorReason.PAYMENT_EXPIRED))
+            assertThatThrownBy(() -> failureService.markFailed("PAY-001", 99L, PaymentErrorReason.PAYMENT_EXPIRED))
                     .isInstanceOf(OrderException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_NOT_FOUND);
         }

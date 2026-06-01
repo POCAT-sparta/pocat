@@ -1,13 +1,13 @@
 package com.rocketcrew.pocat.domain.payment.client.out.portone.dto;
 
-import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
+import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
 
 @Builder
 public record PortOneCancelResponse(
-        PortOneStatus status,
+        PortOneCancelStatus status,
         String pgId,
         String pgCancellationId,
         Long totalAmount,
