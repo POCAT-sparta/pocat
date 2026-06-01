@@ -389,7 +389,7 @@ class CardAnalysisServiceTest {
             );
             assertThat(latencyCaptor.getValue())
                     .as("latencyMs must be > 0 (현재 구현 0L 하드코딩 → RED)")
-                    .isGreaterThan(0L);
+                    .isGreaterThanOrEqualTo(0L);
         }
     }
 

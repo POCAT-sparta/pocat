@@ -125,7 +125,7 @@ public class CardAnalysisService {
                     result.promptTokens(),
                     result.completionTokens(),
                     latencyMs,
-                    FALLBACK_MODEL
+                    result.analysisModel() != null ? result.analysisModel() : FALLBACK_MODEL
             );
         }
 
