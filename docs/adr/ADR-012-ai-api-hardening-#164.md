@@ -235,4 +235,4 @@ Mono.fromCallable(() -> sessionService.getOrCreateSession(sessionId))
 
 - SQL 인젝션 없음 (정적 리터럴 값만 사용)
 - CardAnalysisResponse가 LLM 내부 필드 4개 완전 제거 확인
-- reanalyzeCard() Rate Limit 이전: 프로세스 전역 Resilience4j → 사용자별 Redis (보안 개선)
+- reanalyzeCard() Rate Limit 변경: 서비스 레이어 @RateLimiter(프로세스 전역 Resilience4j) 제거 → 컨트롤러에서 RedisRateLimiter("rate:user:ai:{userId}" 키) 사용자별 적용. analyzeCard()는 @RateLimiter(name="aiEndpoint") 프로세스 전역 Resilience4j 유지.

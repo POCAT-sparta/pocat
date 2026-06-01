@@ -44,13 +44,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * CardAnalysisController 슬라이스 테스트.
  *
- * <p>[RED #164 Issue 1] analyzeCard / reanalyzeCard 응답 JSON에
- * 내부 필드(analysisModel, promptTokens, completionTokens, analyzedAt)가
- * 포함되지 않아야 한다.
- *
- * <p>현재는 CardAnalysisResult를 그대로 직렬화하므로 위 필드가 모두 노출되어
- * 테스트가 FAIL(RED)됩니다. GREEN 조건: CardAnalysisResponse DTO 도입 후
- * 해당 필드를 제외한 응답 반환.
+ * <p>CardAnalysisResponse DTO가 적용되어 analyzeCard / reanalyzeCard 응답 JSON에서
+ * 내부 필드(analysisModel, promptTokens, completionTokens, analyzedAt)가 제외됩니다.
+ * 모든 테스트는 GREEN 상태입니다.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CardAnalysisController")
@@ -129,10 +125,8 @@ class CardAnalysisControllerTest {
     class AnalyzeCardResponseFields {
 
         /**
-         * [RED] 현재 컨트롤러는 CardAnalysisResult를 그대로 응답하므로
-         * analysisModel, promptTokens, completionTokens, analyzedAt 필드가
-         * 모두 JSON에 포함됩니다. 이 테스트는 해당 필드가 없어야 한다고 단언하므로
-         * GREEN 전까지 FAIL(AssertionError)합니다.
+         * CardAnalysisResponse를 통해 내부 필드(analysisModel, promptTokens,
+         * completionTokens, analyzedAt)가 응답에서 제외됩니다.
          */
         @Test
         @DisplayName("[RED] GET /api/ai/cards/1/analysis 응답에 analysisModel 필드 없어야 한다")
@@ -179,7 +173,7 @@ class CardAnalysisControllerTest {
         }
 
         @Test
-        @DisplayName("GET /api/ai/cards/1/analysis 응답에 공개 필드(priceTrend, fairValueEstimate, demandLevel, summary) 포함 확인")
+        @DisplayName("GET /api/ai/cards/1/analysis 응답에 모든 공개 필드 포함 확인 (CardAnalysisResponse 7개 필드)")
         void analyzeCard_response_includes_public_fields() throws Exception {
             given(cardAnalysisService.analyzeCard(1L)).willReturn(fullResult);
 
@@ -189,7 +183,10 @@ class CardAnalysisControllerTest {
                     .andExpect(jsonPath("$.data.priceTrend").exists())
                     .andExpect(jsonPath("$.data.fairValueEstimate").exists())
                     .andExpect(jsonPath("$.data.demandLevel").exists())
-                    .andExpect(jsonPath("$.data.summary").exists());
+                    .andExpect(jsonPath("$.data.summary").exists())
+                    .andExpect(jsonPath("$.data.highlights").exists())
+                    .andExpect(jsonPath("$.data.riskFactors").exists())
+                    .andExpect(jsonPath("$.data.keywords").exists());
         }
     }
 
