@@ -132,7 +132,7 @@ Mono.fromCallable(() -> sessionService.getOrCreateSession(sessionId))
 
 **문제 분석**
 
-`V1__ai_tables.sql`은 `ai_prompt_templates` 테이블 DDL만 생성하고 시드 INSERT가 없다. 신규 환경 기동 시 `AiPromptTemplateService.getPrompt()`가 빈 테이블에서 조회를 수행하여 `IllegalStateException`이 발생한다.
+`V1__ai_tables.sql`은 `ai_prompt_template` 테이블 DDL만 생성하고 시드 INSERT가 없다. 신규 환경 기동 시 `AiPromptTemplateService.getPrompt()`가 빈 테이블에서 조회를 수행하여 `IllegalStateException`이 발생한다.
 
 `V1__ai_tables.sql`을 직접 수정하는 방안은 Flyway 체크섬 충돌로 인해 기존 환경의 마이그레이션이 실패하므로 채택 불가하다.
 
