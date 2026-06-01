@@ -36,7 +36,7 @@ public class PaymentCommandService {
     private final SetExpireService setExpireService;
     private final OrderQueryService orderQueryService;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public Payment createPayment(Long orderId, PaymentType paymentType) {
         Order order = orderQueryService.findByOrderid(orderId);
 

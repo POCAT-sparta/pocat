@@ -13,7 +13,7 @@ WHERE order_id IN (SELECT id FROM orders WHERE order_uid = 'K6-TEST-ORDER-001');
 -- 주문 상태를 AUTO_PAYMENT_FAILED로 복구, deadline 1시간 연장
 UPDATE orders
 SET status           = 'AUTO_PAYMENT_FAILED',
-    payment_deadline = DATE_ADD(NOW(), INTERVAL 1 HOUR),
+    payment_deadline = DATE_ADD(NOW(), INTERVAL 10 HOUR),  -- KST 오프셋(+9h) + 여유(1h)
     updated_at       = NOW()
 WHERE order_uid = 'K6-TEST-ORDER-001';
 

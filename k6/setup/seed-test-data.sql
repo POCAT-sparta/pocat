@@ -28,7 +28,9 @@ INSERT INTO orders
 VALUES
     (1, 1, @buyer_id, 'K6-TEST-ORDER-001',
      10000, 'AUTO_PAYMENT_FAILED', 'PREPARING',
-     DATE_ADD(NOW(), INTERVAL 1 HOUR), 'AUCTION', NOW(), NOW());
+     -- serverTimezone=Asia/Seoul(KST=UTC+9) 설정으로 JDBC가 DATETIME을 KST로 해석 후 UTC 변환.
+     -- Java가 "NOW()+1시간(UTC)" 으로 읽으려면 DB에는 "UTC + 9시간(오프셋) + 1시간(여유)" = +10시간 저장.
+     DATE_ADD(NOW(), INTERVAL 10 HOUR), 'AUCTION', NOW(), NOW());
 
 -- 삽입된 주문 ID 출력 (run.sh에서 ORDER_ID로 캡처)
 SELECT LAST_INSERT_ID() AS order_id;

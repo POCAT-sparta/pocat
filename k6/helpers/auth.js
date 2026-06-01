@@ -19,8 +19,9 @@ export function signup(email, password, nickname) {
     { headers: JSON_HEADERS },
   );
   // 201(생성) 또는 409(이미 존재)는 모두 정상
-  const ok = res.status === 201 || res.status === 409;
-  check(res, { '회원가입 성공(201) 또는 중복(409)': () => ok });
+  const ok = check(res, {
+    '회원가입 성공(201) 또는 중복(409)': (r) => r.status === 201 || r.status === 409,
+  });
   return ok;
 }
 
