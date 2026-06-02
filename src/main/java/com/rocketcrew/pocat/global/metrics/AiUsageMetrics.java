@@ -29,6 +29,7 @@ public class AiUsageMetrics {
         this.responseTimer = Timer.builder("ai.response.time")
                 .description("AI 응답 처리 시간")
                 .publishPercentiles(0.5, 0.95, 0.99)
+                .publishPercentileHistogram(true)
                 .register(meterRegistry);
     }
 

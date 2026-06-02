@@ -75,6 +75,9 @@ ranking:
     cache-size: 100
     max-response-size: 50
 
+loki:
+  url: ${LOKI_URL:http://localhost:3100}
+
 management:
   health:
     elasticsearch:

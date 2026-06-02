@@ -119,7 +119,7 @@ public class PaymentApplicationService {
             // 이후 성공이 아니면 실패처리
             if (!PortOneStatus.PAID.equals(response.status())) {
                 paymentMetrics.incrementAutoFail();
-                paymentCommandService.handleFailed(payment.getPaymentUid(), order.getId());
+                failureService.handleAutoPaymentFailure(payment.getId(), order.getId());
                 throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
             }
 
@@ -132,13 +132,11 @@ public class PaymentApplicationService {
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             paymentMetrics.incrementAutoSuccess();
-            paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
+            paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
             return PaymentResponse.from(payment);
         } finally {
             paymentMetrics.recordAutoPaymentDuration(sample);
         }
-        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
-        return PaymentResponse.from(payment);
     }
     /**
      * 6.2 결제 확정 요청 — Client Confirm 경로
@@ -185,13 +183,11 @@ public class PaymentApplicationService {
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             paymentMetrics.incrementDirectSuccess();
-            paymentCommandService.completePayment(payment, order, portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
+            paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
             return PaymentResponse.from(payment);
         } finally {
             paymentMetrics.recordDirectPaymentDuration(sample);
         }
-        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
-        return PaymentResponse.from(payment);
     }
 
     // resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요
