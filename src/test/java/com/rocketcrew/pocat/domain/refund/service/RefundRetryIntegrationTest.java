@@ -35,6 +35,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -237,6 +238,53 @@ class RefundRetryIntegrationTest {
 
             // PortOne 미호출
             verify(portOneClientService, never()).cancelPayment(anyString(), anyLong(), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("retryRefund() 동시성")
+    class ConcurrentRetryRefund {
+
+        @Test
+        @DisplayName("동시 10스레드 retryRefund → Order 비관적 락으로 직렬화, cancelPayment 1회만 호출")
+        void concurrent_retryRefund_cancelPaymentCalledOnce() throws InterruptedException {
+            Long refundId = createRefund(0, LocalDateTime.now().minusMinutes(5));
+
+            int threadCount = 10;
+            ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+            CountDownLatch startLatch = new CountDownLatch(1);
+            CountDownLatch doneLatch  = new CountDownLatch(threadCount);
+
+            for (int i = 0; i < threadCount; i++) {
+                executor.submit(() -> {
+                    try {
+                        startLatch.await();
+                        refundCommandService.retryRefund(refundId);
+                    } catch (Exception ignored) {
+                        // PESSIMISTIC_WRITE 락 대기 중 예외는 무시
+                    } finally {
+                        doneLatch.countDown();
+                    }
+                });
+            }
+
+            startLatch.countDown();
+            boolean completed = doneLatch.await(30, TimeUnit.SECONDS);
+            executor.shutdown();
+
+            assertThat(completed).as("모든 스레드가 제한 시간 내 완료되어야 함").isTrue();
+
+            // 비관적 락 직렬화: 먼저 처리한 스레드가 COMPLETED로 변경 → 나머지는 상태 체크 후 early return
+            String refundStatus = jdbcTemplate.queryForObject(
+                    "SELECT status FROM refunds WHERE id = ?", String.class, refundId);
+
+            assertThat(refundStatus)
+                    .as("환불 재시도 후 최종 상태는 COMPLETED")
+                    .isEqualTo("COMPLETED");
+
+            // cancelPayment는 정확히 1회만 호출
+            verify(portOneClientService, times(1))
+                    .cancelPayment(anyString(), anyLong(), anyString());
         }
     }
 }

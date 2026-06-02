@@ -5,8 +5,8 @@
 | **Date** | 2026-06-02 |
 | **Branch** | `dev` |
 | **대상** | 결제 · 자동결제 · 입찰 · 정산 · 환불 · Kafka consumer · confirmPayment · 즉시구매 · 환불재시도 |
-| **환경** | H2 in-memory (MySQL MODE), Spring Boot Test, JUnit 5 |
-| **외부 의존성 격리** | Redis · Redisson · PortOne · Kafka · Elasticsearch → @MockBean |
+| **환경** | H2 in-memory (MySQL MODE), Spring Boot Test, JUnit 5 / Testcontainers (Kafka E2E) |
+| **외부 의존성 격리** | Redis · Redisson · PortOne · Kafka · Elasticsearch → @MockBean (Kafka E2E 제외) |
 
 ---
 
@@ -17,18 +17,19 @@
 | `PaymentConcurrencyIntegrationTest` | `domain/payment/service` | 3 |
 | `AutoPaymentIdempotencyIntegrationTest` | `domain/payment/service` | 4 |
 | `PaymentKafkaConsumerIdempotencyTest` | `domain/payment/service` | 2 |
-| `ConfirmPaymentIdempotencyIntegrationTest` | `domain/payment/service` | 2 |
+| `ConfirmPaymentIdempotencyIntegrationTest` | `domain/payment/service` | 3 |
 | `AuctionBidConcurrencyIntegrationTest` | `domain/bid/service` | 1 |
 | `AuctionBuyoutConcurrencyIntegrationTest` | `domain/auction/service` | 1 |
 | `SettlementIdempotencyIntegrationTest` | `domain/settlement/service` | 2 |
 | `RefundConcurrencyIntegrationTest` | `domain/refund/service` | 1 |
-| `RefundRetryIntegrationTest` | `domain/refund/service` | 4 |
+| `RefundRetryIntegrationTest` | `domain/refund/service` | 5 |
+| `PaymentKafkaAtLeastOnceDeliveryTest` | `domain/payment/kafka` | 1 |
 
 ---
 
 ## 2. 전체 결과
 
-**총 20개 테스트 — 전부 PASS**
+**총 23개 테스트 — 전부 PASS**
 
 | # | 테스트명 | 클래스 | 소요 시간 | 결과 |
 |---|---------|--------|-----------|------|
@@ -52,6 +53,9 @@
 | 18 | 환불 재시도: PortOne 실패 (retryCount < 5) → FAILED_RETRYABLE, retryCount 증가 | RefundRetryIntegrationTest | — | ✅ PASS |
 | 19 | 환불 재시도: PortOne 실패 (retryCount = 5) → FAILED_FINAL | RefundRetryIntegrationTest | — | ✅ PASS |
 | 20 | 환불 재시도: nextRetryAt 미도래 → 스킵, PortOne 미호출 | RefundRetryIntegrationTest | — | ✅ PASS |
+| 21 | PortOne 금액 불일치 → cancelPayment 호출 후 PAYMENT_AMOUNT_MISMATCH 예외 | ConfirmPaymentIdempotencyIntegrationTest | — | ✅ PASS |
+| 22 | 동시 10스레드 retryRefund → 비관적 락 직렬화, cancelPayment 1회만 호출 | RefundRetryIntegrationTest | — | ✅ PASS |
+| 23 | at-least-once: 동일 order.created 2회 발행 → 결제 1건, PortOne 1회 (실제 Kafka 브로커) | PaymentKafkaAtLeastOnceDeliveryTest | — | ✅ PASS |
 
 ---
 
@@ -310,6 +314,4 @@ void tearDown() {
 
 | 영역 | 이유 | 제안 방향 |
 |------|------|-----------|
-| Kafka 이벤트 멱등성 (실제 브로커) | consumer 메서드 직접 호출 방식으로 검증 — 실제 at-least-once 전달은 미검증 | Testcontainers Kafka 도입 |
-| `confirmPayment` 금액 불일치 취소 경로 | PortOne 금액 불일치 케이스 미검증 | cancelPayment stub 추가 |
-| 환불 재시도 동시 호출 직렬화 | 비관적 락으로 직렬화 보장하나 동시성 테스트 미작성 | 동시 10스레드 retryRefund 검증 |
+현재 미검증 영역 없음. 모든 동시성·멱등성 시나리오 구현 완료.

@@ -35,7 +35,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -205,6 +205,43 @@ class ConfirmPaymentIdempotencyIntegrationTest {
 
             // 두 번째 호출은 isFinalized 조기 반환 → PortOne 추가 호출 없음
             verify(portOneClientService, times(1)).getPayment(TEST_PAYMENT_UID);
+        }
+    }
+
+    @Nested
+    @DisplayName("confirmPayment() 금액 불일치")
+    class AmountMismatch {
+
+        @Test
+        @DisplayName("PortOne 금액 불일치 → cancelPayment 호출 후 PAYMENT_AMOUNT_MISMATCH 예외")
+        void confirmPayment_amountMismatch_cancelsThenThrows() {
+            // PortOne이 다른 금액을 반환하는 케이스
+            PortOnePaymentResponse mismatchResponse = PortOnePaymentResponse.builder()
+                    .status(PortOneStatus.PAID)
+                    .amount(5_000L)   // DB 결제 금액(10,000)과 불일치
+                    .paymentMethod("card")
+                    .paidAt(LocalDateTime.now())
+                    .build();
+            when(portOneClientService.getPayment(anyString())).thenReturn(mismatchResponse);
+            // cancelPayment는 기본 null 반환 → 정상 호출 처리
+            when(portOneClientService.cancelPayment(anyString(), anyLong(), anyString()))
+                    .thenReturn(null);
+
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    com.rocketcrew.pocat.global.exception.domain.PaymentException.class,
+                    () -> paymentApplicationService.confirmPayment(buyerId, TEST_PAYMENT_UID)
+            );
+
+            // 금액 불일치 → PortOne 취소 호출 확인
+            verify(portOneClientService, times(1))
+                    .cancelPayment(eq(TEST_PAYMENT_UID), anyLong(), anyString());
+
+            // 결제 상태는 CANCELLED (취소 처리)
+            String paymentStatus = jdbcTemplate.queryForObject(
+                    "SELECT status FROM payments WHERE order_id = ?", String.class, orderId);
+            assertThat(paymentStatus)
+                    .as("금액 불일치로 취소된 결제 상태")
+                    .isIn("CANCELLED", "CANCEL_HTTP_ERROR");
         }
     }
 }
