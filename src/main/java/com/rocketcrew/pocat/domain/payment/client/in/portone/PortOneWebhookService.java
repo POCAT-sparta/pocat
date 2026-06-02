@@ -1,8 +1,6 @@
 package com.rocketcrew.pocat.domain.payment.client.in.portone;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
@@ -40,7 +38,6 @@ public class PortOneWebhookService {
     private final PaymentCommandService paymentCommandService;
     private final PortOneClientService portOneClientService;
     private final PortOneSignatureVerifier portOneSignatureVerifier;
-    private final OrderQueryService orderQueryService;
     private final WebhookEventCommandService webhookEventCommandService;
     private final SetExpireService setExpireService;
     private final PaymentMetrics paymentMetrics;
@@ -192,9 +189,8 @@ public class PortOneWebhookService {
                 return;
             }
 
-            Order order = orderQueryService.findByOrderid(payment.getOrderId());
             paymentCommandService.completePayment(
-                    payment, order,
+                    payment.getId(), payment.getOrderId(),
                     portOnePayment.paymentMethod(), portOnePayment.paidAt()
             );
             paymentMetrics.incrementWebhookSuccess();

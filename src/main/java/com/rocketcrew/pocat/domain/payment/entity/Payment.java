@@ -42,6 +42,20 @@ public class Payment extends BaseEntity {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    @Column(name = "billing_key_requested_at")
+    private LocalDateTime billingKeyRequestedAt;
+
+    public boolean markBillingKeyRequested(LocalDateTime requestedAt) {
+        if (this.billingKeyRequestedAt != null) {
+            return false;
+        }
+        if (this.status != PaymentStatus.PENDING || this.paymentType != PaymentType.BILLING_KEY) {
+            return false;
+        }
+        this.billingKeyRequestedAt = requestedAt;
+        return true;
+    }
+
     public void complete(String paymentMethod, LocalDateTime paidAt) {
         if (paymentMethod == null || paymentMethod.isBlank()) {
             throw new PaymentException(ErrorCode.PAYMENT_METHOD_REQUIRED);

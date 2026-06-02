@@ -3,11 +3,13 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.order.service.SetExpireService;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
-import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.PaymentCompletedEvent;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
@@ -53,39 +55,56 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void completePayment(Payment payment, Order order, String paymentMethod, LocalDateTime paidAt) {
-        Payment fresh = paymentQueryService.findPaymentByUidWithLock(payment.getPaymentUid());
-        if (fresh.isFinalized()) return;
-        fresh.complete(paymentMethod, paidAt);
+    public BillingKeyPayment createBillingKeyPaymentIfAbsent(Long orderId) {
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
 
-        Order freshOrder = orderQueryService.findByOrderIdWithLock(fresh.getOrderId());
-        freshOrder.completePayment();
-        evictAvgPriceCache(freshOrder.getCardId());
+        return paymentRepository.findByOrderIdAndPaymentType(orderId, PaymentType.BILLING_KEY)
+                .map(payment -> new BillingKeyPayment(payment, false))
+                .orElseGet(() -> new BillingKeyPayment(paymentRepository.save(Payment.builder()
+                        .orderId(order.getId())
+                        .paymentUid(generatePaymentUid())
+                        .amount(order.getFinalPrice())
+                        .paymentType(PaymentType.BILLING_KEY)
+                        .status(PaymentStatus.PENDING)
+                        .build()), true));
+    }
 
-        setExpireService.cancelExpiry(fresh.getOrderId());
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean markBillingKeyRequested(Long paymentId) {
+        Payment payment = paymentQueryService.findPaymentByIdWithLock(paymentId);
+        return payment.markBillingKeyRequested(LocalDateTime.now());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Payment completePayment(Long paymentId, Long orderId, String paymentMethod, LocalDateTime paidAt) {
+        Payment payment = paymentQueryService.findPaymentByIdWithLock(paymentId);
+        if (payment.isFinalized()) {
+            return payment;
+        }
+
+        Order order = findOrderForPaymentWithLock(payment, orderId);
+        payment.complete(paymentMethod, paidAt);
+        order.completePayment();
+        evictAvgPriceCache(order.getCardId());
+
+        setExpireService.cancelExpiry(payment.getOrderId());
 
         PaymentCompletedEvent event = new PaymentCompletedEvent(
-                freshOrder.getOrderUid(),
-                freshOrder.getBuyerId(),
-                freshOrder.getSellerId(),
-                freshOrder.getFinalPrice()
+                order.getOrderUid(),
+                order.getBuyerId(),
+                order.getSellerId(),
+                order.getFinalPrice()
         );
-        outboxEventWriter.write(PAYMENT_TOPIC, freshOrder.getOrderUid(), event);
+        outboxEventWriter.write(PAYMENT_TOPIC, order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
+
+        return payment;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleFailed(String paymentUId, Long orderId){
-        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
-        payment.fail();
-        order.failPayment();
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleCancel(String paymentUId, Long orderId){
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
-        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUId);
+    public void handleCancel(String paymentUid, Long orderId) {
+        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+        Order order = findOrderForPaymentWithLock(payment, orderId);
         payment.cancel();
         order.failPayment();
     }
@@ -100,11 +119,21 @@ public class PaymentCommandService {
         return TsidGenerator.generatePaymentUid();
     }
 
+    private Order findOrderForPaymentWithLock(Payment payment, Long orderId) {
+        if (!payment.getOrderId().equals(orderId)) {
+            throw new PaymentException(ErrorCode.PAYMENT_ORDER_MISMATCH);
+        }
+        return orderQueryService.findByOrderIdWithLock(orderId);
+    }
+
     private void evictAvgPriceCache(Long cardId) {
         try {
             redisTemplate.delete(AVG_PRICE_CACHE_PREFIX + cardId);
         } catch (Exception e) {
             log.warn("[CardCache] 평균가 캐시 삭제 실패 cardId={}", cardId, e);
         }
+    }
+
+    public record BillingKeyPayment(Payment payment, boolean created) {
     }
 }
