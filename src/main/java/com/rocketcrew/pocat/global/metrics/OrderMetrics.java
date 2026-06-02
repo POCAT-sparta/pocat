@@ -28,5 +28,6 @@ public class OrderMetrics {
     }
 
     public void incrementCreatedFromAuction() { createdFromAuction.increment(); }
+    public void incrementCreatedFromBuyout()  { createdFromBuyout.increment(); }
     public void incrementCancelled()          { cancelled.increment(); }
 }
