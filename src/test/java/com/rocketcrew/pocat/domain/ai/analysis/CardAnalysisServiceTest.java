@@ -4,7 +4,7 @@ import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
 import com.rocketcrew.pocat.domain.ai.analysis.entity.CardAiAnalysis;
 import com.rocketcrew.pocat.domain.ai.analysis.repository.CardAiAnalysisRepository;
 import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisService;
-import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
+import com.rocketcrew.pocat.global.metrics.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
@@ -32,7 +32,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.lang.reflect.Method;
 import java.util.Optional;
 

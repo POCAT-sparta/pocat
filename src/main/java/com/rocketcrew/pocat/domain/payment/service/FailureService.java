@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.AutoPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.DirectPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +30,10 @@ public class FailureService {
     private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxEventWriter;
     private final PaymentQueryService paymentQueryService;
+    private final PaymentMetrics paymentMetrics;
 
     public void autoPaymentFailEvent(String orderUid, Long buyerId, Long sellerId) {
+        paymentMetrics.incrementAutoFail();
         AutoPaymentFailedEvent event = new AutoPaymentFailedEvent(
                 orderUid,
                 buyerId,
@@ -42,6 +45,7 @@ public class FailureService {
     }
 
     public void directPaymentFailEvent(String orderUid, Long buyerId, Long sellerId) {
+        paymentMetrics.incrementDirectFail();
         DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
                 orderUid,
                 buyerId,

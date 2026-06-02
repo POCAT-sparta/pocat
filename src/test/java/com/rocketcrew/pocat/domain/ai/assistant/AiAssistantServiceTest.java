@@ -8,7 +8,7 @@ import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.AuctionTool;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.BidTool;
 import com.rocketcrew.pocat.domain.ai.assistant.tools.CardSearchTool;
-import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
+import com.rocketcrew.pocat.global.metrics.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.junit.jupiter.api.BeforeEach;

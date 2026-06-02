@@ -26,6 +26,7 @@ import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
 import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.global.metrics.AuctionMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -63,6 +64,7 @@ public class AuctionCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final AuctionEsIndexService auctionEsIndexService;
     private final OutboxEventWriter outboxEventWriter;
+    private final AuctionMetrics metrics;
 
     public CreateAuctionResponse createAuction(Long sellerId, CreateAuctionRequest request) {
         Card card = cardQueryService.validateRegistrableForAuction(request.cardId());
@@ -76,7 +78,9 @@ public class AuctionCommandService {
                 .buyoutPrice(request.buyoutPrice())
                 .status(AuctionStatus.PENDING)
                 .build();
-        return CreateAuctionResponse.from(auctionRepository.save(auction));
+        CreateAuctionResponse response = CreateAuctionResponse.from(auctionRepository.save(auction));
+        metrics.incrementRegistered();
+        return response;
     }
 
     public UpdateAuctionResponse updateAuction(Long sellerId, Long id, UpdateAuctionRequest request) {

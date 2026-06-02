@@ -1,7 +1,5 @@
 package com.rocketcrew.pocat.domain.order.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -17,6 +15,7 @@ import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.metrics.OrderMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +44,7 @@ public class OrderCommandService {
     private final AuctionBidRepository auctionBidRepository;
     private final SetExpireService setExpireService;
     private final AuctionRepository auctionRepository;
+    private final OrderMetrics metrics;
 
     // 경매 낙찰 주문 생성 — bidderRank 순위의 Order 저장 후 order.created 이벤트 발행
     public void createOrderFromAuction(Long auctionId, Long cardId, Long sellerId,
@@ -62,6 +62,7 @@ public class OrderCommandService {
         );
         outboxEventWriter.write("order", order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
+        metrics.incrementCreatedFromAuction();
     }
 
     // 즉시구매 주문 생성 — 주문 저장(별도 트랜잭션) 후 자동결제 시도
@@ -184,6 +185,7 @@ public class OrderCommandService {
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         order.cancel(reason);
+        metrics.incrementCancelled();
 
         // 주문 취소 이벤트 발행
         eventPublisher.publishEvent(new OrderCancelledEvent(

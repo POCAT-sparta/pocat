@@ -11,6 +11,7 @@ import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.global.metrics.AuctionMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
@@ -42,6 +43,7 @@ public class AuctionLifecycleService {
     private final ApplicationEventPublisher eventPublisher;
     private final AuctionEsIndexService auctionEsIndexService;
     private final OutboxEventWriter outboxEventWriter;
+    private final AuctionMetrics metrics;
 
     // 검수 승인된 경매를 현재 시각 기준으로 ACTIVE 상태로 전환하고 종료 이벤트 예약용 정보를 확정한다.
     public boolean activateApprovedAuction(Long auctionId) {
@@ -89,6 +91,7 @@ public class AuctionLifecycleService {
         List<AuctionBid> bids = auctionBidRepository.findAllByAuctionId(auctionId);
         if (latestAuction.getHighestBidderId() == null) {
             latestAuction.markNoBidder();
+            metrics.incrementEndedNoBidder();
             publishAuctionEndedEvent(latestAuction, List.of());
             final Long noAuctionId = latestAuction.getId();
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -108,6 +111,7 @@ public class AuctionLifecycleService {
 
         markBidResults(bids, latestAuction.getHighestBidderId());
         latestAuction.end();
+        metrics.incrementEndedSuccess();
         publishAuctionEndedEvent(latestAuction, loserIds);
         final Long endedAuctionId = latestAuction.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
