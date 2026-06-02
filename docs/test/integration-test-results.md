@@ -33,29 +33,29 @@
 
 | # | 테스트명 | 클래스 | 소요 시간 | 결과 |
 |---|---------|--------|-----------|------|
-| 1 | 동시 요청 시 PENDING 여러 건 생성 — 중복 완료 차단은 confirmPayment에서 보장 | PaymentConcurrencyIntegrationTest | 0.096s | ✅ PASS |
-| 2 | 정상: 단건 요청 → PENDING 1건 생성 | PaymentConcurrencyIntegrationTest | 0.378s | ✅ PASS |
-| 3 | 실패: 결제 기한 초과 주문 → PAYMENT_WINDOW_EXPIRED | PaymentConcurrencyIntegrationTest | 0.383s | ✅ PASS |
-| 4 | 동시 호출 시 BILLING_KEY 결제 1건만 생성되고 COMPLETED 상태로 완료됨 | AutoPaymentIdempotencyIntegrationTest | 0.180s | ✅ PASS |
-| 5 | 이미 완료된 주문에 재호출 시 새 결제 생성 없이 기존 결제 반환 | AutoPaymentIdempotencyIntegrationTest | 0.053s | ✅ PASS |
-| 6 | 순차 중복 호출 시 BILLING_KEY 결제 1건만 생성됨 | AutoPaymentIdempotencyIntegrationTest | 0.466s | ✅ PASS |
-| 7 | 즉시구매(BUYOUT) 주문은 직접결제 불가 → PAYMENT_BUYOUT_DIRECT_NOT_ALLOWED | AutoPaymentIdempotencyIntegrationTest | 0.385s | ✅ PASS |
-| 8 | 동시 입찰: Redisson 락으로 1건만 성공, 나머지는 즉시 실패 | AuctionBidConcurrencyIntegrationTest | 1.807s | ✅ PASS |
-| 9 | 순차 중복 호출: 두 번 호출해도 정산 1건만 생성됨 (existsByOrderId 1차 방어) | SettlementIdempotencyIntegrationTest | 0.040s | ✅ PASS |
-| 10 | 동시 중복 호출: 10개 스레드가 같은 orderUid로 요청해도 정산 1건만 생성됨 | SettlementIdempotencyIntegrationTest | 0.110s | ✅ PASS |
-| 11 | 동시 환불 요청: Order 비관적 락으로 직렬화 → 환불 1건만 생성, 나머지는 REFUND_ALREADY_EXISTS | RefundConcurrencyIntegrationTest | 1.297s | ✅ PASS |
-| 12 | 동일 order.created 이벤트 2회 소비 → 결제 1건, PortOne 1회 호출 | PaymentKafkaConsumerIdempotencyTest | — | ✅ PASS |
-| 13 | order.created 아닌 이벤트는 autoPayment 미호출 후 ack | PaymentKafkaConsumerIdempotencyTest | — | ✅ PASS |
-| 14 | 동시 10스레드 confirmPayment → COMPLETED 1건, 나머지는 isFinalized 조기 반환 | ConfirmPaymentIdempotencyIntegrationTest | — | ✅ PASS |
-| 15 | 순차 2회 confirmPayment → COMPLETED 1건, PortOne 1회 호출 | ConfirmPaymentIdempotencyIntegrationTest | — | ✅ PASS |
-| 16 | 동시 10스레드 즉시구매 → Redisson 락으로 1건만 성공, 나머지는 AUCTION_LOCK_FAILED | AuctionBuyoutConcurrencyIntegrationTest | — | ✅ PASS |
-| 17 | 환불 재시도: PortOne 성공 → COMPLETED, Payment·Order REFUNDED | RefundRetryIntegrationTest | — | ✅ PASS |
-| 18 | 환불 재시도: PortOne 실패 (retryCount < 5) → FAILED_RETRYABLE, retryCount 증가 | RefundRetryIntegrationTest | — | ✅ PASS |
-| 19 | 환불 재시도: PortOne 실패 (retryCount = 5) → FAILED_FINAL | RefundRetryIntegrationTest | — | ✅ PASS |
-| 20 | 환불 재시도: nextRetryAt 미도래 → 스킵, PortOne 미호출 | RefundRetryIntegrationTest | — | ✅ PASS |
-| 21 | PortOne 금액 불일치 → cancelPayment 호출 후 PAYMENT_AMOUNT_MISMATCH 예외 | ConfirmPaymentIdempotencyIntegrationTest | — | ✅ PASS |
-| 22 | 동시 10스레드 retryRefund → 비관적 락 직렬화, cancelPayment 1회만 호출 | RefundRetryIntegrationTest | — | ✅ PASS |
-| 23 | at-least-once: 동일 order.created 2회 발행 → 결제 1건, PortOne 1회 (실제 Kafka 브로커) | PaymentKafkaAtLeastOnceDeliveryTest | — | ✅ PASS |
+| 1 | 동시 요청 시 PENDING 여러 건 생성 — 중복 완료 차단은 confirmPayment에서 보장 | PaymentConcurrencyIntegrationTest | 0.134s | ✅ PASS |
+| 2 | 정상: 단건 요청 → PENDING 1건 생성 | PaymentConcurrencyIntegrationTest | 0.089s | ✅ PASS |
+| 3 | 실패: 결제 기한 초과 주문 → PAYMENT_WINDOW_EXPIRED | PaymentConcurrencyIntegrationTest | 0.041s | ✅ PASS |
+| 4 | 동시 호출 시 BILLING_KEY 결제 1건만 생성되고 COMPLETED 상태로 완료됨 | AutoPaymentIdempotencyIntegrationTest | 0.151s | ✅ PASS |
+| 5 | 이미 완료된 주문에 재호출 시 새 결제 생성 없이 기존 결제 반환 | AutoPaymentIdempotencyIntegrationTest | 0.104s | ✅ PASS |
+| 6 | 순차 중복 호출 시 BILLING_KEY 결제 1건만 생성됨 | AutoPaymentIdempotencyIntegrationTest | 0.138s | ✅ PASS |
+| 7 | 즉시구매(BUYOUT) 주문은 직접결제 불가 → PAYMENT_BUYOUT_DIRECT_NOT_ALLOWED | AutoPaymentIdempotencyIntegrationTest | 0.067s | ✅ PASS |
+| 8 | 동시 입찰: Redisson 락으로 1건만 성공, 나머지는 즉시 실패 | AuctionBidConcurrencyIntegrationTest | 2.654s | ✅ PASS |
+| 9 | 순차 중복 호출: 두 번 호출해도 정산 1건만 생성됨 (existsByOrderId 1차 방어) | SettlementIdempotencyIntegrationTest | 0.033s | ✅ PASS |
+| 10 | 동시 중복 호출: 10개 스레드가 같은 orderUid로 요청해도 정산 1건만 생성됨 | SettlementIdempotencyIntegrationTest | 0.208s | ✅ PASS |
+| 11 | 동시 환불 요청: Order 비관적 락으로 직렬화 → 환불 1건만 생성, 나머지는 REFUND_ALREADY_EXISTS | RefundConcurrencyIntegrationTest | 0.107s | ✅ PASS |
+| 12 | 동일 order.created 이벤트 2회 소비 → 결제 1건, PortOne 1회 호출 | PaymentKafkaConsumerIdempotencyTest | 0.370s | ✅ PASS |
+| 13 | order.created 아닌 이벤트는 autoPayment 미호출 후 ack | PaymentKafkaConsumerIdempotencyTest | 0.035s | ✅ PASS |
+| 14 | 동시 10스레드 confirmPayment → COMPLETED 1건, 나머지는 isFinalized 조기 반환 | ConfirmPaymentIdempotencyIntegrationTest | 0.065s | ✅ PASS |
+| 15 | 순차 2회 confirmPayment → COMPLETED 1건, PortOne 1회 호출 | ConfirmPaymentIdempotencyIntegrationTest | 0.115s | ✅ PASS |
+| 16 | PortOne 금액 불일치 → cancelPayment 호출 후 PAYMENT_AMOUNT_MISMATCH 예외 | ConfirmPaymentIdempotencyIntegrationTest | 0.136s | ✅ PASS |
+| 17 | 동시 10스레드 즉시구매 → Redisson 락으로 1건만 성공, 나머지는 AUCTION_LOCK_FAILED | AuctionBuyoutConcurrencyIntegrationTest | 6.316s | ✅ PASS |
+| 18 | 환불 재시도: PortOne 성공 → COMPLETED, Payment·Order REFUNDED | RefundRetryIntegrationTest | 0.045s | ✅ PASS |
+| 19 | 환불 재시도: PortOne 실패 (retryCount < 5) → FAILED_RETRYABLE, retryCount 증가 | RefundRetryIntegrationTest | 0.073s | ✅ PASS |
+| 20 | 환불 재시도: PortOne 실패 (retryCount = 5) → FAILED_FINAL | RefundRetryIntegrationTest | 0.128s | ✅ PASS |
+| 21 | 환불 재시도: nextRetryAt 미도래 → 스킵, PortOne 미호출 | RefundRetryIntegrationTest | 0.042s | ✅ PASS |
+| 22 | 동시 10스레드 retryRefund → 비관적 락 직렬화, cancelPayment 1회만 호출 | RefundRetryIntegrationTest | 0.132s | ✅ PASS |
+| 23 | at-least-once: 동일 order.created 2회 발행 → 결제 1건, PortOne 1회 (실제 Kafka 브로커) | PaymentKafkaAtLeastOnceDeliveryTest | 1.519s | ✅ PASS |
 
 ---
 
@@ -296,22 +296,26 @@ void tearDown() {
 
 **Spring 컨텍스트 캐싱**
 
-9개 테스트 클래스 모두 동일한 `@MockBean` 세트를 사용하므로 Spring이 컨텍스트를 재사용한다.
-전체 실행 시간 단축에 기여한다.
+`PaymentKafkaAtLeastOnceDeliveryTest`(Testcontainers, 별도 컨텍스트)를 제외한 9개 테스트 클래스가 동일한 `@MockBean` 세트를 공유한다.
+
+공통 `@MockBean` 세트 (인프라 격리):
+- Redis: `StringRedisTemplate`, `RedissonClient`, `RedisConnectionFactory`, `RedisMessageListenerContainer`
+- PortOne: `PortOneClientService`
+- Kafka 이벤트 핸들러 (7종): `AuctionEventHandler`, `BidEventHandler`, `OrderEventHandler`, `PaymentEventHandler`, `RefundEventHandler`, `SettlementEventHandler`, `NotificationEventHandler`
+- Elasticsearch: `AuctionSearchRepository`, `CardSearchRepository`
+- 기타: `RedisRateLimiter`, `OutboxEventWriter`
+
+이벤트 핸들러를 `@MockBean`으로 격리한 이유: `@TransactionalEventListener(AFTER_COMMIT)`가 실제 Kafka 브로커 없이 호출되면 `kafkaTemplate.send().get()`이 `max.block.ms`(500ms, test yaml) 동안 블록킹되기 때문.
 
 **테스트 작성 중 발견 및 수정한 프로덕션 코드 이슈**
 
 | 파일 | 문제 | 수정 |
 |------|------|------|
 | `PaymentRepository` | `findAllByOrderId()` — 테스트 검증용으로만 사용되는 메서드가 프로덕션 레포지토리에 선언됨 | 메서드 제거, 테스트는 `JdbcTemplate` 직접 쿼리로 대체 |
-| `SecurityConfig` | `@Value("${cors.allowed-origins}")` — 기본값 없음. 테스트 컨텍스트 로드 시 `PlaceholderResolutionException` 발생 | `@Value("${cors.allowed-origins:http://localhost:*}")` 기본값 추가, `src/test/resources/application.yaml`의 임시 cors 항목 제거 |
+| `SecurityConfig` | `@Value("${cors.allowed-origins}")` — 기본값 없음. 테스트 컨텍스트 로드 시 `PlaceholderResolutionException` 발생 | `@Value("${cors.allowed-origins:http://localhost:*}")` 기본값 추가 |
 
 ---
 
 ## 5. 미검증 영역 (향후 과제)
 
-기존 미검증 항목은 모두 구현 완료. 남은 영역:
-
-| 영역 | 이유 | 제안 방향 |
-|------|------|-----------|
 현재 미검증 영역 없음. 모든 동시성·멱등성 시나리오 구현 완료.

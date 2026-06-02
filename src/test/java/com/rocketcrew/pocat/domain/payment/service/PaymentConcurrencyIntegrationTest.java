@@ -14,6 +14,15 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
+import com.rocketcrew.pocat.domain.bid.service.BidEventHandler;
+import com.rocketcrew.pocat.domain.order.service.OrderEventHandler;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.handler.PaymentEventHandler;
+import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
+import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
+import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +80,15 @@ class PaymentConcurrencyIntegrationTest {
     // Elasticsearch 레포는 시작 시 인덱스 연결을 시도하므로 Mock으로 격리
     @MockBean private AuctionSearchRepository auctionSearchRepository;
     @MockBean private CardSearchRepository cardSearchRepository;
+    @MockBean private RedisConnectionFactory redisConnectionFactory;
+    @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEventHandler auctionEventHandler;
+    @MockBean private BidEventHandler bidEventHandler;
+    @MockBean private OrderEventHandler orderEventHandler;
+    @MockBean private PaymentEventHandler paymentEventHandler;
+    @MockBean private RefundEventHandler refundEventHandler;
+    @MockBean private SettlementEventHandler settlementEventHandler;
+    @MockBean private NotificationEventHandler notificationEventHandler;
 
     // ── 실제 빈 ──────────────────────────────────────────────────
     @Autowired private PaymentApplicationService paymentApplicationService;

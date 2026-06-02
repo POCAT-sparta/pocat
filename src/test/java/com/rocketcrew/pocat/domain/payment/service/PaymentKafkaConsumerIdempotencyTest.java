@@ -4,6 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
+import com.rocketcrew.pocat.domain.bid.service.BidEventHandler;
+import com.rocketcrew.pocat.domain.order.service.OrderEventHandler;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.handler.PaymentEventHandler;
+import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
+import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
+import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
@@ -56,6 +65,15 @@ class PaymentKafkaConsumerIdempotencyTest {
     @MockBean private OutboxEventWriter outboxEventWriter;
     @MockBean private AuctionSearchRepository auctionSearchRepository;
     @MockBean private CardSearchRepository cardSearchRepository;
+    @MockBean private RedisConnectionFactory redisConnectionFactory;
+    @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEventHandler auctionEventHandler;
+    @MockBean private BidEventHandler bidEventHandler;
+    @MockBean private OrderEventHandler orderEventHandler;
+    @MockBean private PaymentEventHandler paymentEventHandler;
+    @MockBean private RefundEventHandler refundEventHandler;
+    @MockBean private SettlementEventHandler settlementEventHandler;
+    @MockBean private NotificationEventHandler notificationEventHandler;
 
     // ── 실제 빈 ──────────────────────────────────────────────────
     @Autowired private PaymentKafkaConsumer paymentKafkaConsumer;

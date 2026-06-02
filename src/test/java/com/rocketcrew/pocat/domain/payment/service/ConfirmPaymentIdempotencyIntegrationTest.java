@@ -3,6 +3,15 @@ package com.rocketcrew.pocat.domain.payment.service;
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
+import com.rocketcrew.pocat.domain.bid.service.BidEventHandler;
+import com.rocketcrew.pocat.domain.order.service.OrderEventHandler;
+import com.rocketcrew.pocat.domain.payment.client.out.kafka.handler.PaymentEventHandler;
+import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
+import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
+import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
@@ -66,6 +75,15 @@ class ConfirmPaymentIdempotencyIntegrationTest {
     @MockBean private OutboxEventWriter outboxEventWriter;
     @MockBean private AuctionSearchRepository auctionSearchRepository;
     @MockBean private CardSearchRepository cardSearchRepository;
+    @MockBean private RedisConnectionFactory redisConnectionFactory;
+    @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEventHandler auctionEventHandler;
+    @MockBean private BidEventHandler bidEventHandler;
+    @MockBean private OrderEventHandler orderEventHandler;
+    @MockBean private PaymentEventHandler paymentEventHandler;
+    @MockBean private RefundEventHandler refundEventHandler;
+    @MockBean private SettlementEventHandler settlementEventHandler;
+    @MockBean private NotificationEventHandler notificationEventHandler;
 
     // ── 실제 빈 ──────────────────────────────────────────────────
     @Autowired private PaymentApplicationService paymentApplicationService;
@@ -223,9 +241,11 @@ class ConfirmPaymentIdempotencyIntegrationTest {
                     .paidAt(LocalDateTime.now())
                     .build();
             when(portOneClientService.getPayment(anyString())).thenReturn(mismatchResponse);
-            // cancelPayment는 기본 null 반환 → 정상 호출 처리
+            // cancelPayment → SUCCEEDED 반환 (status() NPE 방지)
             when(portOneClientService.cancelPayment(anyString(), anyLong(), anyString()))
-                    .thenReturn(null);
+                    .thenReturn(com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOneCancelResponse.builder()
+                            .status(com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus.SUCCEEDED)
+                            .build());
 
             org.junit.jupiter.api.Assertions.assertThrows(
                     com.rocketcrew.pocat.global.exception.domain.PaymentException.class,
