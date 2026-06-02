@@ -8,6 +8,8 @@ import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.AutoPaymentFai
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.DirectPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +33,9 @@ public class FailureService {
     private final PaymentQueryService paymentQueryService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void persistBillingKeyFailure(Long paymentId, Long orderId) {
+    public void handleAutoPaymentFailure(Long paymentId, Long orderId) {
         Payment payment = paymentQueryService.findPaymentByIdWithLock(paymentId);
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Order order = findOrderForPaymentWithLock(payment, orderId);
 
         payment.fail();
         if (order.getOrderType() == OrderType.BUYOUT) {
@@ -70,7 +72,7 @@ public class FailureService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markFailed(String paymentUid, Long orderId, PaymentErrorReason reason) {
         Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Order order = findOrderForPaymentWithLock(payment, orderId);
         payment.fail();
 
         // 결제 기한이 지난 PENDING 주문은 직접결제 실패 이벤트를 발행해 후속 승격 처리를 진행한다.
@@ -80,5 +82,12 @@ public class FailureService {
             log.info("[OrderFailure] orderId={} reason={} -> FAILED", orderId, reason);
             directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
         }
+    }
+
+    private Order findOrderForPaymentWithLock(Payment payment, Long orderId) {
+        if (!payment.getOrderId().equals(orderId)) {
+            throw new PaymentException(ErrorCode.PAYMENT_ORDER_MISMATCH);
+        }
+        return orderQueryService.findByOrderIdWithLock(orderId);
     }
 }
