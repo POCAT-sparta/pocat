@@ -91,13 +91,13 @@ public class AuctionLifecycleService {
         List<AuctionBid> bids = auctionBidRepository.findAllByAuctionId(auctionId);
         if (latestAuction.getHighestBidderId() == null) {
             latestAuction.markNoBidder();
-            metrics.incrementEndedNoBidder();
             publishAuctionEndedEvent(latestAuction, List.of());
             final Long noAuctionId = latestAuction.getId();
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
                     auctionEsIndexService.updateStatus(noAuctionId, com.rocketcrew.pocat.domain.auction.enums.AuctionStatus.NO_BIDDER);
+                    metrics.incrementEndedNoBidder();
                 }
             });
             return true;
@@ -111,13 +111,13 @@ public class AuctionLifecycleService {
 
         markBidResults(bids, latestAuction.getHighestBidderId());
         latestAuction.end();
-        metrics.incrementEndedSuccess();
         publishAuctionEndedEvent(latestAuction, loserIds);
         final Long endedAuctionId = latestAuction.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 auctionEsIndexService.updateStatus(endedAuctionId, com.rocketcrew.pocat.domain.auction.enums.AuctionStatus.ENDED);
+                metrics.incrementEndedSuccess();
             }
         });
         return true;

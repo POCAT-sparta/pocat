@@ -20,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -57,7 +59,12 @@ public class OrderCommandService {
         );
         outboxEventWriter.write("order", order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
-        metrics.incrementCreatedFromAuction();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                metrics.incrementCreatedFromAuction();
+            }
+        });
     }
 
     // 즉시구매 주문만 생성한다. 자동결제는 주문 커밋 이후 상위 유스케이스에서 호출한다.
@@ -178,7 +185,12 @@ public class OrderCommandService {
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         order.cancel(reason);
-        metrics.incrementCancelled();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                metrics.incrementCancelled();
+            }
+        });
 
         // 주문 취소 이벤트 발행
         eventPublisher.publishEvent(new OrderCancelledEvent(

@@ -86,7 +86,6 @@ public class AuctionBidCommandService {
                 .status(BidStatus.LEADING)
                 .build();
         AuctionBid savedBid = auctionBidRepository.save(auctionBid);
-        metrics.incrementCreated();
 
         latestAuction.updateHighestBid(request.bidPrice(), userId);
         publishBidCreatedEvent(latestAuction, userId, request.bidPrice());
@@ -98,6 +97,7 @@ public class AuctionBidCommandService {
             @Override
             public void afterCommit() {
                 auctionEsIndexService.updateHighestPrice(bidAuctionId, newHighestPrice);
+                metrics.incrementCreated();
             }
         });
 

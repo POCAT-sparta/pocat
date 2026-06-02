@@ -79,7 +79,12 @@ public class AuctionCommandService {
                 .status(AuctionStatus.PENDING)
                 .build();
         CreateAuctionResponse response = CreateAuctionResponse.from(auctionRepository.save(auction));
-        metrics.incrementRegistered();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                metrics.incrementRegistered();
+            }
+        });
         return response;
     }
 
