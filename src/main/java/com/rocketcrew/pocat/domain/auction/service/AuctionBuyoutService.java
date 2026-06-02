@@ -14,6 +14,7 @@ import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -39,6 +40,7 @@ public class AuctionBuyoutService {
     private final PaymentRepository paymentRepository;
     private final OrderCommandService orderCommandService;
     private final OrderQueryService orderQueryService;
+    private final PaymentApplicationService paymentApplicationService;
     private final UserQueryService userQueryService;
     private final RedissonClient redissonClient;
     private final ApplicationEventPublisher eventPublisher;
@@ -54,14 +56,15 @@ public class AuctionBuyoutService {
 
         PaymentResponse paymentResponse;
         try {
-            // 즉시 구매 주문 생성 및 자동결제 요청
-            paymentResponse = orderCommandService.createOrderFromBuyout(
+            // 주문 커밋 이후 자동결제를 호출해 외부 PG 호출이 주문 생성 트랜잭션에 묶이지 않게 한다.
+            Order createdOrder = orderCommandService.createOrderFromBuyout(
                     reservation.auctionId(),
                     reservation.cardId(),
                     reservation.sellerId(),
                     buyerId,
                     reservation.buyoutPrice()
             );
+            paymentResponse = paymentApplicationService.autoPayment(createdOrder.getOrderUid());
         } catch (RuntimeException e) {
             // 즉시 구매 자동 결제 실패 시 경매 ACTIVE 복구 로직
             buyoutTransactionService.restoreAuctionAfterPaymentFailure(auctionId);

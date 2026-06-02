@@ -13,8 +13,6 @@ import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.event.OrderCancelledEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
-import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
-import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
@@ -22,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -39,9 +36,7 @@ public class OrderCommandService {
     private final OrderRepository orderRepository;
     private final CardRepository cardRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final PaymentApplicationService paymentApplicationService;
     private final OutboxEventWriter outboxEventWriter;
-    private final OrderSaveService orderSaveService;
     private final AuctionBidRepository auctionBidRepository;
     private final SetExpireService setExpireService;
     private final AuctionRepository auctionRepository;
@@ -64,12 +59,10 @@ public class OrderCommandService {
         eventPublisher.publishEvent(event);
     }
 
-    // 즉시구매 주문 생성 — 주문 저장(별도 트랜잭션) 후 자동결제 시도
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public PaymentResponse createOrderFromBuyout(Long auctionId, Long cardId, Long sellerId,
-                                                 Long buyerId, Long finalPrice) {
-        Order order = orderSaveService.saveBuyoutOrder(auctionId, cardId, sellerId, buyerId, finalPrice);
-        return paymentApplicationService.autoPayment(order.getOrderUid());
+    // 즉시구매 주문만 생성한다. 자동결제는 주문 커밋 이후 상위 유스케이스에서 호출한다.
+    public Order createOrderFromBuyout(Long auctionId, Long cardId, Long sellerId,
+                                       Long buyerId, Long finalPrice) {
+        return orderRepository.save(Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
     }
 
     // 자동결제 실패 시 1시간 직접결제 창 설정 — 주문 상태를 AUTO_PAYMENT_FAILED로 변경하고 Redis 만료 키 등록

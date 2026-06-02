@@ -36,8 +36,9 @@ public class PaymentKafkaConsumer {
             }
             acknowledgment.acknowledge();
         } catch (ServiceException e) {
-            // 비즈니스 실패는 이미 내부에서 처리 완료 (AUTO_PAYMENT_FAILED + 알림)
-            log.warn("payment 자동결제 처리 종료 - skip: {}", message, e);
+            // 자동결제 비즈니스 실패는 주문 유형별 정책에 따라 내부에서 종결된다.
+            // 낙찰 주문은 직접결제 대기, 즉시구매 주문은 취소 처리 후 skip-ack 한다.
+            log.warn("payment 자동결제 비즈니스 실패 처리 완료 - skip-ack: {}", message, e);
             acknowledgment.acknowledge();
         } catch (Exception e) {
             // 아예 처리가 안된 상황 오프셋 커밋 X

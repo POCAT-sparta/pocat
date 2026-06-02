@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneCancelStatus;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
@@ -11,6 +12,7 @@ import com.rocketcrew.pocat.domain.payment.client.out.portone.dto.PortOnePayment
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.domain.user.entity.User;
@@ -50,6 +52,10 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
         }
 
+        if (order.getOrderType() == OrderType.BUYOUT) {
+            throw new PaymentException(ErrorCode.PAYMENT_BUYOUT_DIRECT_NOT_ALLOWED);
+        }
+
         // 자동결제 실패 시에만 직접 결제 생성.
         if (order.getStatus() != OrderStatus.AUTO_PAYMENT_FAILED) {
             throw new PaymentException(ErrorCode.PAYMENT_ORDER_NOT_FAILED);
@@ -78,11 +84,22 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
         }
 
-        Payment payment = paymentCommandService.createPayment(order.getId() , PaymentType.BILLING_KEY);
+        PaymentCommandService.BillingKeyPayment billingKeyPayment =
+                paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId());
+        Payment payment = billingKeyPayment.payment();
 
-        PortOnePaymentResponse response = portOneClientService.attemptBillingKeyPayment(
-                payment.getPaymentUid(), billingKey, payment.getAmount()
-        );
+        if (payment.isFinalized() || payment.getStatus() != PaymentStatus.PENDING) {
+            return PaymentResponse.from(payment);
+        }
+
+        PortOnePaymentResponse response;
+        if (payment.getBillingKeyRequestedAt() == null && paymentCommandService.markBillingKeyRequested(payment.getId())) {
+            response = portOneClientService.attemptBillingKeyPayment(
+                    payment.getPaymentUid(), billingKey, payment.getAmount()
+            );
+        } else {
+            response = portOneClientService.getPayment(payment.getPaymentUid());
+        }
 
         // 네트워크 에러, 대기, 준비 건은 3번 재시도 하여 데이터 조회
         if(PortOneStatus.NETWORK_ERROR.equals(response.status())
@@ -94,7 +111,7 @@ public class PaymentApplicationService {
 
         // 이후 성공이 아니면 실패처리
         if (!PortOneStatus.PAID.equals(response.status())) {
-            paymentCommandService.handleFailed(payment.getPaymentUid(), order.getId());
+            failureService.handleAutoPaymentFailure(payment.getId(), order.getId());
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 
@@ -106,7 +123,7 @@ public class PaymentApplicationService {
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
 
-        paymentCommandService.completePayment(payment, order, response.paymentMethod(), response.paidAt());
+        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
         return PaymentResponse.from(payment);
     }
     /**
@@ -149,7 +166,7 @@ public class PaymentApplicationService {
             failureService.directPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
             throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
         }
-        paymentCommandService.completePayment(payment, order, portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
+        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
         return PaymentResponse.from(payment);
     }
 

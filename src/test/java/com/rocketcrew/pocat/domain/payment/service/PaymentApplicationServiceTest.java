@@ -104,6 +104,19 @@ class PaymentApplicationServiceTest {
         }
 
         @Test
+        @DisplayName("실패: 즉시구매 주문은 직접결제를 생성할 수 없다")
+        void fail_buyoutDirectPaymentNotAllowed() {
+            Order order = TestFixtures.anBuyoutOrder(OrderStatus.AUTO_PAYMENT_FAILED);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
+
+            assertThatThrownBy(() -> paymentApplicationService.generatePayment(1L, new CreatePaymentRequest(1L)))
+                    .isInstanceOf(PaymentException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_BUYOUT_DIRECT_NOT_ALLOWED);
+
+            verify(paymentCommandService, never()).createPayment(anyLong(), any());
+        }
+
+        @Test
         @DisplayName("실패: 결제 가능 시간(1시간) 초과 → PAYMENT_WINDOW_EXPIRED")
         void fail_windowExpired() {
             Order order = TestFixtures.anExpiredPaymentFailedOrder();
@@ -116,7 +129,7 @@ class PaymentApplicationServiceTest {
 
         @Test
         @DisplayName("성공: PAYMENT_FAILED 주문에 PG_DIRECT 결제를 신규 생성한다")
-        void idempotent_pendingAlreadyExists() {
+        void success_createPgDirectPayment() {
             Order order = TestFixtures.aPaymentFailedOrder();
             Payment existing = TestFixtures.aPayment(PaymentStatus.PENDING);
 
@@ -148,10 +161,12 @@ class PaymentApplicationServiceTest {
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(portOneClientService.getPayment("PAY-001")).willReturn(
                     new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "CARD", paidAt, "", null, null, null));
+            given(paymentCommandService.completePayment(payment.getId(), order.getId(), "CARD", paidAt))
+                    .willReturn(TestFixtures.aPayment(PaymentStatus.COMPLETED));
 
             paymentApplicationService.confirmPayment(1L, "PAY-001");
 
-            verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("CARD"), eq(paidAt));
+            verify(paymentCommandService).completePayment(eq(payment.getId()), eq(order.getId()), eq("CARD"), eq(paidAt));
         }
 
         @Test
@@ -271,13 +286,17 @@ class PaymentApplicationServiceTest {
 
             given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
             given(userQueryService.getUserEntity(1L)).willReturn(user);
-            given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
+            given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
+                    .willReturn(new PaymentCommandService.BillingKeyPayment(payment, true));
+            given(paymentCommandService.markBillingKeyRequested(payment.getId())).willReturn(true);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), eq("bkey-001"), eq(10000L)))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "BILLING_KEY", paidAt, null, null, null, null));
+            given(paymentCommandService.completePayment(payment.getId(), order.getId(), "BILLING_KEY", paidAt))
+                    .willReturn(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED));
 
             paymentApplicationService.autoPayment("ORD-001");
 
-            verify(paymentCommandService).completePayment(eq(payment), eq(order), eq("BILLING_KEY"), eq(paidAt));
+            verify(paymentCommandService).completePayment(eq(payment.getId()), eq(order.getId()), eq("BILLING_KEY"), eq(paidAt));
         }
 
         @Test
@@ -310,7 +329,7 @@ class PaymentApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("실패: PortOne 결제 실패 → handelFailed 호출 후 PAYMENT_STATUS_NOT_PAID")
+        @DisplayName("실패: PortOne 결제 실패 → 빌링키 실패 영속화 후 PAYMENT_STATUS_NOT_PAID")
         void fail_portOnePaymentFailed() {
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
             User user = TestFixtures.aUserWithBillingKey();
@@ -318,7 +337,9 @@ class PaymentApplicationServiceTest {
 
             given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
             given(userQueryService.getUserEntity(1L)).willReturn(user);
-            given(paymentCommandService.createPayment(order.getId(), PaymentType.BILLING_KEY)).willReturn(payment);
+            given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
+                    .willReturn(new PaymentCommandService.BillingKeyPayment(payment, true));
+            given(paymentCommandService.markBillingKeyRequested(payment.getId())).willReturn(true);
             given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
                     .willReturn(new PortOnePaymentResponse(PortOneStatus.FAILED, 10000L, null, null, null, null, null, null));
 
@@ -326,7 +347,102 @@ class PaymentApplicationServiceTest {
                     .isInstanceOf(PaymentException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
 
-            verify(paymentCommandService).handleFailed(eq("PAY-001"), eq(1L));
+            verify(failureService).handleAutoPaymentFailure(payment.getId(), order.getId());
+        }
+
+        @Test
+        @DisplayName("실패: 즉시구매 자동결제 실패도 빌링키 실패 영속화 경로로 처리한다")
+        void fail_buyoutPortOnePaymentFailed() {
+            Order order = TestFixtures.anBuyoutOrder(OrderStatus.PAYMENT_PENDING);
+            User user = TestFixtures.aUserWithBillingKey();
+            Payment payment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
+
+            given(orderQueryService.findByOrderUid("ORD-002")).willReturn(order);
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
+            given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
+                    .willReturn(new PaymentCommandService.BillingKeyPayment(payment, true));
+            given(paymentCommandService.markBillingKeyRequested(payment.getId())).willReturn(true);
+            given(portOneClientService.attemptBillingKeyPayment(anyString(), anyString(), anyLong()))
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.FAILED, 10000L, null, null, null, null, null, null));
+
+            assertThatThrownBy(() -> paymentApplicationService.autoPayment("ORD-002"))
+                    .isInstanceOf(PaymentException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PAYMENT_STATUS_NOT_PAID);
+
+            verify(failureService).handleAutoPaymentFailure(payment.getId(), order.getId());
+        }
+
+        @Test
+        @DisplayName("멱등: 기존 PENDING 자동결제가 있으면 같은 paymentUid로 PG를 재시도한다")
+        void retry_existingPendingBillingKeyPayment() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            User user = TestFixtures.aUserWithBillingKey();
+            Payment existingPayment = TestFixtures.aBillingKeyPayment(PaymentStatus.PENDING);
+            LocalDateTime paidAt = LocalDateTime.now();
+
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
+            given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
+                    .willReturn(new PaymentCommandService.BillingKeyPayment(existingPayment, false));
+            given(paymentCommandService.markBillingKeyRequested(existingPayment.getId())).willReturn(true);
+            given(portOneClientService.attemptBillingKeyPayment("PAY-001", "bkey-001", 10000L))
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "BILLING_KEY", paidAt, null, null, null, null));
+            given(paymentCommandService.completePayment(existingPayment.getId(), order.getId(), "BILLING_KEY", paidAt))
+                    .willReturn(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED));
+
+            PaymentResponse response = paymentApplicationService.autoPayment("ORD-001");
+
+            assertThat(response.paymentUid()).isEqualTo(existingPayment.getPaymentUid());
+            assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
+            verify(portOneClientService).attemptBillingKeyPayment("PAY-001", "bkey-001", 10000L);
+            verify(paymentCommandService).completePayment(existingPayment.getId(), order.getId(), "BILLING_KEY", paidAt);
+        }
+
+        @Test
+        @DisplayName("멱등: 이미 PG 요청 marker가 있는 PENDING 자동결제는 POST 없이 PortOne 조회로 처리한다")
+        void idempotent_requestedPendingBillingKeyPayment() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            User user = TestFixtures.aUserWithBillingKey();
+            Payment existingPayment = TestFixtures.aRequestedBillingKeyPayment(PaymentStatus.PENDING);
+            LocalDateTime paidAt = LocalDateTime.now();
+
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
+            given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
+                    .willReturn(new PaymentCommandService.BillingKeyPayment(existingPayment, false));
+            given(portOneClientService.getPayment("PAY-001"))
+                    .willReturn(new PortOnePaymentResponse(PortOneStatus.PAID, 10000L, "BILLING_KEY", paidAt, null, null, null, null));
+            given(paymentCommandService.completePayment(existingPayment.getId(), order.getId(), "BILLING_KEY", paidAt))
+                    .willReturn(TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED));
+
+            PaymentResponse response = paymentApplicationService.autoPayment("ORD-001");
+
+            assertThat(response.paymentUid()).isEqualTo(existingPayment.getPaymentUid());
+            assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
+            verify(paymentCommandService, never()).markBillingKeyRequested(anyLong());
+            verify(portOneClientService, never()).attemptBillingKeyPayment(anyString(), anyString(), anyLong());
+            verify(portOneClientService).getPayment("PAY-001");
+            verify(paymentCommandService).completePayment(existingPayment.getId(), order.getId(), "BILLING_KEY", paidAt);
+        }
+
+        @Test
+        @DisplayName("멱등: 기존 자동결제가 최종 상태면 PG 호출 없이 기존 결제를 반환한다")
+        void idempotent_existingFinalBillingKeyPayment() {
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            User user = TestFixtures.aUserWithBillingKey();
+            Payment existingPayment = TestFixtures.aBillingKeyPayment(PaymentStatus.COMPLETED);
+
+            given(orderQueryService.findByOrderUid("ORD-001")).willReturn(order);
+            given(userQueryService.getUserEntity(1L)).willReturn(user);
+            given(paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId()))
+                    .willReturn(new PaymentCommandService.BillingKeyPayment(existingPayment, false));
+
+            PaymentResponse response = paymentApplicationService.autoPayment("ORD-001");
+
+            assertThat(response.paymentUid()).isEqualTo(existingPayment.getPaymentUid());
+            assertThat(response.status()).isEqualTo(PaymentStatus.COMPLETED);
+            verify(portOneClientService, never()).attemptBillingKeyPayment(anyString(), anyString(), anyLong());
+            verify(paymentCommandService, never()).completePayment(anyLong(), anyLong(), anyString(), any());
         }
     }
 }

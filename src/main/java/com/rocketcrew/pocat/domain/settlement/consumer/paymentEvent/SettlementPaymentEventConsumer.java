@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class SettlePaymentEventConsumer {
+public class SettlementPaymentEventConsumer {
 
     private final SettlementCommandService settlementCommandService;
     private final ObjectMapper objectMapper;

@@ -241,6 +241,12 @@ public final class TestFixtures {
         return payment;
     }
 
+    public static Payment aRequestedBillingKeyPayment(PaymentStatus status) {
+        Payment payment = aBillingKeyPayment(status);
+        ReflectionTestUtils.setField(payment, "billingKeyRequestedAt", LocalDateTime.now().minusMinutes(1));
+        return payment;
+    }
+
     // ── Card ─────────────────────────────────────────────────────────
 
     public static Series aSeries() {
