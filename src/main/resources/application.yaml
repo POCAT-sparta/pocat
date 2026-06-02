@@ -63,6 +63,10 @@ portone:
   webhook-secret: ${PORTONE_WEBHOOK_SECRET}
   webhook-allowed-ips: ${PORTONE_WEBHOOK_ALLOWED_IPS:}
 
+pocat:
+  internal:
+    token: ${POCAT_INTERNAL_TOKEN:dev-token}
+
 outbox:
   relay:
     age-threshold-seconds: 10
