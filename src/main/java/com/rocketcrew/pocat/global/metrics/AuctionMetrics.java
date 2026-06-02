@@ -17,12 +17,12 @@ public class AuctionMetrics {
                 .register(registry);
 
         endedSuccess  = Counter.builder("auction.ended.total")
-                .description("총 경매 종료 수")
+                .description("경매 종료 수 (result=success: 낙찰, result=no_bidder: 유찰)")
                 .tag("result", "success")
                 .register(registry);
 
         endedNoBidder = Counter.builder("auction.ended.total")
-                .description("낙찰 혹은 유찰 경매 수")
+                .description("경매 종료 수 (result=success: 낙찰, result=no_bidder: 유찰)")
                 .tag("result", "no_bidder")
                 .register(registry);
     }
