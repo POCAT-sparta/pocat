@@ -103,13 +103,16 @@ class AuctionBuyoutConcurrencyIntegrationTest {
     @BeforeEach
     void setUp() throws Exception {
         // Redisson 분산 락 → AtomicBoolean으로 시뮬레이션
-        AtomicBoolean lockHeld = new AtomicBoolean(false);
+        // unlock() 호출 후에도 false로 되돌리지 않아 "1회 성공 후 영구 실패"를 보장한다.
+        // 이렇게 해야 성공 스레드가 커밋·해제한 뒤 대기 중이던 다른 스레드가
+        // 우연히 락을 재획득하여 두 번째 buyout이 실행되는 경우를 방지한다.
+        AtomicBoolean lockAcquired = new AtomicBoolean(false);
         RLock mockLock = Mockito.mock(RLock.class);
         when(redissonClient.getLock(anyString())).thenReturn(mockLock);
-        doAnswer(inv -> lockHeld.compareAndSet(false, true))
+        doAnswer(inv -> lockAcquired.compareAndSet(false, true))
                 .when(mockLock).tryLock(anyLong(), any(TimeUnit.class));
         when(mockLock.isHeldByCurrentThread()).thenReturn(true);
-        doAnswer(inv -> { lockHeld.set(false); return null; }).when(mockLock).unlock();
+        doAnswer(inv -> null).when(mockLock).unlock(); // sticky: 한번 획득 후 해제해도 재획득 불가
 
         // PortOne mock: buyoutPrice(50,000원) PAID 응답
         PortOnePaymentResponse paidResponse = PortOnePaymentResponse.builder()
@@ -181,8 +184,9 @@ class AuctionBuyoutConcurrencyIntegrationTest {
             CountDownLatch startLatch = new CountDownLatch(1);
             CountDownLatch doneLatch  = new CountDownLatch(threadCount);
 
-            AtomicInteger successCount = new AtomicInteger(0);
-            AtomicInteger failCount    = new AtomicInteger(0);
+            AtomicInteger successCount   = new AtomicInteger(0);
+            AtomicInteger lockFailCount  = new AtomicInteger(0);
+            AtomicInteger otherFailCount = new AtomicInteger(0);
 
             for (int i = 0; i < threadCount; i++) {
                 executor.submit(() -> {
@@ -190,8 +194,10 @@ class AuctionBuyoutConcurrencyIntegrationTest {
                         startLatch.await();
                         auctionBuyoutService.buyout(buyerId, auctionId);
                         successCount.incrementAndGet();
+                    } catch (com.rocketcrew.pocat.global.exception.domain.AuctionException e) {
+                        lockFailCount.incrementAndGet();   // AUCTION_LOCK_FAILED
                     } catch (Exception e) {
-                        failCount.incrementAndGet();
+                        otherFailCount.incrementAndGet();  // 예상 외 예외
                     } finally {
                         doneLatch.countDown();
                     }
@@ -209,23 +215,24 @@ class AuctionBuyoutConcurrencyIntegrationTest {
                     "SELECT status FROM auctions WHERE id = ?", String.class, auctionId);
 
             System.out.println("=== 즉시구매 동시성 결과 ===");
-            System.out.printf("성공: %d건 | 실패(락): %d건 | 경매상태: %s%n",
-                    successCount.get(), failCount.get(), auctionStatus);
+            System.out.printf("성공: %d건 | 락실패: %d건 | 기타실패: %d건 | 경매상태: %s%n",
+                    successCount.get(), lockFailCount.get(), otherFailCount.get(), auctionStatus);
 
+            assertThat(otherFailCount.get()).as("예상 외 예외 없어야 함").isZero();
             assertThat(successCount.get())
                     .as("즉시구매는 1건만 성공해야 함")
                     .isEqualTo(1);
-            assertThat(failCount.get())
-                    .as("나머지는 락 획득 실패")
+            assertThat(lockFailCount.get())
+                    .as("나머지는 AUCTION_LOCK_FAILED여야 함")
                     .isEqualTo(threadCount - 1);
             assertThat(auctionStatus)
                     .as("경매가 ENDED 상태로 마감되어야 함")
                     .isEqualTo("ENDED");
 
-            // 주문·결제 각 1건만 생성
+            // 주문 1건만 생성
             Long orderCount = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM orders WHERE auction_id = ?", Long.class, auctionId);
-            assertThat(orderCount).isEqualTo(1L);
+            assertThat(orderCount).as("즉시구매 주문은 1건만 생성되어야 함").isEqualTo(1L);
         }
     }
 }

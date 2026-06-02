@@ -259,9 +259,10 @@ class ConfirmPaymentIdempotencyIntegrationTest {
             // 결제 상태는 CANCELLED (취소 처리)
             String paymentStatus = jdbcTemplate.queryForObject(
                     "SELECT status FROM payments WHERE order_id = ?", String.class, orderId);
+            // cancelPayment를 SUCCEEDED로 모킹했으므로 CANCELLED만 기대
             assertThat(paymentStatus)
-                    .as("금액 불일치로 취소된 결제 상태")
-                    .isIn("CANCELLED", "CANCEL_HTTP_ERROR");
+                    .as("금액 불일치로 취소된 결제 상태는 CANCELLED여야 함")
+                    .isEqualTo("CANCELLED");
         }
     }
 }

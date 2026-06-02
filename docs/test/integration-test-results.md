@@ -123,6 +123,7 @@
 **검증 목적**: `createBid()` 동시 호출 시 Redisson 분산 락 직렬화 효과
 
 **동시성 보호 메커니즘**
+
 ```text
 AuctionBidCommandService.createBid()
   └─ redissonClient.getLock("auction:lock:{auctionId}")
@@ -178,6 +179,7 @@ AuctionBidCommandService.createBid()
 **검증 목적**: `createRefund()` 동시 호출 시 Order 비관적 락 직렬화 효과
 
 **동시성 보호 메커니즘**
+
 ```text
 RefundCommandService.createRefund()
   └─ orderRepository.findByIdWithLock(orderId)  ← PESSIMISTIC_WRITE
@@ -220,6 +222,7 @@ consumer 메서드를 직접 호출해 실제 Kafka 브로커 없이 검증한�
 **검증 목적**: 동시·중복 confirmPayment 호출 시 COMPLETED 결제 1건만 생성
 
 **이중 방어 구조**
+
 ```text
 1차 (락 없음)
   └─ payment.isFinalized() 조기 반환
@@ -259,6 +262,7 @@ consumer 메서드를 직접 호출해 실제 Kafka 브로커 없이 검증한�
 **검증 목적**: `retryRefund()` 시나리오별 상태 전이 및 지수 백오프 정책 검증
 
 **재시도 정책 (RefundRetryPolicy.MAX_RETRY_COUNT = 5)**
+
 ```text
 retryCount < 5  → FAILED_RETRYABLE (nextRetryAt 지수 백오프 갱신)
 retryCount >= 5 → FAILED_FINAL     (수동 처리 필요)

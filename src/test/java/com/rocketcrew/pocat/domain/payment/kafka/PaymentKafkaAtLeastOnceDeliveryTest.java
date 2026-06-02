@@ -182,7 +182,9 @@ class PaymentKafkaAtLeastOnceDeliveryTest {
         kafkaTemplate.send("order", TEST_ORDER_UID, message).get();
         kafkaTemplate.send("order", TEST_ORDER_UID, message).get();
 
-        // @KafkaListener(paymentKafkaListenerContainerFactory)가 소비할 때까지 대기
+        // 2개 메시지가 모두 소비되어 안정적으로 처리될 때까지 대기한다.
+        // COMPLETED 1건을 확인한 후 추가 2초를 대기해 두 번째 메시지 처리가 완료되었음을 보장한다.
+        // (두 번째 소비 후 중복 결제나 추가 PortOne 호출이 없는지까지 검증)
         await().atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(500))
                 .until(() -> {
@@ -191,6 +193,9 @@ class PaymentKafkaAtLeastOnceDeliveryTest {
                             Long.class, orderId);
                     return count != null && count == 1L;
                 });
+
+        // 첫 번째 메시지가 처리된 뒤, 두 번째(중복) 메시지가 소비·처리될 충분한 시간을 대기
+        Thread.sleep(2_000);
 
         Long paymentCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM payments WHERE order_id = ?", Long.class, orderId);
