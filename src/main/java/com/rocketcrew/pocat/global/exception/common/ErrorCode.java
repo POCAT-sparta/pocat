@@ -77,6 +77,7 @@ public enum ErrorCode {
     PAYMENT_BUYOUT_DIRECT_NOT_ALLOWED(HttpStatus.CONFLICT, "즉시구매 주문은 직접결제를 진행할 수 없습니다."),
     PAYMENT_WINDOW_EXPIRED(HttpStatus.GONE, "결제 가능 시간(1시간)이 초과되었습니다."),
     PAYMENT_BUYER_MISMATCH(HttpStatus.FORBIDDEN, "결제 요청자와 주문 구매자가 일치하지 않습니다."),
+    PAYMENT_ORDER_MISMATCH(HttpStatus.BAD_REQUEST, "결제와 주문이 일치하지 않습니다."),
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.CONFLICT, "결제 금액이 주문 금액과 일치하지 않습니다."),
     PAYMENT_METHOD_REQUIRED(HttpStatus.BAD_REQUEST, "결제 수단은 필수입니다."),
     PAYMENT_PAID_AT_REQUIRED(HttpStatus.BAD_REQUEST, "결제 완료 시각은 필수입니다."),
