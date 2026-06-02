@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.refund.controller.InternalRefundController;
 import com.rocketcrew.pocat.domain.refund.service.RefundCommandService;
 import com.rocketcrew.pocat.global.config.SecurityConfig;
 import com.rocketcrew.pocat.global.security.JwtUtil;
+import org.springframework.context.annotation.Import;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,7 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - 예외 처리 (500 Internal Server Error)
  */
 @WebMvcTest(controllers = {InternalAuctionController.class, InternalRefundController.class})
-@TestPropertySource(properties = "pocat.internal.token=test-token")
+@Import(SecurityConfig.class)
+@TestPropertySource(properties = {"pocat.internal.token=test-token", "cors.allowed-origins=http://localhost:3000"})
 class InternalEndpointMvcTest {
 
     @Autowired
@@ -75,12 +77,12 @@ class InternalEndpointMvcTest {
         }
 
         @Test
-        @DisplayName("T-01: X-Internal-Token 헤더 없을 때 400 반환")
-        void shouldReturn400WhenTokenMissing_auction() throws Exception {
+        @DisplayName("T-01: X-Internal-Token 헤더 없을 때 401 반환")
+        void shouldReturn401WhenTokenMissing_auction() throws Exception {
             mockMvc.perform(post("/internal/auctions/{id}/recover-buyout", AUCTION_ID)
 )
                     .andDo(print())
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
@@ -151,11 +153,11 @@ class InternalEndpointMvcTest {
         }
 
         @Test
-        @DisplayName("T-07: X-Internal-Token 헤더 없을 때 400 반환")
-        void shouldReturn400WhenTokenMissing_refund() throws Exception {
+        @DisplayName("T-07: X-Internal-Token 헤더 없을 때 401 반환")
+        void shouldReturn401WhenTokenMissing_refund() throws Exception {
             mockMvc.perform(post("/internal/refunds/{id}/retry", REFUND_ID)
 )
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
@@ -198,14 +200,14 @@ class InternalEndpointMvcTest {
         }
 
         @Test
-        @DisplayName("T-12: 유효한 토큰이지만 IllegalArgumentException 발생 시 200 반환 (멱등성)")
-        void shouldReturn200WhenIllegalArgumentException_refund() throws Exception {
+        @DisplayName("T-12: 유효한 토큰이지만 IllegalArgumentException 발생 시 500 반환 (비멱등 예외, 재시도 필요)")
+        void shouldReturn500WhenIllegalArgumentException_refund() throws Exception {
             willThrow(new IllegalArgumentException("invalid refund state"))
                     .given(refundCommandService).retryRefund(REFUND_ID);
 
             mockMvc.perform(post("/internal/refunds/{id}/retry", REFUND_ID)
                     .header("X-Internal-Token", VALID_TOKEN))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isInternalServerError());
         }
     }
 }

@@ -35,10 +35,12 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
     private final Environment environment;
-    private final InternalTokenAuthFilter internalTokenAuthFilter;
 
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
+
+    @Value("${pocat.internal.token}")
+    private String internalToken;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -98,7 +100,7 @@ public class SecurityConfig {
                     auth.anyRequest().authenticated();
                 })
                 .addFilterBefore(
-                        internalTokenAuthFilter,
+                        new InternalTokenAuthFilter(internalToken),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .addFilterBefore(
