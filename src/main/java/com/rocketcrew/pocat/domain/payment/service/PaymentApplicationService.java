@@ -87,17 +87,19 @@ public class PaymentApplicationService {
         PaymentCommandService.BillingKeyPayment billingKeyPayment =
                 paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId());
         Payment payment = billingKeyPayment.payment();
-        if (!billingKeyPayment.created()) {
-            return PaymentResponse.from(payment);
-        }
 
         if (payment.isFinalized() || payment.getStatus() != PaymentStatus.PENDING) {
             return PaymentResponse.from(payment);
         }
 
-        PortOnePaymentResponse response = portOneClientService.attemptBillingKeyPayment(
-                payment.getPaymentUid(), billingKey, payment.getAmount()
-        );
+        PortOnePaymentResponse response;
+        if (payment.getBillingKeyRequestedAt() == null && paymentCommandService.markBillingKeyRequested(payment.getId())) {
+            response = portOneClientService.attemptBillingKeyPayment(
+                    payment.getPaymentUid(), billingKey, payment.getAmount()
+            );
+        } else {
+            response = portOneClientService.getPayment(payment.getPaymentUid());
+        }
 
         // 네트워크 에러, 대기, 준비 건은 3번 재시도 하여 데이터 조회
         if(PortOneStatus.NETWORK_ERROR.equals(response.status())
@@ -109,7 +111,7 @@ public class PaymentApplicationService {
 
         // 이후 성공이 아니면 실패처리
         if (!PortOneStatus.PAID.equals(response.status())) {
-            paymentCommandService.handleFailed(payment.getPaymentUid(), order.getId());
+            failureService.handleAutoPaymentFailure(payment.getId(), order.getId());
             throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
         }
 

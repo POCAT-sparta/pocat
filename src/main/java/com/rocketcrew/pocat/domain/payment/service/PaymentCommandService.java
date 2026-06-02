@@ -8,6 +8,8 @@ import com.rocketcrew.pocat.domain.payment.entity.Payment;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.entity.PaymentType;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
+import com.rocketcrew.pocat.global.exception.common.ErrorCode;
+import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
 import lombok.RequiredArgsConstructor;
@@ -68,13 +70,19 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean markBillingKeyRequested(Long paymentId) {
+        Payment payment = paymentQueryService.findPaymentByIdWithLock(paymentId);
+        return payment.markBillingKeyRequested(LocalDateTime.now());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Payment completePayment(Long paymentId, Long orderId, String paymentMethod, LocalDateTime paidAt) {
         Payment payment = paymentQueryService.findPaymentByIdWithLock(paymentId);
         if (payment.isFinalized()) {
             return payment;
         }
 
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Order order = findOrderForPaymentWithLock(payment, orderId);
         payment.complete(paymentMethod, paidAt);
         order.completePayment();
         evictAvgPriceCache(order.getCardId());
@@ -94,17 +102,9 @@ public class PaymentCommandService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleFailed(String paymentUid, Long orderId) {
-        Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
-        payment.fail();
-        order.failPayment();
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleCancel(String paymentUid, Long orderId) {
         Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
+        Order order = findOrderForPaymentWithLock(payment, orderId);
         payment.cancel();
         order.failPayment();
     }
@@ -117,6 +117,13 @@ public class PaymentCommandService {
 
     private String generatePaymentUid() {
         return TsidGenerator.generatePaymentUid();
+    }
+
+    private Order findOrderForPaymentWithLock(Payment payment, Long orderId) {
+        if (!payment.getOrderId().equals(orderId)) {
+            throw new PaymentException(ErrorCode.PAYMENT_ORDER_MISMATCH);
+        }
+        return orderQueryService.findByOrderIdWithLock(orderId);
     }
 
     private void evictAvgPriceCache(Long cardId) {
