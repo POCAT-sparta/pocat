@@ -62,7 +62,6 @@ public class FailureService {
     }
 
     public void directPaymentFailEvent(String orderUid, Long buyerId, Long sellerId) {
-        paymentMetrics.incrementDirectFail();
         DirectPaymentFailedEvent event = new DirectPaymentFailedEvent(
                 orderUid,
                 buyerId,

@@ -177,6 +177,7 @@ public class PaymentApplicationService {
 
             if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
                 paymentMetrics.incrementAmountMismatch();
+                paymentMetrics.incrementDirectFail();
                 Long cancelAmount = portOneClientPayment.amount() != null ? portOneClientPayment.amount() : payment.getAmount();
                 attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
                 failureService.directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
