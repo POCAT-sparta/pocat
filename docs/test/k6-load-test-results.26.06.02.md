@@ -90,7 +90,7 @@ first_batch와 steady 간 응답시간 차이가 미미 → 캐시 워밍 후 �
 
 ### 결과
 
-```
+```text
 concurrent_successes:  10
 concurrent_failures:   20  (레이트리밋 429)
 ```
@@ -120,7 +120,7 @@ concurrent_failures:   20  (레이트리밋 429)
 
 ### 결과
 
-```
+```text
 concurrent_bid_successes:   1   ✅
 concurrent_bid_lock_failed: 29
 ```
@@ -173,11 +173,11 @@ VALUES ('k6-bidder-1@test.com', '$2a$10$...', 'k6bidder1', 'USER', ...),
 
 | 시나리오 | 결과 | 핵심 수치 | 06-01 대비 |
 |---------|------|----------|-----------|
-| 스모크 | ✅ 통과 | p(95) 8.47ms, 에러 0% | p(95) 23.61ms → 8.47ms ↑ |
-| 카드 검색 부하 | ✅ 통과 | p(95) 8.64ms, 에러 0% | p(95) 10.72ms → 8.64ms ↑ |
-| 캐시 스탬피드 | ✅ 통과 | p(95) 6.55ms, 에러 0% | p(95) 9.58ms → 6.55ms ↑ |
+| 스모크 | ✅ 통과 | p(95) 8.47ms, 에러 0% | p(95) 23.61ms → 8.47ms ↓ |
+| 카드 검색 부하 | ✅ 통과 | p(95) 8.64ms, 에러 0% | p(95) 10.72ms → 8.64ms ↓ |
+| 캐시 스탬피드 | ✅ 통과 | p(95) 6.55ms, 에러 0% | p(95) 9.58ms → 6.55ms ↓ |
 | 결제 동시성 | ✅ 설계 의도 | concurrent_successes=10, confirmPayment에서 중복 차단 | ⚠️ 버그 → 설계 의도로 재분류 |
 | 입찰 동시성 | ✅ 통과 | concurrent_bid_successes=1, Redisson 정상 동작 | bidder 생성 방식 SQL로 변경 |
-| 트래픽 스파이크 | ✅ 통과 | 100 VU 급증 시 p(95) 6.5ms, 에러 0% | p(95) 7.53ms → 6.5ms ↑ |
+| 트래픽 스파이크 | ✅ 통과 | 100 VU 급증 시 p(95) 6.5ms, 에러 0% | p(95) 7.53ms → 6.5ms ↓ |
 
 > Breaking Point(07) 미실행 — `./k6/run.sh stress`로 단독 실행 권장.

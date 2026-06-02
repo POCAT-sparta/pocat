@@ -106,7 +106,7 @@
 **검증 목적**: `createBid()` 동시 호출 시 Redisson 분산 락 직렬화 효과
 
 **동시성 보호 메커니즘**
-```
+```text
 AuctionBidCommandService.createBid()
   └─ redissonClient.getLock("auction:lock:{auctionId}")
        └─ lock.tryLock(0, SECONDS)  ← 대기 없이 즉시 실패
@@ -134,7 +134,7 @@ AuctionBidCommandService.createBid()
 
 **이중 방어 구조**
 
-```
+```text
 1차 방어 (순차 중복)
   └─ existsByOrderId() 체크 → true면 즉시 return
 
@@ -161,7 +161,7 @@ AuctionBidCommandService.createBid()
 **검증 목적**: `createRefund()` 동시 호출 시 Order 비관적 락 직렬화 효과
 
 **동시성 보호 메커니즘**
-```
+```text
 RefundCommandService.createRefund()
   └─ orderRepository.findByIdWithLock(orderId)  ← PESSIMISTIC_WRITE
        직렬화 보장:

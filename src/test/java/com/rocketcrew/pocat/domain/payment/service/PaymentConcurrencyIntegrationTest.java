@@ -203,14 +203,6 @@ class PaymentConcurrencyIntegrationTest {
         @Test
         @DisplayName("실패: 결제 기한 초과 주문 → PAYMENT_WINDOW_EXPIRED")
         void expiredOrder_throwsPaymentWindowExpired() {
-            // 결제 기한이 이미 만료된 주문으로 교체
-            transactionTemplate.execute(status -> {
-                orderRepository.findByOrderUid(TEST_ORDER_UID).ifPresent(order -> {
-                    // H2는 updatedAt 직접 접근 불가 → paymentDeadline을 과거로 설정한 새 주문 사용
-                });
-                return null;
-            });
-
             // paymentDeadline 과거인 새 주문
             Long expiredOrderId = transactionTemplate.execute(status -> {
                 Order expired = orderRepository.save(Order.builder()
