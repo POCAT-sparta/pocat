@@ -1,7 +1,5 @@
 package com.rocketcrew.pocat.domain.order.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -15,12 +13,15 @@ import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.metrics.OrderMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -40,6 +41,7 @@ public class OrderCommandService {
     private final AuctionBidRepository auctionBidRepository;
     private final SetExpireService setExpireService;
     private final AuctionRepository auctionRepository;
+    private final OrderMetrics metrics;
 
     // 경매 낙찰 주문 생성 — bidderRank 순위의 Order 저장 후 order.created 이벤트 발행
     public void createOrderFromAuction(Long auctionId, Long cardId, Long sellerId,
@@ -57,12 +59,25 @@ public class OrderCommandService {
         );
         outboxEventWriter.write("order", order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                metrics.incrementCreatedFromAuction();
+            }
+        });
     }
 
     // 즉시구매 주문만 생성한다. 자동결제는 주문 커밋 이후 상위 유스케이스에서 호출한다.
     public Order createOrderFromBuyout(Long auctionId, Long cardId, Long sellerId,
                                        Long buyerId, Long finalPrice) {
-        return orderRepository.save(Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
+        Order order = orderRepository.save(Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                metrics.incrementCreatedFromBuyout();
+            }
+        });
+        return order;
     }
 
     // 자동결제 실패 시 1시간 직접결제 창 설정 — 주문 상태를 AUTO_PAYMENT_FAILED로 변경하고 Redis 만료 키 등록
@@ -177,6 +192,12 @@ public class OrderCommandService {
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         order.cancel(reason);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                metrics.incrementCancelled();
+            }
+        });
 
         // 주문 취소 이벤트 발행
         eventPublisher.publishEvent(new OrderCancelledEvent(

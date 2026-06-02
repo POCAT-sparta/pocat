@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
 import com.rocketcrew.pocat.domain.ai.analysis.entity.CardAiAnalysis;
 import com.rocketcrew.pocat.domain.ai.analysis.repository.CardAiAnalysisRepository;
-import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
+import com.rocketcrew.pocat.global.metrics.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
