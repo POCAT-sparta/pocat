@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.global.config;
 
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import com.rocketcrew.pocat.global.security.JwtAuthenticationFilter;
+import com.rocketcrew.pocat.global.security.InternalTokenAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +35,7 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     private final StringRedisTemplate redisTemplate;
     private final Environment environment;
+    private final InternalTokenAuthFilter internalTokenAuthFilter;
 
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
@@ -69,6 +71,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth
+                            .requestMatchers("/internal/**").authenticated()
                             .requestMatchers("/api/v1/auth/**").permitAll()
                             .requestMatchers("/ws/chat/**").permitAll()
                             .requestMatchers(HttpMethod.GET,
@@ -94,6 +97,10 @@ public class SecurityConfig {
                     }
                     auth.anyRequest().authenticated();
                 })
+                .addFilterBefore(
+                        internalTokenAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                )
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtUtil, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class
