@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
+import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.InvalidAuctionEventPayloadException;
@@ -15,8 +16,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -54,6 +58,7 @@ class AuctionPostProcessConsumerTest {
                 {
                   "eventType": "auction.activated",
                   "auctionId": 1,
+                  "sellerId": 10,
                   "endedAt": "2026-06-01T19:00:00"
                 }
                 """;
@@ -61,6 +66,12 @@ class AuctionPostProcessConsumerTest {
         consumer.consume(message);
 
         verify(auctionExpirationRedisService).setExpirationKeys(1L, endedAt);
+        verify(notificationCommandService).send(
+                eq(10L),
+                eq(NotificationType.AUCTION_ACTIVATED),
+                anyString(),
+                eq(Map.of("auctionId", 1L))
+        );
         verifyNoInteractions(auctionSnapshotCommandService);
     }
 
@@ -77,7 +88,7 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
     }
 
     @Test
@@ -88,7 +99,7 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
     }
 
     @Test
@@ -105,6 +116,7 @@ class AuctionPostProcessConsumerTest {
 
         verify(auctionExpirationRedisService).deleteExpirationKeys(1L);
         verify(auctionSnapshotCommandService).createSnapshot(1L, null);
+        verifyNoInteractions(notificationCommandService);
     }
 
     @Test
@@ -122,6 +134,7 @@ class AuctionPostProcessConsumerTest {
 
         verify(auctionExpirationRedisService).deleteExpirationKeys(1L);
         verify(auctionSnapshotCommandService).createSnapshot(1L, 10000L);
+        verifyNoInteractions(notificationCommandService);
     }
 
     @Test
@@ -137,7 +150,7 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
     }
 
     @Test
@@ -146,13 +159,34 @@ class AuctionPostProcessConsumerTest {
         String message = """
                 {
                   "eventType": "auction.cancelled",
-                  "auctionId": 1
+                  "auctionId": 1,
+                  "sellerId": 10,
+                  "reason": "seller requested",
+                  "bidderIds": [20, 30]
                 }
                 """;
 
         consumer.consume(message);
 
         verify(auctionExpirationRedisService).deleteExpirationKeys(1L);
+        verify(notificationCommandService).send(
+                eq(10L),
+                eq(NotificationType.AUCTION_CANCELLED),
+                anyString(),
+                eq(Map.of("auctionId", 1L))
+        );
+        verify(notificationCommandService).send(
+                eq(20L),
+                eq(NotificationType.AUCTION_CANCELLED),
+                anyString(),
+                eq(Map.of("auctionId", 1L))
+        );
+        verify(notificationCommandService).send(
+                eq(30L),
+                eq(NotificationType.AUCTION_CANCELLED),
+                anyString(),
+                eq(Map.of("auctionId", 1L))
+        );
         verifyNoInteractions(auctionSnapshotCommandService);
     }
 
@@ -162,13 +196,20 @@ class AuctionPostProcessConsumerTest {
         String message = """
                 {
                   "eventType": "auction.inspection.passed",
-                  "auctionId": 1
+                  "auctionId": 1,
+                  "sellerId": 10
                 }
                 """;
 
         consumer.consume(message);
 
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verify(notificationCommandService).send(
+                eq(10L),
+                eq(NotificationType.INSPECTION_PASSED),
+                anyString(),
+                eq(Map.of("auctionId", 1L))
+        );
     }
 
     @Test
@@ -177,13 +218,21 @@ class AuctionPostProcessConsumerTest {
         String message = """
                 {
                   "eventType": "auction.inspection.failed",
-                  "auctionId": 1
+                  "auctionId": 1,
+                  "sellerId": 10,
+                  "failedReason": "invalid condition"
                 }
                 """;
 
         consumer.consume(message);
 
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verify(notificationCommandService).send(
+                eq(10L),
+                eq(NotificationType.INSPECTION_FAILED),
+                anyString(),
+                eq(Map.of("auctionId", 1L))
+        );
     }
 
     @Test
@@ -198,7 +247,7 @@ class AuctionPostProcessConsumerTest {
 
         consumer.consume(message);
 
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
     }
 
     @Test
@@ -213,6 +262,6 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
     }
 }

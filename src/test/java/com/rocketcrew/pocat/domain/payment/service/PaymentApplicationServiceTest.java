@@ -129,7 +129,7 @@ class PaymentApplicationServiceTest {
 
         @Test
         @DisplayName("성공: PAYMENT_FAILED 주문에 PG_DIRECT 결제를 신규 생성한다")
-        void idempotent_pendingAlreadyExists() {
+        void success_createPgDirectPayment() {
             Order order = TestFixtures.aPaymentFailedOrder();
             Payment existing = TestFixtures.aPayment(PaymentStatus.PENDING);
 

@@ -103,8 +103,8 @@ public class PaymentCommandService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleCancel(String paymentUid, Long orderId) {
-        Order order = orderQueryService.findByOrderIdWithLock(orderId);
         Payment payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+        Order order = orderQueryService.findByOrderIdWithLock(orderId);
         payment.cancel();
         order.failPayment();
     }
