@@ -82,9 +82,9 @@ Redisson RLock을 배치 서버에서 획득하고, Tasklet이 DB 상태를 직�
 - 배치 Tasklet은 ES를 직접 쿼리하지 않고 Outbox/Kafka를 경유하여 비동기 위임한다.
 - SLA: p99 ≤ 30s. ES 쿼리 방어 필터를 주방어선으로 유지.
 
-**Feature Flag 전환**
-- 각 스케줄러에 `pocat.scheduler.{name}.enabled` 플래그를 적용한다.
-- 메인 앱의 기존 스케줄러는 플래그로 비활성화 후 검증, 검증 완료 시 코드 삭제.
+**메인 앱 스케줄러 삭제 (직접 삭제 방식)**
+- Feature Flag 병행 운영 없이 PR #176에서 메인 앱 스케줄러 클래스를 즉시 삭제한다.
+- 이 PR 머지 직후 메인 앱에는 `@Scheduled` 어노테이션이 남아있지 않으며, 모든 스케줄링은 pocat-batch 서버로 완전 이관된다.
 
 **Outbox 보조 작업**
 - `OutboxReaperTasklet`: PROCESSING 상태 5분 초과 레코드 → PENDING 리셋 (stuck 회수)
@@ -105,15 +105,36 @@ Redisson RLock을 배치 서버에서 획득하고, Tasklet이 DB 상태를 직�
 
 ## Migration Plan
 
+### 완료된 단계 (PR #171 / PR #176)
+
+| 단계 | 내용 | 상태 |
+|------|------|------|
+| 1 | pocat-batch에 8개 Job Tasklet 구현 (#1~6) + Internal API 클라이언트 (#7·8) | ✅ 완료 (PR #3, pocat-batch) |
+| 2 | 메인 앱 Internal API 엔드포인트 추가 (InternalAuctionController, InternalRefundController) | ✅ 완료 (PR #176, POCAT main) |
+| 3 | 메인 앱 스케줄러 클래스 10개 직접 삭제, CardSyncService `@Scheduled` 제거 | ✅ 완료 (PR #176, POCAT main) |
+| 4 | `InternalTokenAuthFilter` 도입 — X-Internal-Token 헤더 중앙 인증 | ✅ 완료 (PR #176) |
+
+### 남은 단계 (운영 배포 후)
+
 | 단계 | 내용 | 담당 |
 |------|------|------|
-| 1 | pocat-batch에 Tasklet 구현 (#1~6) + Internal API 클라이언트 구현 (#7·8) | 개발팀 |
-| 2 | `pocat.scheduler.{name}.enabled=false` 로 메인 앱 스케줄러 비활성화 (Feature Flag) | 개발팀 |
-| 3 | 스테이징 환경 병행 검증 (7일 이상, 아래 종료 기준 확인) | 개발팀 + QA |
-| 4 | 운영 배포 후 병행 운영 기간 진행 (롤백 조건: 오류율 > 1% 또는 데이터 불일치 감지 시 배치 중단) | 개발팀 + 운영팀 |
-| 5 | 종료 기준 충족 후 메인 앱 스케줄러 코드 삭제, Feature Flag 제거 | 개발팀 |
+| 5 | 스테이징 환경 배치 서버 배포 및 검증 (아래 종료 기준) | 개발팀 + QA |
+| 6 | 운영 배포: pocat-batch 서버 먼저 배포 → POCAT main 배포 (스케줄러 삭제 버전) | 개발팀 + 운영팀 |
 
-**병행 운영 종료 기준 (checklist):**
+> **배포 순서 준수 필수**: pocat-batch 먼저 기동·확인 → POCAT main 배포. 반대 순서 시 스케줄러 공백 발생.
+
+### 롤백 절차
+
+배포 후 배치 Job 연속 3회 FAILED 또는 데이터 정합성 불일치 감지 시:
+
+1. pocat-batch 배포 롤백 (이전 버전으로)
+2. POCAT main `git revert HEAD` — 스케줄러 삭제 커밋 되돌리기 → 재배포
+3. 중복 실행 방지: 롤백된 메인 앱 스케줄러가 재활성화됨 → pocat-batch는 중단 상태
+
+> 롤백은 각 파일이 독립 커밋이므로 `git revert` 단위가 명확. 특정 스케줄러만 선택적 복구 가능.
+
+### 배치 서버 검증 기준 (운영 전 7일)
+
 - [ ] 7일 이상 연속 배치 Job 오류율 0% 유지
 - [ ] Outbox PROCESSING stuck 레코드 미누적 (OutboxReaper 정상 동작 확인)
 - [ ] 경매 활성화/만료/낙찰/환불 데이터 정합성 검증 완료
@@ -132,9 +153,9 @@ Redisson RLock을 배치 서버에서 획득하고, Tasklet이 DB 상태를 직�
 - Spring Batch 메타테이블을 통한 Job 실행 이력 영속 관리
 
 **부정적 효과 / 주의사항**
-- 병행 운영 기간 중 Feature Flag 미적용 시 중복 실행 지속 (플래그 적용 필수)
+- 배포 순서 준수 필수: pocat-batch 먼저 기동 후 POCAT main 배포 (순서 역전 시 스케줄링 공백)
 - Internal API (#7·8) 네트워크 장애 시 배치 재시도 정책 필요
-- OutboxRelayTasklet(#3) 이전 전 메인 앱 OutboxRelayScheduler 비활성화 순서 준수 필요
+- 롤백 시 POCAT main `git revert` 즉시 배포 필요 (병행 운영 기간 없음)
 - 배치 서버 인프라 관리 포인트 유지 (ADR-003 대비 추가 없음, 기존 pocat-batch 확장)
 
 **스키마 변경**: 없음 (기존 `outbox_events`, `BATCH_*` 메타테이블 재사용)
