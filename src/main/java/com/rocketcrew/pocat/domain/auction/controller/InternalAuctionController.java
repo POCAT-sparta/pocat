@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 @Slf4j
 @RestController
 @RequestMapping("/internal/auctions")
@@ -36,7 +39,9 @@ public class InternalAuctionController {
             @PathVariable Long id,
             @RequestHeader("X-Internal-Token") String token) {
 
-        if (!internalToken.equals(token)) {
+        if (!MessageDigest.isEqual(
+                internalToken.getBytes(StandardCharsets.UTF_8),
+                token.getBytes(StandardCharsets.UTF_8))) {
             log.warn("내부 API 인증 실패: 잘못된 토큰");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -44,15 +49,19 @@ public class InternalAuctionController {
         try {
             boolean recovered = auctionBuyoutService.recoverStalePaymentPendingAuction(id);
             if (recovered) {
-                log.info("경매 복구 성공: id={}", id);
+                log.info("경매 복구 성공: auctionId={}", id);
             } else {
-                log.info("경매 복구 스킵 (이미 처리됨 또는 해당 상태 없음): id={}", id);
+                log.info("경매 복구 스킵 (이미 처리됨 또는 해당 상태 없음): auctionId={}", id);
             }
+            return ResponseEntity.ok().build();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            // 이미 처리됨 또는 상태 불일치 → 멱등 성공으로 처리
+            log.info("경매 복구 스킵 (이미 처리됨): auctionId={}, reason={}", id, e.getMessage());
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
-            // 멱등성: 오류 발생해도 200 OK 반환 (배치 재시도 처리)
-            log.debug("경매 복구 중 예외 발생 (멱등 처리): id={}, error={}", id, e.getMessage());
+            // 예기치 않은 오류 → 배치가 재시도할 수 있도록 5xx 반환
+            log.error("경매 복구 실패: auctionId={}", id, e);
+            return ResponseEntity.internalServerError().build();
         }
-
-        return ResponseEntity.ok().build();
     }
 }

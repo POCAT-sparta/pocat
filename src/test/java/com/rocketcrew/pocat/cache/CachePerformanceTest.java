@@ -5,7 +5,7 @@ import com.rocketcrew.pocat.domain.ai.analysis.entity.CardAiAnalysis;
 import com.rocketcrew.pocat.domain.ai.analysis.repository.CardAiAnalysisRepository;
 import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisService;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
-import com.rocketcrew.pocat.domain.ai.monitoring.AiUsageMetrics;
+import com.rocketcrew.pocat.global.metrics.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
 import com.rocketcrew.pocat.domain.ai.rag.service.EmbeddingService;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
@@ -39,7 +39,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
@@ -53,8 +52,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,7 +62,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 

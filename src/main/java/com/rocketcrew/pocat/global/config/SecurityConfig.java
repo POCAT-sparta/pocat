@@ -69,7 +69,8 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth
-                            // 내부 API (배치 시스템 전용): X-Internal-Token 헤더 검증은 컨트롤러에서 수행
+                            // TODO: 운영 환경에서는 /internal/**를 배치 서버 IP 대역만 허용하도록 제한 필요
+                            // 현재는 X-Internal-Token 헤더로만 인증 (내부망 접근 제어 추가 권장)
                             .requestMatchers("/internal/**").permitAll()
                             .requestMatchers("/api/v1/auth/**").permitAll()
                             .requestMatchers("/ws/chat/**").permitAll()

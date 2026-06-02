@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.AutoPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.event.DirectPaymentFailedEvent;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
@@ -31,6 +32,7 @@ public class FailureService {
     private final ApplicationEventPublisher eventPublisher;
     private final OutboxEventWriter outboxEventWriter;
     private final PaymentQueryService paymentQueryService;
+    private final PaymentMetrics paymentMetrics;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleAutoPaymentFailure(Long paymentId, Long orderId) {
@@ -48,6 +50,7 @@ public class FailureService {
     }
 
     public void autoPaymentFailEvent(String orderUid, Long buyerId, Long sellerId) {
+        paymentMetrics.incrementAutoFail();
         AutoPaymentFailedEvent event = new AutoPaymentFailedEvent(
                 orderUid,
                 buyerId,
