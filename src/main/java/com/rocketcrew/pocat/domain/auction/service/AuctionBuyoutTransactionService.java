@@ -14,6 +14,8 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.BidException;
 import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class AuctionBuyoutTransactionService {
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
     private final AuctionAnomalyProperties anomalyProperties;
+    private final CardQueryService cardQueryService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BuyoutReservation reserveBuyout(Long auctionId, User buyer) {
@@ -100,16 +103,22 @@ public class AuctionBuyoutTransactionService {
     }
 
     private void logBuyoutAnomalyIfNeeded(Auction auction, Long buyerId) {
-        Long startingPrice = auction.getStartingPrice();
         Long buyoutPrice = auction.getBuyoutPrice();
-        if (startingPrice == null || startingPrice <= 0 || buyoutPrice == null) {
+        if (buyoutPrice == null) {
             return;
         }
-        double ratio = (double) buyoutPrice / startingPrice;
+        CardAveragePriceResponse avg = cardQueryService.getAveragePrice(auction.getCardId());
+        Long marketPrice = (avg != null && avg.averagePrice() != null && avg.transactionCount() > 0)
+                ? avg.averagePrice()
+                : auction.getStartingPrice();
+        if (marketPrice == null || marketPrice <= 0) {
+            return;
+        }
+        double ratio = (double) buyoutPrice / marketPrice;
         if (ratio > anomalyProperties.getAuctionAnomalyThreshold()) {
-            log.warn("[AUCTION_ANOMALY] type=BUYOUT auctionId={} cardId={} sellerId={} buyerId={} finalPrice={} startingPrice={} ratio={}",
+            log.warn("[AUCTION_ANOMALY] type=BUYOUT auctionId={} cardId={} sellerId={} buyerId={} finalPrice={} marketPrice={} ratio={}",
                     auction.getId(), auction.getCardId(), auction.getSellerId(), buyerId,
-                    buyoutPrice, startingPrice, String.format("%.2f", ratio));
+                    buyoutPrice, marketPrice, String.format("%.2f", ratio));
         }
     }
 

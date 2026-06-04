@@ -8,6 +8,8 @@ import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.global.metrics.AuctionMetrics;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import ch.qos.logback.classic.Logger;
@@ -75,11 +77,17 @@ class AuctionLifecycleServiceTest {
     @Mock
     AuctionAnomalyProperties anomalyProperties;
 
+    @Mock
+    CardQueryService cardQueryService;
+
     @BeforeEach
     void setUp() throws InterruptedException {
         given(redissonClient.getLock(anyString())).willReturn(rLock);
         given(rLock.tryLock(anyLong(), any(TimeUnit.class))).willReturn(true);
         lenient().when(anomalyProperties.getAuctionAnomalyThreshold()).thenReturn(3.0);
+        lenient().when(cardQueryService.getAveragePrice(anyLong()))
+                .thenReturn(new CardAveragePriceResponse(1L, 1000L, 5L,
+                        LocalDateTime.now().minusDays(90), LocalDateTime.now()));
         TransactionSynchronizationManager.initSynchronization();
     }
 
@@ -221,7 +229,7 @@ class AuctionLifecycleServiceTest {
                                 && msg.contains("type=EXPIRED_WIN")
                                 && msg.contains("winnerId=10")
                                 && msg.contains("finalPrice=5000")
-                                && msg.contains("startingPrice=1000")
+                                && msg.contains("marketPrice=1000")
                                 && msg.contains("ratio=5.00");
                     });
         } finally {

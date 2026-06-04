@@ -13,6 +13,8 @@ import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.event.BaseEvent;
 import com.rocketcrew.pocat.global.metrics.AuctionMetrics;
 import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,7 @@ public class AuctionLifecycleService {
     private final OutboxEventWriter outboxEventWriter;
     private final AuctionMetrics metrics;
     private final AuctionAnomalyProperties anomalyProperties;
+    private final CardQueryService cardQueryService;
 
     // 검수 승인된 경매를 현재 시각 기준으로 ACTIVE 상태로 전환하고 종료 이벤트 예약용 정보를 확정한다.
     public boolean activateApprovedAuction(Long auctionId) {
@@ -149,13 +152,20 @@ public class AuctionLifecycleService {
 
     private void logAnomalyIfNeeded(Long auctionId, Long cardId, Long sellerId,
             Long winnerId, Long finalPrice, Long startingPrice, String type) {
-        if (startingPrice == null || startingPrice <= 0 || finalPrice == null) {
+        if (finalPrice == null) {
             return;
         }
-        double ratio = (double) finalPrice / startingPrice;
+        CardAveragePriceResponse avg = cardQueryService.getAveragePrice(cardId);
+        Long marketPrice = (avg != null && avg.averagePrice() != null && avg.transactionCount() > 0)
+                ? avg.averagePrice()
+                : startingPrice;
+        if (marketPrice == null || marketPrice <= 0) {
+            return;
+        }
+        double ratio = (double) finalPrice / marketPrice;
         if (ratio > anomalyProperties.getAuctionAnomalyThreshold()) {
-            log.warn("[AUCTION_ANOMALY] type={} auctionId={} cardId={} sellerId={} winnerId={} finalPrice={} startingPrice={} ratio={}",
-                    type, auctionId, cardId, sellerId, winnerId, finalPrice, startingPrice,
+            log.warn("[AUCTION_ANOMALY] type={} auctionId={} cardId={} sellerId={} winnerId={} finalPrice={} marketPrice={} ratio={}",
+                    type, auctionId, cardId, sellerId, winnerId, finalPrice, marketPrice,
                     String.format("%.2f", ratio));
         }
     }

@@ -23,6 +23,8 @@ import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import ch.qos.logback.classic.Logger;
@@ -105,10 +107,16 @@ class AuctionBuyoutServiceTest {
     @Mock
     AuctionAnomalyProperties anomalyProperties;
 
+    @Mock
+    CardQueryService cardQueryService;
+
     @BeforeEach
     void setUp() throws InterruptedException {
-        buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository, anomalyProperties);
+        buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository, anomalyProperties, cardQueryService);
         lenient().when(anomalyProperties.getAuctionAnomalyThreshold()).thenReturn(3.0);
+        lenient().when(cardQueryService.getAveragePrice(anyLong()))
+                .thenReturn(new CardAveragePriceResponse(3L, 1000L, 5L,
+                        LocalDateTime.now().minusDays(90), LocalDateTime.now()));
         service = new AuctionBuyoutService(
                 orderRepository,
                 paymentRepository,
@@ -441,7 +449,7 @@ class AuctionBuyoutServiceTest {
                                 && msg.contains("type=BUYOUT")
                                 && msg.contains("buyerId=1")
                                 && msg.contains("finalPrice=10000")
-                                && msg.contains("startingPrice=1000")
+                                && msg.contains("marketPrice=1000")
                                 && msg.contains("ratio=10.00");
                     });
         } finally {
