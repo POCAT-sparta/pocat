@@ -35,4 +35,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
 
     Optional<Order> findByAuctionIdAndBidderRank(Long auctionId, Integer bidderRank);
 
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(o.finalPrice), 0) FROM Order o WHERE o.createdAt BETWEEN :start AND :end")
+    Long sumFinalPriceByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }
