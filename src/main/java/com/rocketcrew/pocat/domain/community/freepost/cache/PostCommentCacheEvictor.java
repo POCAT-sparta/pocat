@@ -31,13 +31,13 @@ public class PostCommentCacheEvictor {
                 keysToDelete.add(cursor.next());
             }
         } catch (Exception ex) {
-            log.warn("[Cache] SCAN error for pattern='{}': {}", pattern, ex.getMessage());
+            log.warn("[CACHE] 캐시 SCAN 실패 pattern={}: {}", pattern, ex.getMessage());
             return;
         }
 
         if (!keysToDelete.isEmpty()) {
             stringRedisTemplate.delete(keysToDelete);
-            log.debug("[Cache] Evicted {} keys for postId={}", keysToDelete.size(), postId);
+            log.debug("[CACHE] 댓글 캐시 삭제 완료 evictedKeys={} postId={}", keysToDelete.size(), postId);
         }
     }
 

@@ -46,16 +46,16 @@ public class AdminAiService {
             acquired = lock.tryLock(0, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("[AdminAiService] 분산 락 획득 중 인터럽트: 재색인 중단");
+            log.warn("[RAG_REINDEX] 분산 락 획득 중 인터럽트, 재색인 중단: {}", e.getMessage());
             return;
         }
         if (!acquired) {
-            log.warn("[AdminAiService] 재색인이 이미 실행 중입니다(분산 락). 중복 실행을 무시합니다.");
+            log.warn("[RAG_REINDEX] 재색인이 이미 실행 중입니다(분산 락). 중복 실행을 무시합니다.");
             return;
         }
         try {
-            log.info("[AdminAiService] 전체 카드 재색인 시작");
-            log.warn("[AdminAiService] 기존 card 타입 벡터 삭제는 VectorStore filter-delete 미지원으로 생략합니다. embedCard()로 upsert 처리됩니다.");
+            log.info("[RAG_REINDEX] 전체 카드 재색인 시작");
+            log.warn("[RAG_REINDEX] 기존 card 타입 벡터 삭제는 VectorStore filter-delete 미지원으로 생략합니다. embedCard()로 upsert 처리됩니다.");
 
             int page = 0;
             int totalIndexed = 0;
@@ -87,16 +87,16 @@ public class AdminAiService {
                             break;
                         } catch (Exception e) {
                             if (attempt < 3) {
-                                log.warn("[AdminAiService] 카드 색인 재시도: cardId={}, attempt={}/{}", card.getId(), attempt, 3);
+                                log.warn("[RAG_REINDEX] 카드 색인 재시도 cardId={} attempt={}/{}: {}", card.getId(), attempt, 3, e.getMessage());
                                 try {
                                     Thread.sleep(500L * attempt);
                                 } catch (InterruptedException ie) {
                                     Thread.currentThread().interrupt();
-                                    log.warn("[AdminAiService] 재색인 스레드 인터럽트: cardId={}", card.getId());
+                                    log.warn("[RAG_REINDEX] 재색인 스레드 인터럽트 cardId={}: {}", card.getId(), ie.getMessage());
                                     return;
                                 }
                             } else {
-                                log.error("[AdminAiService] 카드 색인 최종 실패: cardId={}", card.getId(), e);
+                                log.error("[RAG_REINDEX] 카드 색인 최종 실패 cardId={}: {}", card.getId(), e.getMessage(), e);
                                 failedCount++;
                             }
                         }
@@ -106,7 +106,7 @@ public class AdminAiService {
                     }
                 }
 
-                log.info("[AdminAiService] 페이지 {} 처리 완료 ({}건)",
+                log.info("[RAG_REINDEX] 페이지 처리 완료 page={} count={}",
                         page, cardPage.getNumberOfElements());
 
                 if (cardPage.isLast()) {
@@ -115,7 +115,7 @@ public class AdminAiService {
                 page++;
             }
 
-            log.info("[AdminAiService] 전체 카드 재색인 완료: 성공={}건, 실패={}건", totalIndexed, failedCount);
+            log.info("[RAG_REINDEX] 전체 카드 재색인 완료 success={} failed={}", totalIndexed, failedCount);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();

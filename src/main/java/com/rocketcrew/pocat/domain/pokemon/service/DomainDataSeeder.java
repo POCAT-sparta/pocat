@@ -52,7 +52,7 @@ public class DomainDataSeeder {
             String joined = String.join(" ", koList);
             seriesRepository.findByName(en).ifPresent(s -> {
                 s.updateNameKo(joined);
-                log.info("[Seeder] Series nameKo 업데이트: {} → {}", en, joined);
+                log.info("[DATA_SEEDING] Series nameKo 업데이트: {} → {}", en, joined);
             });
         });
     }
@@ -68,7 +68,7 @@ public class DomainDataSeeder {
                     .filter(ps -> ps.getName().equals(en))
                     .forEach(ps -> {
                         ps.updateNameKo(joined);
-                        log.info("[Seeder] PokemonSet nameKo 업데이트: {} → {}", en, joined);
+                        log.info("[DATA_SEEDING] PokemonSet nameKo 업데이트: {} → {}", en, joined);
                     });
         });
     }
@@ -76,12 +76,12 @@ public class DomainDataSeeder {
     /** pokemon-names.yml → Pokemon 테이블 시드 (이미 있으면 스킵) */
     private void seedPokemon() {
         if (pokemonCommandService.getCacheSize() > 0) {
-            log.info("[Seeder] Pokemon 이미 {}개 로드됨, 시드 스킵", pokemonCommandService.getCacheSize());
+            log.info("[DATA_SEEDING] Pokemon 이미 {}개 로드됨, 시드 스킵", pokemonCommandService.getCacheSize());
             return;
         }
         try (InputStream is = getClass().getResourceAsStream("/pokemon-names.yml")) {
             if (is == null) {
-                log.warn("[Seeder] pokemon-names.yml 파일을 찾을 수 없음");
+                log.warn("[DATA_SEEDING] pokemon-names.yml 파일을 찾을 수 없음");
                 return;
             }
             Map<String, Map<String, String>> root = new Yaml().load(is);
@@ -90,9 +90,9 @@ public class DomainDataSeeder {
             Map<String, String> enToKo = new LinkedHashMap<>();
             koToEn.forEach((ko, en) -> enToKo.putIfAbsent(en, ko));
             enToKo.forEach((en, ko) -> pokemonCommandService.findOrCreate(en, ko));
-            log.info("[Seeder] Pokemon {}개 시드 완료", enToKo.size());
+            log.info("[DATA_SEEDING] Pokemon {}개 시드 완료", enToKo.size());
         } catch (Exception e) {
-            log.warn("[Seeder] pokemon-names.yml 로드 실패: {}", e.getMessage());
+            log.warn("[DATA_SEEDING] pokemon-names.yml 로드 실패: {}", e.getMessage());
         }
         // 시드 후 캐시 재빌드
         pokemonCommandService.buildCache();
@@ -120,7 +120,7 @@ public class DomainDataSeeder {
                 }
             }
         } while (!batch.isEmpty());
-        log.info("[Seeder] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, total);
+        log.info("[DATA_SEEDING] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, total);
     }
 
     /**
@@ -131,7 +131,7 @@ public class DomainDataSeeder {
         Map<String, List<String>> enToKoList = new LinkedHashMap<>();
         try (InputStream is = getClass().getResourceAsStream(resource)) {
             if (is == null) {
-                log.debug("[Seeder] {} 파일 없음 (스킵)", resource);
+                log.debug("[DATA_SEEDING] {} 파일 없음 (스킵)", resource);
                 return enToKoList;
             }
             Map<Object, Object> root = new Yaml().load(is);
@@ -144,7 +144,7 @@ public class DomainDataSeeder {
                 }
             }
         } catch (Exception e) {
-            log.warn("[Seeder] {} 로드 실패: {}", resource, e.getMessage());
+            log.warn("[DATA_SEEDING] {} 로드 실패: {}", resource, e.getMessage());
         }
         return enToKoList;
     }

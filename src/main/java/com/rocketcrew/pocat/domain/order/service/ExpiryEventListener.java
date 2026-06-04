@@ -36,13 +36,13 @@ public class ExpiryEventListener implements MessageListener {
         try {
             orderId = Long.parseLong(orderIdStr);
         } catch (NumberFormatException e) {
-            log.warn("[PaymentExpiry] 파싱 불가 key={}", expiredKey);
+            log.warn("[PAYMENT_ESCALATION] 결제 만료 키 파싱 불가 key={}", expiredKey);
             return;
         }
 
         Order order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
-            log.warn("[PaymentExpiry] 주문 없음 orderId={}", orderId);
+            log.warn("[PAYMENT_ESCALATION] 승격 대상 주문 없음 orderId={}", orderId);
             return;
         }
 
@@ -59,7 +59,7 @@ public class ExpiryEventListener implements MessageListener {
                                 Map.of("orderUid", result.nextOrderUid())
                         );
                     } catch (Exception e) {
-                        log.error("[PaymentExpiry] 승격 결제 기회 알림 실패: nextBidderId={}", result.nextBidderId(), e);
+                        log.error("[PAYMENT_ESCALATION] 승격 결제 기회 알림 실패 nextBidderId={}: {}", result.nextBidderId(), e.getMessage(), e);
                     }
                 }
                 case CANCELLED -> {
@@ -71,13 +71,13 @@ public class ExpiryEventListener implements MessageListener {
                                 Map.of("orderUid", order.getOrderUid())
                         );
                     } catch (Exception e) {
-                        log.error("[PaymentExpiry] 최종 결제 실패 판매자 알림 실패: orderId={}", orderId, e);
+                        log.error("[PAYMENT_ESCALATION] 최종 결제 실패 판매자 알림 실패 orderId={}: {}", orderId, e.getMessage(), e);
                     }
                 }
-                case SKIPPED -> log.info("[PaymentExpiry] 승격 처리 스킵 orderId={}", orderId);
+                case SKIPPED -> log.info("[PAYMENT_ESCALATION] 승격 처리 스킵 orderId={}", orderId);
             }
         } catch (Exception e) {
-            log.error("[PaymentExpiry] 다음 순위 승격 실패 orderId={}", orderId, e);
+            log.error("[PAYMENT_ESCALATION] 다음 순위 승격 실패 orderId={}: {}", orderId, e.getMessage(), e);
         }
     }
 }

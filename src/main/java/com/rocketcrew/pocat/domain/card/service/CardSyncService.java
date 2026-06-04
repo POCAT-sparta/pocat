@@ -50,7 +50,7 @@ public class CardSyncService {
      * 배치 시스템에서 호출. 더 이상 스케줄러로 자동 실행하지 않음.
      */
     public void syncAll() {
-        log.info("[CardSync] 주간 전체 동기화 시작");
+        log.info("[CARD_SYNC] 주간 전체 동기화 시작");
 
         // 스케줄러 실행 시 HTTP 컨텍스트가 없으므로 DB에서 첫 번째 유저 ID 사용
         // 사용자가 없으면 FK 오류 또는 잘못된 소유자 저장을 막기 위해 동기화 중단
@@ -59,7 +59,7 @@ public class CardSyncService {
                 .orElse(null);
 
         if (adminUserId == null) {
-            log.error("[CardSync] 등록된 사용자가 없어 동기화를 중단합니다. 최소 1명의 사용자가 필요합니다.");
+            log.error("[CARD_SYNC] 등록된 사용자가 없어 동기화를 중단합니다. 최소 1명의 사용자가 필요합니다.");
             return;
         }
 
@@ -75,15 +75,15 @@ public class CardSyncService {
                 try {
                     totalSynced += syncSet(restTemplate, adminUserId, setId, totalSynced);
                 } catch (Exception e) {
-                    log.warn("[CardSync] 세트 동기화 실패 ({}): {}", setId, e.getMessage());
+                    log.warn("[CARD_SYNC] 세트 동기화 실패 setId={}: {}", setId, e.getMessage());
                 }
             }
 
         } catch (Exception e) {
-            log.error("[CardSync] 전체 동기화 실패: {}", e.getMessage());
+            log.error("[CARD_SYNC] 전체 동기화 실패: {}", e.getMessage(), e);
         }
 
-        log.info("[CardSync] 주간 전체 동기화 완료 — 신규 카드 총 {}개", totalSynced);
+        log.info("[CARD_SYNC] 주간 전체 동기화 완료 newCardCount={}", totalSynced);
     }
 
     /**
@@ -147,11 +147,11 @@ public class CardSyncService {
                     synced++;
                 } catch (DataIntegrityViolationException e) {
                     // 동시 요청 시 race condition 방어
-                    log.warn("[CardSync] 중복 카드 스킵 (race): {}", tcgdexId);
+                    log.warn("[CARD_SYNC] 중복 카드 스킵(race) tcgdexId={}: {}", tcgdexId, e.getMessage());
                 }
 
             } catch (Exception e) {
-                log.warn("[CardSync] 카드 처리 실패 ({}): {}", tcgdexId, e.getMessage());
+                log.warn("[CARD_SYNC] 카드 처리 실패 tcgdexId={}: {}", tcgdexId, e.getMessage());
             }
         }
 

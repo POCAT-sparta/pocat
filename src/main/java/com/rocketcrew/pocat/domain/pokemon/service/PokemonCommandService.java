@@ -31,7 +31,7 @@ public class PokemonCommandService {
     @PostConstruct
     public void buildCache() {
         pokemonRepository.findAll().forEach(p -> nameCache.put(normalize(p.getName()), p));
-        log.info("[PokemonCache] {}개 포켓몬 캐시 로드", nameCache.size());
+        log.info("[CACHE] 포켓몬 인메모리 캐시 로드 count={}", nameCache.size());
     }
 
     /**

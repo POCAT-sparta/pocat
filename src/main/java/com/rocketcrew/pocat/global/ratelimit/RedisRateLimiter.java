@@ -35,7 +35,7 @@ public class RedisRateLimiter {
             );
             return result == null || result == 0L;
         } catch (Exception e) {
-            log.warn("[RateLimit] Redis 장애로 rate limit 건너뜀 key={}", key, e);
+            log.warn("[RATE_LIMIT] Redis 장애로 rate limit 건너뜀 key={}: {}", key, e.getMessage());
             return true;
         }
     }

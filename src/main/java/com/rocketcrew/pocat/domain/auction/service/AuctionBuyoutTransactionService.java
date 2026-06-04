@@ -117,12 +117,12 @@ public class AuctionBuyoutTransactionService {
             }
             double ratio = (double) buyoutPrice / marketPrice;
             if (ratio > anomalyProperties.getAuctionAnomalyThreshold()) {
-                log.warn("[AUCTION_ANOMALY] type=BUYOUT auctionId={} cardId={} sellerId={} buyerId={} finalPrice={} marketPrice={} ratio={}",
+                log.warn("[AUCTION_ANOMALY] 즉시구매 이상가 감지 type=BUYOUT auctionId={} cardId={} sellerId={} buyerId={} finalPrice={} marketPrice={} ratio={}",
                         auction.getId(), auction.getCardId(), auction.getSellerId(), buyerId,
                         buyoutPrice, marketPrice, String.format("%.2f", ratio));
             }
         } catch (Exception e) {
-            log.warn("[AUCTION_ANOMALY] 모니터링 로그 실패 — auctionId={} cardId={}", auction.getId(), auction.getCardId(), e);
+            log.warn("[AUCTION_ANOMALY] 즉시구매 이상가 모니터링 로그 실패 auctionId={} cardId={}: {}", auction.getId(), auction.getCardId(), e.getMessage());
         }
     }
 
