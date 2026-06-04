@@ -80,6 +80,11 @@ public class AdminCardController {
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 
+    /**
+     * TCGDex 카드 이미지 S3 마이그레이션 (비동기 실행)
+     * migrateAll()은 @Async("syncExecutor")라 즉시 응답 반환, 백그라운드에서 마이그레이션 진행
+     * 완료 여부는 서버 로그에서 "[ImageMigration] 완료" 메시지로 확인
+     */
     @PostMapping("/v1/admin/cards/migrate-images")
     public ResponseEntity<ApiResponseDto<Void>> migrateImages() {
         cardImageMigrationService.migrateAll();

@@ -8,7 +8,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Slf4j
@@ -17,6 +16,7 @@ public class S3UploaderImpl implements S3Uploader {
 
     private final S3Client s3Client;
     private final String bucket;
+    private final String region;
 
     public S3UploaderImpl(
             @Value("${cloud.aws.credentials.access-key}") String accessKey,
@@ -25,6 +25,7 @@ public class S3UploaderImpl implements S3Uploader {
             @Value("${cloud.aws.s3.bucket}") String bucket
     ) {
         this.bucket = bucket;
+        this.region = region;
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(
@@ -38,12 +39,11 @@ public class S3UploaderImpl implements S3Uploader {
                 .bucket(bucket)
                 .key(key)
                 .contentType(contentType)
-                .acl(ObjectCannedACL.PUBLIC_READ)
                 .build();
 
         s3Client.putObject(request, RequestBody.fromBytes(data));
 
-        String url = "https://%s.s3.amazonaws.com/%s".formatted(bucket, key);
+        String url = "https://%s.s3.%s.amazonaws.com/%s".formatted(bucket, region, key);
         log.debug("[S3] 업로드 완료: {}", url);
         return url;
     }

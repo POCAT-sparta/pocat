@@ -33,8 +33,8 @@ public interface CardRepository extends JpaRepository<Card, Long>, CardRepositor
     List<Card> findPokemonCardsWithNullPokemonAfter(@Param("lastId") Long lastId, Pageable pageable);
 
     /** S3 마이그레이션 대상: TCGDex CDN URL을 그대로 저장 중인 카드 */
-    @Query("SELECT c FROM Card c WHERE c.imageUrl LIKE 'https://assets.tcgdex.net%' ORDER BY c.id ASC")
-    List<Card> findTcgdexImageCards(Pageable pageable);
+    @Query("SELECT c FROM Card c WHERE c.imageUrl LIKE 'https://assets.tcgdex.net%' AND c.id > :lastId ORDER BY c.id ASC")
+    List<Card> findTcgdexImageCardsAfterId(@Param("lastId") Long lastId, Pageable pageable);
 
     @Query("SELECT COUNT(c) FROM Card c WHERE c.imageUrl LIKE 'https://assets.tcgdex.net%'")
     long countTcgdexImageCards();

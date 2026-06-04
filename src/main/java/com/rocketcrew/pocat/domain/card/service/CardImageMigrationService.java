@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.global.infra.s3.S3Uploader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -17,7 +18,7 @@ import java.util.List;
  *
  * <p>실행 흐름:
  * <pre>
- * 1. DB에서 imageUrl이 assets.tcgdex.net으로 시작하는 카드를 배치 단위로 조회
+ * 1. DB에서 imageUrl이 assets.tcgdex.net으로 시작하는 카드를 배치 단위로 커서 기반 조회
  * 2. TCGDex CDN에서 이미지 바이트 다운로드
  * 3. S3에 "cards/{tcgdexId}/high.webp" 키로 업로드
  * 4. Card.imageUrl을 S3 URL로 업데이트
@@ -33,35 +34,35 @@ public class CardImageMigrationService {
     private static final int BATCH_SIZE = 50;
     private static final long DELAY_MS  = 100; // TCGDex rate limit 방지
 
-    private final CardRepository   cardRepository;
+    private final CardRepository     cardRepository;
     private final CardCommandService cardCommandService;
-    private final S3Uploader        s3Uploader;
+    private final S3Uploader         s3Uploader;
 
-    /**
-     * 전체 TCGDex 이미지를 S3로 마이그레이션한다.
-     *
-     * @return 마이그레이션 결과 요약
-     */
-    @Async
+    @Async("syncExecutor")
     public void migrateAll() {
         long total   = cardRepository.countTcgdexImageCards();
         int  success = 0;
         int  failed  = 0;
+        long lastId  = 0L;
 
         log.info("[ImageMigration] 시작 — 대상 카드: {}개", total);
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = createRestTemplate();
         List<Card> batch;
 
         do {
-            batch = cardRepository.findTcgdexImageCards(PageRequest.of(0, BATCH_SIZE));
+            batch = cardRepository.findTcgdexImageCardsAfterId(lastId, PageRequest.of(0, BATCH_SIZE));
 
             for (Card card : batch) {
+                lastId = card.getId(); // 성공/실패 무관하게 커서 전진
                 try {
+                    if (card.getTcgdexId() == null || card.getTcgdexId().isBlank()) {
+                        throw new IllegalStateException("tcgdexId 없음: cardId=" + card.getId());
+                    }
                     String s3Url = downloadAndUpload(restTemplate, card);
                     card.updateImageUrl(s3Url);
                     cardRepository.save(card);
-                    cardCommandService.indexCard(card); // Elasticsearch 재색인
+                    cardCommandService.indexCard(card);
                     success++;
 
                     log.debug("[ImageMigration] 완료 ({}/{}): {}", success + failed, total, card.getTcgdexId());
@@ -92,4 +93,10 @@ public class CardImageMigrationService {
         return s3Uploader.upload(s3Key, imageBytes, "image/webp");
     }
 
+    private RestTemplate createRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);
+        factory.setReadTimeout(15_000);
+        return new RestTemplate(factory);
+    }
 }
