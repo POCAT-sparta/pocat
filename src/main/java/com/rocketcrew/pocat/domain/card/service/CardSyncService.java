@@ -16,6 +16,8 @@ import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.set.service.PokemonSetCommandService;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.infra.s3.S3Uploader;
+import static com.rocketcrew.pocat.global.infra.s3.S3Uploader.CARD_IMAGE_CONTENT_TYPE;
+import static com.rocketcrew.pocat.global.infra.s3.S3Uploader.cardImageKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -166,7 +168,7 @@ public class CardSyncService {
         try {
             byte[] imageBytes = restTemplate.getForObject(tcgdexImageUrl, byte[].class);
             if (imageBytes == null || imageBytes.length == 0) return tcgdexImageUrl;
-            return s3Uploader.upload("cards/" + tcgdexId + "/high.webp", imageBytes, "image/webp");
+            return s3Uploader.upload(cardImageKey(tcgdexId), imageBytes, CARD_IMAGE_CONTENT_TYPE);
         } catch (Exception e) {
             log.warn("[CardSync] S3 업로드 실패 ({}), TCGDex URL 유지: {}", tcgdexId, e.getMessage());
             return tcgdexImageUrl;

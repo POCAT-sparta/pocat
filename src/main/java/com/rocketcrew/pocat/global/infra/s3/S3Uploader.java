@@ -15,4 +15,10 @@ public interface S3Uploader {
      * @return 업로드된 파일의 공개 URL
      */
     String upload(String key, byte[] data, String contentType);
+
+    static String cardImageKey(String tcgdexId) {
+        return "cards/" + tcgdexId + "/high.webp";
+    }
+
+    String CARD_IMAGE_CONTENT_TYPE = "image/webp";
 }

@@ -3,6 +3,8 @@ package com.rocketcrew.pocat.domain.card.service;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.global.infra.s3.S3Uploader;
+import static com.rocketcrew.pocat.global.infra.s3.S3Uploader.CARD_IMAGE_CONTENT_TYPE;
+import static com.rocketcrew.pocat.global.infra.s3.S3Uploader.cardImageKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -62,8 +64,12 @@ public class CardImageMigrationService {
                     String s3Url = downloadAndUpload(restTemplate, card);
                     card.updateImageUrl(s3Url);
                     cardRepository.save(card);
-                    cardCommandService.indexCard(card);
                     success++;
+                    try {
+                        cardCommandService.indexCard(card);
+                    } catch (Exception esEx) {
+                        log.warn("[ImageMigration] ES 색인 실패 ({}): {}", card.getTcgdexId(), esEx.getMessage());
+                    }
 
                     log.debug("[ImageMigration] 완료 ({}/{}): {}", success + failed, total, card.getTcgdexId());
                     Thread.sleep(DELAY_MS);
@@ -89,8 +95,7 @@ public class CardImageMigrationService {
             throw new IllegalStateException("이미지 다운로드 실패: " + card.getImageUrl());
         }
 
-        String s3Key = "cards/" + card.getTcgdexId() + "/high.webp";
-        return s3Uploader.upload(s3Key, imageBytes, "image/webp");
+        return s3Uploader.upload(cardImageKey(card.getTcgdexId()), imageBytes, CARD_IMAGE_CONTENT_TYPE);
     }
 
     private RestTemplate createRestTemplate() {
