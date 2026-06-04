@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.service.CardCommandService;
+import com.rocketcrew.pocat.domain.card.service.CardImageMigrationService;
 import com.rocketcrew.pocat.domain.card.service.CardQueryService;
 import com.rocketcrew.pocat.domain.card.service.CardSyncService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -29,6 +30,7 @@ public class AdminCardController {
     private final CardQueryService cardQueryService;
     private final CardCommandService cardCommandService;
     private final CardSyncService cardSyncService;
+    private final CardImageMigrationService cardImageMigrationService;
 
     @GetMapping("/v1/admin/cards/requests")
     public ResponseEntity<ApiResponseDto<PageResponseDto<CardResponse>>> getRequests(
@@ -75,6 +77,12 @@ public class AdminCardController {
     @PostMapping("/v1/admin/cards/sync")
     public ResponseEntity<ApiResponseDto<Void>> syncCards() {
         cardSyncService.syncAll();
+        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
+    }
+
+    @PostMapping("/v1/admin/cards/migrate-images")
+    public ResponseEntity<ApiResponseDto<Void>> migrateImages() {
+        cardImageMigrationService.migrateAll();
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 }
