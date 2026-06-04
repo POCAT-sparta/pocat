@@ -1,0 +1,120 @@
+﻿{
+  "name": "POCAT Flow6 - 일일 비즈니스 인사이트 리포트",
+  "nodes": [
+    {
+      "id": "f6-001",
+      "name": "매일 오전 9시",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "cronExpression", "expression": "0 9 * * *"}]
+        }
+      }
+    },
+    {
+      "id": "f6-002",
+      "name": "Fetch Daily Stats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300],
+      "notes": "endpoint /internal/stats/daily may need to be implemented; returns JSON with auction counts, trade volume, embedding failure counts",
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $vars.POCAT_BASE_URL + \"/internal/stats/daily\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "X-Internal-Token", "value": "={{ $vars.POCAT_INTERNAL_TOKEN }}"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "f6-003",
+      "name": "Build Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300],
+      "parameters": {
+        "jsCode": "const stats = $json;\nconst today = new Date().toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric'});\n\nconst statsText = JSON.stringify(stats, null, 2).slice(0, 800);\n\nreturn [{\n  json: {\n    stats: stats,\n    reportDate: today,\n    geminiRequest: {\n      model: 'gemini-2.0-flash',\n      max_tokens: 500,\n      messages: [\n        {\n          role: 'system',\n          content: 'POCAT 카드 거래 플랫폼 비즈니스 인사이트 리포트 생성 AI입니다. 데이터를 분석하고 한국어로 경영진이 읽기 좋게 5~7줄로 작성하세요.'\n        },\n        {\n          role: 'user',\n          content: today + ' POCAT 일일 통계 데이터:\\n' + statsText + '\\n\\n다음 항목을 포함해 분석하세요:\\n1. 오늘의 주요 지표 요약\\n2. 전날 대비 주목할 변화\\n3. 이상 거래 또는 시스템 이슈\\n4. 비즈니스 기회 또는 위험 요소\\n5. 내일 주목해야 할 사항'\n        }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f6-004",
+      "name": "Gemini 리포트 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.GEMINI_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ \"Bearer \" + $vars.GEMINI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.geminiRequest) }}"
+      }
+    },
+    {
+      "id": "f6-005",
+      "name": "Format Slack Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "parameters": {
+        "jsCode": "const geminiResp = $json;\nconst report = (geminiResp.choices && geminiResp.choices[0] && geminiResp.choices[0].message && geminiResp.choices[0].message.content) || '리포트 생성 실패';\nconst prev = $('Build Gemini Request').first().json;\n\nreturn [{\n  json: {\n    slackPayload: {\n      text: '📊 *POCAT 일일 비즈니스 인사이트 — ' + prev.reportDate + '*',\n      attachments: [{\n        color: '#36a64f',\n        text: report,\n        footer: 'POCAT Business Intelligence | Powered by Gemini',\n        ts: Math.floor(Date.now() / 1000)\n      }]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f6-006",
+      "name": "Slack #business-insight",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SLACK_WEBHOOK_BUSINESS_INSIGHT }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.slackPayload) }}"
+      }
+    }
+  ],
+  "connections": {
+    "매일 오전 9시": {
+      "main": [[{"node": "Fetch Daily Stats", "type": "main", "index": 0}]]
+    },
+    "Fetch Daily Stats": {
+      "main": [[{"node": "Build Gemini Request", "type": "main", "index": 0}]]
+    },
+    "Build Gemini Request": {
+      "main": [[{"node": "Gemini 리포트 생성", "type": "main", "index": 0}]]
+    },
+    "Gemini 리포트 생성": {
+      "main": [[{"node": "Format Slack Report", "type": "main", "index": 0}]]
+    },
+    "Format Slack Report": {
+      "main": [[{"node": "Slack #business-insight", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "pinData": {},
+  "versionId": "pocat-flow6-v1",
+  "meta": {"instanceId": "pocat-monitoring"},
+  "id": "pocat-flow6",
+  "tags": []
+}

@@ -1,0 +1,101 @@
+﻿{
+  "name": "POCAT Flow1 - AI 서비스 이상 감지",
+  "nodes": [
+    {
+      "id": "f1-001",
+      "name": "Grafana Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "pocat-ai-anomaly-wh",
+      "parameters": {
+        "path": "pocat-ai-anomaly",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      }
+    },
+    {
+      "id": "f1-002",
+      "name": "Parse Alert & Build Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst alerts = body.alerts || [];\nconst alert = alerts[0] || {};\nconst labels = alert.labels || {};\nconst desc = (alert.annotations && (alert.annotations.description || alert.annotations.summary) || '').slice(0, 600);\n\nreturn [{\n  json: {\n    alertName: labels.alertname || 'AI Service Error',\n    instance: labels.instance || 'pocat-backend',\n    severity: labels.severity || 'warning',\n    description: desc,\n    startTime: alert.startsAt || new Date().toISOString(),\n    generatorURL: alert.generatorURL || '',\n    geminiRequest: {\n      model: 'gemini-2.0-flash',\n      max_tokens: 300,\n      messages: [\n        {\n          role: 'system',\n          content: 'POCAT 카드 거래 플랫폼 AI 서비스 모니터링입니다. 간결하게 한국어로 3줄 이내 답변하세요.'\n        },\n        {\n          role: 'user',\n          content: 'AI 서비스 이상 감지\\n알림명: ' + (labels.alertname || '') + '\\n인스턴스: ' + (labels.instance || '') + '\\n심각도: ' + (labels.severity || '') + '\\n내용: ' + desc + '\\n\\n원인 추정, 영향 범위, 즉시 조치를 각 1줄로 답변하세요.'\n        }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f1-003",
+      "name": "Gemini 장애 분석",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.GEMINI_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ \"Bearer \" + $vars.GEMINI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.geminiRequest) }}"
+      }
+    },
+    {
+      "id": "f1-004",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "parameters": {
+        "jsCode": "const geminiResp = $json;\nconst analysis = (geminiResp.choices && geminiResp.choices[0] && geminiResp.choices[0].message && geminiResp.choices[0].message.content) || '분석 실패';\nconst prev = $('Parse Alert & Build Request').first().json;\nconst color = prev.severity === 'critical' ? 'danger' : 'warning';\n\nreturn [{\n  json: {\n    slackPayload: {\n      text: '🤖 *[AI 서비스 이상] ' + prev.alertName + '*',\n      attachments: [{\n        color: color,\n        fields: [\n          { title: '인스턴스', value: prev.instance || '-', short: true },\n          { title: '심각도', value: prev.severity || '-', short: true },\n          { title: '내용', value: prev.description || '-', short: false },\n          { title: 'AI 분석', value: analysis, short: false }\n        ],\n        footer: 'POCAT Monitoring | ' + prev.startTime,\n        footer_icon: 'https://grafana.com/favicon.ico'\n      }]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f1-005",
+      "name": "Slack #dev-alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SLACK_WEBHOOK_DEV_ALERT }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.slackPayload) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Grafana Webhook": {
+      "main": [[{"node": "Parse Alert & Build Request", "type": "main", "index": 0}]]
+    },
+    "Parse Alert & Build Request": {
+      "main": [[{"node": "Gemini 장애 분석", "type": "main", "index": 0}]]
+    },
+    "Gemini 장애 분석": {
+      "main": [[{"node": "Format Slack Message", "type": "main", "index": 0}]]
+    },
+    "Format Slack Message": {
+      "main": [[{"node": "Slack #dev-alert", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "pinData": {},
+  "versionId": "pocat-flow1-v1",
+  "meta": {"instanceId": "pocat-monitoring"},
+  "id": "pocat-flow1",
+  "tags": []
+}
