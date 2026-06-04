@@ -23,7 +23,11 @@ import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
+import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,6 +53,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import org.slf4j.LoggerFactory;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -96,9 +102,13 @@ class AuctionBuyoutServiceTest {
     @Mock
     OutboxEventWriter outboxEventWriter;
 
+    @Mock
+    AuctionAnomalyProperties anomalyProperties;
+
     @BeforeEach
     void setUp() throws InterruptedException {
-        buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository);
+        buyoutTransactionService = new AuctionBuyoutTransactionService(auctionRepository, auctionBidRepository, anomalyProperties);
+        lenient().when(anomalyProperties.getAuctionAnomalyThreshold()).thenReturn(3.0);
         service = new AuctionBuyoutService(
                 orderRepository,
                 paymentRepository,
@@ -352,5 +362,82 @@ class AuctionBuyoutServiceTest {
         verify(rLock).unlock();
         verify(eventPublisher, never()).publishEvent(any());
         verify(outboxEventWriter, never()).write(anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("즉시구매가가 시작가의 임계값 초과 시 AUCTION_ANOMALY 로그를 출력한다")
+    void buyout_logsAnomalyWhenBuyoutPriceExceedsThreshold() {
+        // given — buyoutPrice=10000, startingPrice=1000, ratio=10.0 (임계값 3.0 초과)
+        User buyer = User.builder()
+                .email("buyer@test.com")
+                .password("encoded")
+                .nickname("buyer")
+                .userRole(UserRole.USER)
+                .billingKey("billing-key")
+                .build();
+        ReflectionTestUtils.setField(buyer, "id", 1L);
+
+        Auction auction = Auction.builder()
+                .cardId(3L)
+                .sellerId(2L)
+                .title("test auction")
+                .startingPrice(1000L)
+                .buyoutPrice(10000L)
+                .highestPrice(5000L)
+                .status(AuctionStatus.ACTIVE)
+                .startedAt(LocalDateTime.now().minusHours(1))
+                .endedAt(LocalDateTime.now().plusHours(1))
+                .build();
+        ReflectionTestUtils.setField(auction, "id", 10L);
+
+        AuctionBid previousLeadingBid = AuctionBid.builder()
+                .auctionId(10L)
+                .userId(4L)
+                .bidPrice(5000L)
+                .status(BidStatus.LEADING)
+                .build();
+
+        Order order = Order.builder()
+                .auctionId(10L).cardId(3L).sellerId(2L).buyerId(1L)
+                .orderUid("ORD-001").finalPrice(10000L)
+                .status(OrderStatus.PAYMENT_COMPLETED)
+                .deliveryStatus(DeliveryStatus.PREPARING)
+                .build();
+        ReflectionTestUtils.setField(order, "id", 20L);
+
+        PaymentResponse payment = new PaymentResponse(
+                "PAY-001", 20L, 10000L, PaymentType.BILLING_KEY, "card",
+                PaymentStatus.COMPLETED, LocalDateTime.now(), LocalDateTime.now());
+
+        given(userQueryService.getUserEntity(1L)).willReturn(buyer);
+        given(auctionRepository.findById(10L)).willReturn(Optional.of(auction));
+        given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(order);
+        given(paymentApplicationService.autoPayment("ORD-001")).willReturn(payment);
+        given(orderQueryService.findByOrderid(20L)).willReturn(order);
+        given(auctionBidRepository.findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+                10L, 1L, BidStatus.WON)).willReturn(Optional.empty());
+        given(auctionBidRepository.findAllByAuctionId(10L)).willReturn(List.of(previousLeadingBid));
+        given(auctionBidRepository.save(any(AuctionBid.class))).willAnswer(invocation -> {
+            AuctionBid bid = invocation.getArgument(0);
+            ReflectionTestUtils.setField(bid, "id", 30L);
+            return bid;
+        });
+        given(anomalyProperties.getAuctionAnomalyThreshold()).willReturn(3.0);
+
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        Logger logger = (Logger) LoggerFactory.getLogger(AuctionBuyoutTransactionService.class);
+        listAppender.start();
+        logger.addAppender(listAppender);
+
+        try {
+            // when
+            service.buyout(1L, 10L);
+
+            // then
+            assertThat(listAppender.list)
+                    .anyMatch(event -> event.getFormattedMessage().contains("[AUCTION_ANOMALY]"));
+        } finally {
+            logger.detachAppender(listAppender);
+        }
     }
 }

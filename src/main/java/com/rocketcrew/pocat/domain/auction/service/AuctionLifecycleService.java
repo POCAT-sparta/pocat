@@ -12,8 +12,10 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.event.BaseEvent;
 import com.rocketcrew.pocat.global.metrics.AuctionMetrics;
+import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.context.ApplicationEventPublisher;
@@ -27,6 +29,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -44,6 +47,7 @@ public class AuctionLifecycleService {
     private final AuctionEsIndexService auctionEsIndexService;
     private final OutboxEventWriter outboxEventWriter;
     private final AuctionMetrics metrics;
+    private final AuctionAnomalyProperties anomalyProperties;
 
     // 검수 승인된 경매를 현재 시각 기준으로 ACTIVE 상태로 전환하고 종료 이벤트 예약용 정보를 확정한다.
     public boolean activateApprovedAuction(Long auctionId) {
@@ -111,6 +115,8 @@ public class AuctionLifecycleService {
 
         markBidResults(bids, latestAuction.getHighestBidderId());
         latestAuction.end();
+        logAnomalyIfNeeded(latestAuction.getId(), latestAuction.getCardId(), latestAuction.getSellerId(),
+                latestAuction.getHighestBidderId(), latestAuction.getHighestPrice(), latestAuction.getStartingPrice(), "EXPIRED_WIN");
         publishAuctionEndedEvent(latestAuction, loserIds);
         final Long endedAuctionId = latestAuction.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -138,6 +144,19 @@ public class AuctionLifecycleService {
             } else if (bid.getStatus() == BidStatus.OUTBID) {
                 bid.markLost();
             }
+        }
+    }
+
+    private void logAnomalyIfNeeded(Long auctionId, Long cardId, Long sellerId,
+            Long winnerId, Long finalPrice, Long startingPrice, String type) {
+        if (startingPrice == null || startingPrice <= 0 || finalPrice == null) {
+            return;
+        }
+        double ratio = (double) finalPrice / startingPrice;
+        if (ratio > anomalyProperties.getAuctionAnomalyThreshold()) {
+            log.warn("[AUCTION_ANOMALY] type={} auctionId={} cardId={} sellerId={} winnerId={} finalPrice={} startingPrice={} ratio={}",
+                    type, auctionId, cardId, sellerId, winnerId, finalPrice, startingPrice,
+                    String.format("%.2f", ratio));
         }
     }
 
