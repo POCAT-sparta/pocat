@@ -8,17 +8,17 @@
 
 | 마커 | 레벨 | 감지 대상 | Loki LogQL |
 |------|------|-----------|-----------|
-| `[AUCTION_ANOMALY]` | WARN | 이상 낙찰가 감지 | `|= "AUCTION_ANOMALY"` |
-| `[EMBEDDING_FAIL]` | ERROR | 벡터 임베딩 실패 | `|= "EMBEDDING_FAIL"` |
+| `[AUCTION_ANOMALY]` | WARN | 이상 낙찰가 감지 | <code>|= "AUCTION_ANOMALY"</code> |
+| `[EMBEDDING_FAIL]` | ERROR | 벡터 임베딩 실패 | <code>|= "EMBEDDING_FAIL"</code> |
 
 ---
 
 ## [AUCTION_ANOMALY]
 
-**목적**: 낙찰가가 시작가 대비 threshold 배 초과 시 이상 거래 감지
+**목적**: 낙찰가가 시장 평균가 대비 threshold 배 초과 시 이상 거래 감지
 
 **발생 조건**:
-- `finalPrice > startingPrice * pocat.monitoring.auction-anomaly-threshold`
+- `finalPrice > marketPrice * pocat.monitoring.auction-anomaly-threshold`
 - 기본 threshold: `3.0` (application.yaml 외부화)
 
 **발생 경로**:
@@ -35,15 +35,15 @@
 | `sellerId` | 판매자 User ID |
 | `winnerId` / `buyerId` | 낙찰자/구매자 User ID |
 | `finalPrice` | 최종 결제 금액 |
-| `startingPrice` | 경매 시작가 |
-| `ratio` | `finalPrice / startingPrice` (소수점 2자리) |
+| `marketPrice` | 시장 평균가 (카드 평균 거래가; 거래 이력 없으면 시작가 폴백) |
+| `ratio` | `finalPrice / marketPrice` (소수점 2자리) |
 
 **예외 처리**:
-- `startingPrice == null` 또는 `startingPrice <= 0` → 로그 미출력, 비즈니스 흐름 무영향
+- `marketPrice <= 0 또는 null (시장가·시작가 모두 없는 경우)` → 로그 미출력, 비즈니스 흐름 무영향
 
 **n8n 연동 포인트**:
 - Grafana Alert: `{app="pocat"} |= "AUCTION_ANOMALY"` 발생 → n8n Webhook
-- n8n에서 `cardId`, `finalPrice`, `startingPrice`, `ratio` 파싱 후 Gemini 분석 → Slack `#admin-alert`
+- n8n에서 `cardId`, `finalPrice`, `marketPrice`, `ratio` 파싱 후 Gemini 분석 → Slack `#admin-alert`
 
 ---
 

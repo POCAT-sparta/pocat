@@ -39,14 +39,14 @@
 |------|----|
 | 레벨 | `WARN` |
 | 마커 | `[AUCTION_ANOMALY]` |
-| 조건 | `finalPrice > startingPrice * threshold` (기본 threshold=3.0) |
+| 조건 | `finalPrice > marketPrice * threshold` (기본 threshold=3.0; marketPrice = 카드 평균 거래가, 없으면 시작가 폴백) |
 | 삽입 위치 | `AuctionLifecycleService.closeExpiredAuction()` (EXPIRED_WIN), `AuctionBuyoutTransactionService.completeBuyout()` (BUYOUT) |
 
 로그 예시:
 
 ```log
-WARN [AUCTION_ANOMALY] type=EXPIRED_WIN auctionId=42 cardId=7 sellerId=3 winnerId=10 finalPrice=30000 startingPrice=5000 ratio=6.00
-WARN [AUCTION_ANOMALY] type=BUYOUT auctionId=42 cardId=7 sellerId=3 buyerId=10 finalPrice=30000 startingPrice=5000 ratio=6.00
+WARN [AUCTION_ANOMALY] type=EXPIRED_WIN auctionId=42 cardId=7 sellerId=3 winnerId=10 finalPrice=30000 marketPrice=5000 ratio=6.00
+WARN [AUCTION_ANOMALY] type=BUYOUT auctionId=42 cardId=7 sellerId=3 buyerId=10 finalPrice=30000 marketPrice=5000 ratio=6.00
 ```
 
 Loki LogQL: `{app="pocat"} |= "AUCTION_ANOMALY"`
@@ -79,7 +79,7 @@ Loki LogQL: `{app="pocat"} |= "EMBEDDING_FAIL"`
 # application.yaml
 pocat:
   monitoring:
-    auction-anomaly-threshold: 3.0  # 시작가 대비 N배 초과 시 이상 감지
+    auction-anomaly-threshold: 3.0  # 시장 평균가 대비 N배 초과 시 이상 감지
 ```
 
 ---

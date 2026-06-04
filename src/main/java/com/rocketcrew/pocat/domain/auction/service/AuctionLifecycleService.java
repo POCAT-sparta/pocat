@@ -155,7 +155,13 @@ public class AuctionLifecycleService {
         if (finalPrice == null) {
             return;
         }
-        CardAveragePriceResponse avg = cardQueryService.getAveragePrice(cardId);
+        CardAveragePriceResponse avg;
+        try {
+            avg = cardQueryService.getAveragePrice(cardId);
+        } catch (Exception e) {
+            log.warn("[AUCTION_ANOMALY] marketPrice 조회 실패 — auctionId={} cardId={}", auctionId, cardId, e);
+            avg = null;
+        }
         Long marketPrice = (avg != null && avg.averagePrice() != null && avg.transactionCount() > 0)
                 ? avg.averagePrice()
                 : startingPrice;
