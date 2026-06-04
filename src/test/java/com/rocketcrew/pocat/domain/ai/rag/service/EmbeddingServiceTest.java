@@ -59,8 +59,14 @@ class EmbeddingServiceTest {
 
         // then
         assertThat(listAppender.list)
-                .anyMatch(event -> event.getFormattedMessage().contains("[EMBEDDING_FAIL]")
-                        && event.getFormattedMessage().contains("eventType=CARD"));
+                .anyMatch(event -> {
+                    String msg = event.getFormattedMessage();
+                    return msg.contains("[EMBEDDING_FAIL]")
+                            && msg.contains("eventType=CARD")
+                            && msg.contains("targetId=1")
+                            && msg.contains("exceptionType=RuntimeException")
+                            && msg.contains("reason=vector store error");
+                });
     }
 
     @Test
@@ -74,8 +80,14 @@ class EmbeddingServiceTest {
 
         // then
         assertThat(listAppender.list)
-                .anyMatch(event -> event.getFormattedMessage().contains("[EMBEDDING_FAIL]")
-                        && event.getFormattedMessage().contains("eventType=TRADE_POST"));
+                .anyMatch(event -> {
+                    String msg = event.getFormattedMessage();
+                    return msg.contains("[EMBEDDING_FAIL]")
+                            && msg.contains("eventType=TRADE_POST")
+                            && msg.contains("targetId=1")
+                            && msg.contains("exceptionType=RuntimeException")
+                            && msg.contains("reason=vector store error");
+                });
     }
 
     @Test

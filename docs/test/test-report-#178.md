@@ -43,7 +43,8 @@
 | 삽입 위치 | `AuctionLifecycleService.closeExpiredAuction()` (EXPIRED_WIN), `AuctionBuyoutTransactionService.completeBuyout()` (BUYOUT) |
 
 로그 예시:
-```
+
+```log
 WARN [AUCTION_ANOMALY] type=EXPIRED_WIN auctionId=42 cardId=7 sellerId=3 winnerId=10 finalPrice=30000 startingPrice=5000 ratio=6.00
 WARN [AUCTION_ANOMALY] type=BUYOUT auctionId=42 cardId=7 sellerId=3 buyerId=10 finalPrice=30000 startingPrice=5000 ratio=6.00
 ```
@@ -62,7 +63,8 @@ Loki LogQL: `{app="pocat"} |= "AUCTION_ANOMALY"`
 | 삽입 위치 | `EmbeddingService.embedCard()`, `EmbeddingService.embedTradePost()` catch 블록 |
 
 로그 예시:
-```
+
+```log
 ERROR [EMBEDDING_FAIL] eventType=CARD targetId=15 exceptionType=RuntimeException reason=connection refused
 ERROR [EMBEDDING_FAIL] eventType=TRADE_POST targetId=88 exceptionType=TimeoutException reason=read timed out
 ```

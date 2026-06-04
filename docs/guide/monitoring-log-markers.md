@@ -8,8 +8,8 @@
 
 | 마커 | 레벨 | 감지 대상 | Loki LogQL |
 |------|------|-----------|-----------|
-| `[AUCTION_ANOMALY]` | WARN | 이상 낙찰가 감지 | `\|= "AUCTION_ANOMALY"` |
-| `[EMBEDDING_FAIL]` | ERROR | 벡터 임베딩 실패 | `\|= "EMBEDDING_FAIL"` |
+| `[AUCTION_ANOMALY]` | WARN | 이상 낙찰가 감지 | `|= "AUCTION_ANOMALY"` |
+| `[EMBEDDING_FAIL]` | ERROR | 벡터 임베딩 실패 | `|= "EMBEDDING_FAIL"` |
 
 ---
 

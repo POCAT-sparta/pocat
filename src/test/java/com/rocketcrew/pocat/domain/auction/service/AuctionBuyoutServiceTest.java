@@ -435,7 +435,15 @@ class AuctionBuyoutServiceTest {
 
             // then
             assertThat(listAppender.list)
-                    .anyMatch(event -> event.getFormattedMessage().contains("[AUCTION_ANOMALY]"));
+                    .anyMatch(event -> {
+                        String msg = event.getFormattedMessage();
+                        return msg.contains("[AUCTION_ANOMALY]")
+                                && msg.contains("type=BUYOUT")
+                                && msg.contains("buyerId=1")
+                                && msg.contains("finalPrice=10000")
+                                && msg.contains("startingPrice=1000")
+                                && msg.contains("ratio=10.00");
+                    });
         } finally {
             logger.detachAppender(listAppender);
         }

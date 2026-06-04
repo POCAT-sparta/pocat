@@ -215,7 +215,15 @@ class AuctionLifecycleServiceTest {
 
             // then
             assertThat(listAppender.list)
-                    .anyMatch(event -> event.getFormattedMessage().contains("[AUCTION_ANOMALY]"));
+                    .anyMatch(event -> {
+                        String msg = event.getFormattedMessage();
+                        return msg.contains("[AUCTION_ANOMALY]")
+                                && msg.contains("type=EXPIRED_WIN")
+                                && msg.contains("winnerId=10")
+                                && msg.contains("finalPrice=5000")
+                                && msg.contains("startingPrice=1000")
+                                && msg.contains("ratio=5.00");
+                    });
         } finally {
             logger.detachAppender(listAppender);
         }
