@@ -19,8 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -48,12 +46,9 @@ public class CardSyncService {
     private final PokemonCommandService pokemonCommandService;
 
     /**
-     * 매주 일요일 자정에 전체 세트를 자동 동기화한다.
-     * @Async("syncExecutor"): 전용 스레드 풀에서 실행되므로 스케줄러 스레드를 블로킹하지 않는다.
-     * @Scheduled: cron 표현식 "0 0 0 * * SUN" = 매주 일요일 00:00:00
+     * 카드 세트 전체를 동기화한다.
+     * 배치 시스템에서 호출. 더 이상 스케줄러로 자동 실행하지 않음.
      */
-    @Async("syncExecutor")
-    @Scheduled(cron = "0 0 0 * * SUN")
     public void syncAll() {
         log.info("[CardSync] 주간 전체 동기화 시작");
 
