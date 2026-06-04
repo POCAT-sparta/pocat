@@ -13,7 +13,11 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.BidException;
+import com.rocketcrew.pocat.global.monitoring.AuctionAnomalyProperties;
+import com.rocketcrew.pocat.domain.card.service.CardQueryService;
+import com.rocketcrew.pocat.domain.order.dto.response.CardAveragePriceResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +26,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuctionBuyoutTransactionService {
@@ -30,6 +35,8 @@ public class AuctionBuyoutTransactionService {
 
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
+    private final AuctionAnomalyProperties anomalyProperties;
+    private final CardQueryService cardQueryService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BuyoutReservation reserveBuyout(Long auctionId, User buyer) {
@@ -83,6 +90,7 @@ public class AuctionBuyoutTransactionService {
         auction.updateHighestBid(reservation.buyoutPrice(), buyerId);
         // 경매 상태를 PAYMENT_PENDING -> ENDED로 변경합니다.
         auction.endAfterPaymentPending();
+        logBuyoutAnomalyIfNeeded(auction, buyerId);
         // 즉시 구매 완료 아웃박스 저장 및 이벤트 발행
         buyoutCompletedEventPublisher.publish(
                 auction,
@@ -92,6 +100,30 @@ public class AuctionBuyoutTransactionService {
         );
 
         return new BuyoutCompletion(auction, buyoutBid);
+    }
+
+    private void logBuyoutAnomalyIfNeeded(Auction auction, Long buyerId) {
+        Long buyoutPrice = auction.getBuyoutPrice();
+        if (buyoutPrice == null) {
+            return;
+        }
+        try {
+            CardAveragePriceResponse avg = cardQueryService.getAveragePrice(auction.getCardId());
+            Long marketPrice = (avg != null && avg.averagePrice() != null && avg.transactionCount() > 0)
+                    ? avg.averagePrice()
+                    : auction.getStartingPrice();
+            if (marketPrice == null || marketPrice <= 0) {
+                return;
+            }
+            double ratio = (double) buyoutPrice / marketPrice;
+            if (ratio > anomalyProperties.getAuctionAnomalyThreshold()) {
+                log.warn("[AUCTION_ANOMALY] type=BUYOUT auctionId={} cardId={} sellerId={} buyerId={} finalPrice={} marketPrice={} ratio={}",
+                        auction.getId(), auction.getCardId(), auction.getSellerId(), buyerId,
+                        buyoutPrice, marketPrice, String.format("%.2f", ratio));
+            }
+        } catch (Exception e) {
+            log.warn("[AUCTION_ANOMALY] 모니터링 로그 실패 — auctionId={} cardId={}", auction.getId(), auction.getCardId(), e);
+        }
     }
 
     private AuctionBid findOrCreateWonBuyoutBid(Auction auction, Long buyerId, Long buyoutPrice) {

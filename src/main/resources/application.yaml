@@ -66,6 +66,8 @@ portone:
 pocat:
   internal:
     token: ${POCAT_INTERNAL_TOKEN}
+  monitoring:
+    auction-anomaly-threshold: 3.0
 
 outbox:
   relay:

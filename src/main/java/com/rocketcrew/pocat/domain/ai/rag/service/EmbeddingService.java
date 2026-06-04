@@ -44,7 +44,8 @@ public class EmbeddingService {
             vectorStore.add(java.util.List.of(document));
             log.debug("Card embedded successfully: cardId={}", cardId);
         } catch (Exception e) {
-            log.error("Failed to embed card: cardId={}", cardId, e);
+            log.error("[EMBEDDING_FAIL] eventType=CARD targetId={} exceptionType={} reason={}",
+                    cardId, e.getClass().getSimpleName(), e.getMessage(), e);
             // 벡터화 실패는 비즈니스 로직에 영향 없음 (로그만 기록)
         }
     }
@@ -70,7 +71,8 @@ public class EmbeddingService {
             vectorStore.add(java.util.List.of(document));
             log.debug("Trade post embedded successfully: postId={}", postId);
         } catch (Exception e) {
-            log.error("Failed to embed trade post: postId={}", postId, e);
+            log.error("[EMBEDDING_FAIL] eventType=TRADE_POST targetId={} exceptionType={} reason={}",
+                    postId, e.getClass().getSimpleName(), e.getMessage(), e);
             // 벡터화 실패는 비즈니스 로직에 영향 없음 (로그만 기록)
         }
     }
