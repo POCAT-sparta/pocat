@@ -36,7 +36,7 @@ public class SecurityConfig {
     private final StringRedisTemplate redisTemplate;
     private final Environment environment;
 
-    @Value("${cors.allowed-origins}")
+    @Value("${cors.allowed-origins:http://localhost:*}")
     private String allowedOrigins;
 
     @Value("${pocat.internal.token}")

@@ -27,6 +27,12 @@ spring:
       port: 6379
   kafka:
     bootstrap-servers: localhost:9092
+    producer:
+      properties:
+        max.block.ms: 500        # Kafka 미기동 시 send() 블록킹 최대 500ms로 제한
+        request.timeout.ms: 500  # 요청 타임아웃도 짧게 설정
+    admin:
+      fail-fast: false           # 토픽 생성 실패 시 컨텍스트 기동 중단 방지
 
 jwt:
   secret: pocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkey
