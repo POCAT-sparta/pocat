@@ -16,8 +16,18 @@ public interface S3Uploader {
      */
     String upload(String key, byte[] data, String contentType);
 
+    void delete(String key);
+
     static String cardImageKey(String tcgdexId) {
         return "cards/" + tcgdexId + "/high.webp";
+    }
+
+    static String cardPendingImageKey(Long cardId) {
+        return "cards/pending/" + cardId + "/image";
+    }
+
+    static String cardManualImageKey(Long cardId) {
+        return "cards/manual/" + cardId + "/image";
     }
 
     String CARD_IMAGE_CONTENT_TYPE = "image/webp";

@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Slf4j
@@ -46,5 +47,14 @@ public class S3UploaderImpl implements S3Uploader {
         String url = "https://%s.s3.%s.amazonaws.com/%s".formatted(bucket, region, key);
         log.debug("[S3] 업로드 완료: {}", url);
         return url;
+    }
+
+    @Override
+    public void delete(String key) {
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build());
+        log.debug("[S3] 삭제 완료: {}", key);
     }
 }
