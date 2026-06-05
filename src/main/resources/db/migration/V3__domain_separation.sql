@@ -52,7 +52,9 @@ DEALLOCATE PREPARE stmt;
 SET @seed_sets = (
     SELECT IF(
         (SELECT COUNT(*) FROM information_schema.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cards' AND COLUMN_NAME = 'set_id') > 0,
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cards'
+           AND COLUMN_NAME IN ('set_id', 'set_name')
+         GROUP BY TABLE_NAME HAVING COUNT(*) = 2) IS NOT NULL,
         'INSERT IGNORE INTO pokemon_sets (set_id, name, series_id, name_ko, created_at, updated_at) SELECT DISTINCT c.set_id, c.set_name, s.id, NULL, NOW(6), NOW(6) FROM cards c LEFT JOIN series s ON s.name = c.series WHERE c.set_id IS NOT NULL AND c.set_id != \'\'',
         'SELECT 1'
     )

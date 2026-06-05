@@ -108,7 +108,7 @@ public class SecurityConfig {
                         new JwtAuthenticationFilter(jwtUtil, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class
                 )
-                .addFilterAfter(
+                .addFilterBefore(
                         new MdcLoggingFilter(),
                         JwtAuthenticationFilter.class
                 );

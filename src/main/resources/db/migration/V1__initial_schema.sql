@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `deleted_at`    DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `UK6dotkott2kjsp8vw4d0m25fb7` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `ai_prompt_template` (
     `id`          BIGINT       NOT NULL AUTO_INCREMENT,
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `ai_prompt_template` (
     `deleted_at`  DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_prompt_grade` (`card_grade`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `outbox_events` (
     `id`            BIGINT       NOT NULL AUTO_INCREMENT,
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `outbox_events` (
     `processed_at`  DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_outbox_status_created` (`status`, `created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `webhook_events` (
     `id`         BIGINT      NOT NULL AUTO_INCREMENT,
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `webhook_events` (
     `created_at` DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `UKslmo429fqscq0l8jxt8o7r74a` (`payment_id`, `event_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── series 의존 ─────────────────────────────────────────────────────────────────
 
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
     `updated_at`   DATETIME(6)  DEFAULT NULL,
     `deleted_at`   DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `free_posts` (
     `id`            BIGINT       NOT NULL AUTO_INCREMENT,
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `free_posts` (
     `updated_at`    DATETIME(6)  DEFAULT NULL,
     `deleted_at`    DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `trade_posts` (
     `id`         BIGINT       NOT NULL AUTO_INCREMENT,
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS `trade_posts` (
     `updated_at` DATETIME(6)  DEFAULT NULL,
     `deleted_at` DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `ai_chat_sessions` (
     `id`             BIGINT      NOT NULL AUTO_INCREMENT,
@@ -199,9 +199,8 @@ CREATE TABLE IF NOT EXISTS `ai_chat_sessions` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `session_uuid` (`session_uuid`),
     KEY `idx_ai_chat_session_user_id` (`user_id`),
-    KEY `idx_ai_chat_session_uuid` (`session_uuid`),
     KEY `idx_ai_chat_session_last_active` (`last_active_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── cards 의존 ──────────────────────────────────────────────────────────────────
 
@@ -226,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `auctions` (
     `updated_at`        DATETIME(6)  DEFAULT NULL,
     `deleted_at`        DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `card_ai_analysis` (
     `id`                 BIGINT      NOT NULL AUTO_INCREMENT,
@@ -247,7 +246,7 @@ CREATE TABLE IF NOT EXISTS `card_ai_analysis` (
     PRIMARY KEY (`id`),
     KEY `idx_card_ai_analysis_card_id` (`card_id`),
     CONSTRAINT `fk_card_ai_analysis_card` FOREIGN KEY (`card_id`) REFERENCES `cards` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── auctions 의존 ───────────────────────────────────────────────────────────────
 
@@ -261,7 +260,7 @@ CREATE TABLE IF NOT EXISTS `auction_bids` (
     `updated_at` DATETIME(6) DEFAULT NULL,
     `deleted_at` DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `auction_snapshots` (
     `id`            BIGINT NOT NULL AUTO_INCREMENT,
@@ -273,7 +272,7 @@ CREATE TABLE IF NOT EXISTS `auction_snapshots` (
     `deleted_at`    DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_auction_snapshots_auction_id` (`auction_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `likes` (
     `id`         BIGINT NOT NULL AUTO_INCREMENT,
@@ -284,7 +283,7 @@ CREATE TABLE IF NOT EXISTS `likes` (
     `deleted_at` DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_likes_user_auction` (`user_id`, `auction_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `orders` (
     `id`               BIGINT      NOT NULL AUTO_INCREMENT,
@@ -308,7 +307,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `UKi0poo21rsght60tvcy7qfw59p` (`order_uid`),
     UNIQUE KEY `uk_auction_id_bidder_rank` (`auction_id`, `bidder_rank`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── free_posts 의존 ─────────────────────────────────────────────────────────────
 
@@ -322,7 +321,7 @@ CREATE TABLE IF NOT EXISTS `comments` (
     `updated_at`  DATETIME(6) DEFAULT NULL,
     `deleted_at`  DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── trade_posts 의존 ────────────────────────────────────────────────────────────
 
@@ -339,7 +338,7 @@ CREATE TABLE IF NOT EXISTS `chats` (
     `deleted_at` DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `UK49oew9dktwaeim0n3jxkawwk2` (`post_id`, `guest_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── chats 의존 ──────────────────────────────────────────────────────────────────
 
@@ -353,7 +352,7 @@ CREATE TABLE IF NOT EXISTS `chat_messages` (
     `updated_at` DATETIME(6) DEFAULT NULL,
     `deleted_at` DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── orders 의존 ─────────────────────────────────────────────────────────────────
 
@@ -370,7 +369,7 @@ CREATE TABLE IF NOT EXISTS `order_snapshots` (
     `deleted_at`     DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_snapshots_order_uid` (`order_uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `payments` (
     `id`                       BIGINT      NOT NULL AUTO_INCREMENT,
@@ -387,7 +386,7 @@ CREATE TABLE IF NOT EXISTS `payments` (
     `deleted_at`               DATETIME(6) DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `UKll5wr1fe73lohconkmmup7mwq` (`payment_uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `settlements` (
     `id`             BIGINT      NOT NULL AUTO_INCREMENT,
@@ -405,7 +404,7 @@ CREATE TABLE IF NOT EXISTS `settlements` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `UK139014vvhp0mo9ecrtxtsjcql` (`order_id`),
     UNIQUE KEY `UKrclsmsls0ys9fncguw76fwp7x` (`settlement_uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── payments 의존 ───────────────────────────────────────────────────────────────
 
@@ -424,7 +423,7 @@ CREATE TABLE IF NOT EXISTS `refunds` (
     `updated_at`     DATETIME(6)  DEFAULT NULL,
     `deleted_at`     DATETIME(6)  DEFAULT NULL,
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── ai_chat_sessions 의존 ───────────────────────────────────────────────────────
 
@@ -441,6 +440,6 @@ CREATE TABLE IF NOT EXISTS `ai_chat_messages` (
     KEY `idx_ai_chat_message_session_id` (`ai_chat_session_id`),
     KEY `idx_ai_chat_message_created_at` (`created_at`),
     CONSTRAINT `fk_ai_chat_messages_session` FOREIGN KEY (`ai_chat_session_id`) REFERENCES `ai_chat_sessions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

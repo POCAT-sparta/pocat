@@ -44,9 +44,6 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="LOKI"/>
         <appender-ref ref="LOGSTASH"/>
-        <springProfile name="prod,local">
-            <appender-ref ref="LOKI"/>
-        </springProfile>
     </root>
 
 </configuration>
