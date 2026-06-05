@@ -47,11 +47,11 @@ public class CardEsMigrationService {
             if (!docs.isEmpty()) {
                 cardSearchRepository.saveAll(docs);
                 totalCount += docs.size();
-                log.info("[EsMigration] 배치 인덱싱 완료 (누적: {}/{})", totalCount, batch.getTotalElements());
+                log.info("[ES_MIGRATION] 카드 배치 인덱싱 완료 누적={} 전체={}", totalCount, batch.getTotalElements());
             }
         } while (batch.hasNext());
 
-        log.info("[EsMigration] 전체 {}개 카드 ES 인덱싱 완료", totalCount);
+        log.info("[ES_MIGRATION] 카드 전체 ES 인덱싱 완료 count={}", totalCount);
         return totalCount;
     }
 }

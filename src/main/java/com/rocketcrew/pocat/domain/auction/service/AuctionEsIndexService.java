@@ -34,9 +34,9 @@ public class AuctionEsIndexService {
             String sellerNickname = resolveNickname(auction.getSellerId());
             AuctionDocument doc = AuctionDocument.from(auction, card, sellerNickname);
             auctionSearchRepository.save(doc);
-            log.debug("[AuctionEs] 인덱싱 완료 auctionId={}", auction.getId());
+            log.debug("[ES_INDEXING] 경매 인덱싱 완료 auctionId={}", auction.getId());
         } catch (Exception e) {
-            log.error("[AuctionEs] 인덱싱 실패 auctionId={}", auction.getId(), e);
+            log.error("[ES_INDEXING] 경매 인덱싱 실패 auctionId={}: {}", auction.getId(), e.getMessage(), e);
         }
     }
 
@@ -47,9 +47,9 @@ public class AuctionEsIndexService {
                     .withDocument(Document.create().append("highestPrice", highestPrice))
                     .build();
             elasticsearchOperations.update(updateQuery, IndexCoordinates.of(INDEX));
-            log.debug("[AuctionEs] highestPrice 업데이트 auctionId={} price={}", auctionId, highestPrice);
+            log.debug("[ES_INDEXING] 경매 highestPrice 업데이트 auctionId={} price={}", auctionId, highestPrice);
         } catch (Exception e) {
-            log.warn("[AuctionEs] highestPrice 업데이트 실패 auctionId={}", auctionId, e);
+            log.warn("[ES_INDEXING] 경매 highestPrice 업데이트 실패 auctionId={}: {}", auctionId, e.getMessage());
         }
     }
 
@@ -62,9 +62,9 @@ public class AuctionEsIndexService {
                             .append("statusOrder", AuctionDocument.toStatusOrder(status)))
                     .build();
             elasticsearchOperations.update(updateQuery, IndexCoordinates.of(INDEX));
-            log.debug("[AuctionEs] status 업데이트 auctionId={} status={}", auctionId, status);
+            log.debug("[ES_INDEXING] 경매 status 업데이트 auctionId={} status={}", auctionId, status);
         } catch (Exception e) {
-            log.warn("[AuctionEs] status 업데이트 실패 auctionId={}", auctionId, e);
+            log.warn("[ES_INDEXING] 경매 status 업데이트 실패 auctionId={}: {}", auctionId, e.getMessage());
         }
     }
 
@@ -72,9 +72,9 @@ public class AuctionEsIndexService {
     public void delete(Long auctionId) {
         try {
             auctionSearchRepository.deleteById(String.valueOf(auctionId));
-            log.debug("[AuctionEs] 삭제 완료 auctionId={}", auctionId);
+            log.debug("[ES_INDEXING] 경매 삭제 완료 auctionId={}", auctionId);
         } catch (Exception e) {
-            log.warn("[AuctionEs] 삭제 실패 auctionId={}", auctionId, e);
+            log.warn("[ES_INDEXING] 경매 삭제 실패 auctionId={}: {}", auctionId, e.getMessage());
         }
     }
 
@@ -82,7 +82,7 @@ public class AuctionEsIndexService {
         try {
             return userQueryService.getUserEntity(sellerId).getNickname();
         } catch (Exception e) {
-            log.warn("[AuctionEs] 판매자 닉네임 조회 실패 sellerId={}", sellerId);
+            log.warn("[ES_INDEXING] 경매 판매자 닉네임 조회 실패 sellerId={}: {}", sellerId, e.getMessage());
             return null;
         }
     }

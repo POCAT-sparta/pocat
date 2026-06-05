@@ -159,7 +159,7 @@ public class AuctionLifecycleService {
         try {
             avg = cardQueryService.getAveragePrice(cardId);
         } catch (Exception e) {
-            log.warn("[AUCTION_ANOMALY] marketPrice 조회 실패 — auctionId={} cardId={}", auctionId, cardId, e);
+            log.warn("[AUCTION_ANOMALY] 이상거래 판정용 marketPrice 조회 실패 auctionId={} cardId={}: {}", auctionId, cardId, e.getMessage());
             avg = null;
         }
         Long marketPrice = (avg != null && avg.averagePrice() != null && avg.transactionCount() > 0)
@@ -170,7 +170,7 @@ public class AuctionLifecycleService {
         }
         double ratio = (double) finalPrice / marketPrice;
         if (ratio > anomalyProperties.getAuctionAnomalyThreshold()) {
-            log.warn("[AUCTION_ANOMALY] type={} auctionId={} cardId={} sellerId={} winnerId={} finalPrice={} marketPrice={} ratio={}",
+            log.warn("[AUCTION_ANOMALY] 낙찰 이상가 감지 type={} auctionId={} cardId={} sellerId={} winnerId={} finalPrice={} marketPrice={} ratio={}",
                     type, auctionId, cardId, sellerId, winnerId, finalPrice, marketPrice,
                     String.format("%.2f", ratio));
         }

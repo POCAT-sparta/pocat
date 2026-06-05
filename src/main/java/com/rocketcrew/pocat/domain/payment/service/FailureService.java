@@ -82,7 +82,7 @@ public class FailureService {
         if (order.getPaymentDeadline().isBefore(LocalDateTime.now())
                 && order.getStatus() == OrderStatus.PAYMENT_PENDING) {
             order.failPayment();
-            log.info("[OrderFailure] orderId={} reason={} -> FAILED", orderId, reason);
+            log.info("[PAYMENT_ESCALATION] 주문 결제 실패 처리 orderId={} reason={}", orderId, reason);
             directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
         }
     }

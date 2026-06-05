@@ -220,7 +220,7 @@ public class CardCommandService {
             String setNameKo = card.getPokemonSet() != null ? card.getPokemonSet().getNameKo() : null;
             cardSearchRepository.save(CardDocument.from(card, nameKo, seriesKo, setNameKo));
         } catch (Exception e) {
-            log.warn("[CardES] 인덱싱 실패 cardId={}: {}", card.getId(), e.getMessage());
+            log.warn("[ES_INDEXING] 카드 인덱싱 실패 cardId={}: {}", card.getId(), e.getMessage());
         }
     }
 
@@ -241,7 +241,7 @@ public class CardCommandService {
         try {
             cardSearchRepository.deleteById(String.valueOf(id));
         } catch (Exception e) {
-            log.warn("[CardES] 인덱스 삭제 실패 cardId={}: {}", id, e.getMessage());
+            log.warn("[ES_INDEXING] 카드 인덱스 삭제 실패 cardId={}: {}", id, e.getMessage());
         }
     }
 
