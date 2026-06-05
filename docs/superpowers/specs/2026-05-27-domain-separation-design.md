@@ -151,15 +151,15 @@ public class Pokemon extends BaseEntity {
 
 nameKo는 처음엔 null → 어드민 API로 수동 입력하거나 시더가 채움.
 
-### 4-2. YAML 시더 (최초 1회, ApplicationReadyEvent)
+### 4-2. ApplicationReadyEvent 시더
 
 ```
-pokemon-names.yml → Pokemon 테이블 INSERT
-  (name=영문, nameKo=한글, 이미 존재하면 스킵)
-
 기존 cards 순회 → 카드명에서 포켓몬명 추출 → pokemon_id UPDATE
   (POKEMON category이고 pokemon_id IS NULL인 카드만)
 ```
+
+> Pokemon 테이블 `nameKo`는 DB에 이미 데이터가 있으므로 YAML 시더 불필요.  
+> `pokemon-names.yml` 로드 및 `seedPokemon()` 로직 제거됨.
 
 series/set 시드 데이터는 Flyway V3에서 처리 (아래 섹션 참조).
 

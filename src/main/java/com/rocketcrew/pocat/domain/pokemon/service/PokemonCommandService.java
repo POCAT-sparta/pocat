@@ -51,16 +51,6 @@ public class PokemonCommandService {
         return Optional.empty();
     }
 
-    /** pokemon-names.yml 에서 읽어온 (nameEn, nameKo) 쌍으로 일괄 저장 */
-    public Pokemon findOrCreate(String name, String nameKo) {
-        return pokemonRepository.findByName(name).orElseGet(() -> {
-            Pokemon saved = pokemonRepository.save(
-                    Pokemon.builder().name(name).nameKo(nameKo).build());
-            nameCache.put(normalize(name), saved);
-            return saved;
-        });
-    }
-
     public PokemonResponse updateNameKo(Long id, String nameKo) {
         Pokemon pokemon = pokemonRepository.findById(id)
                 .orElseThrow(() -> new PokemonException(ErrorCode.POKEMON_NOT_FOUND));
