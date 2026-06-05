@@ -2,6 +2,11 @@ spring:
   config:
     import: aws-parameterstore:/pocat/prod/
 
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
