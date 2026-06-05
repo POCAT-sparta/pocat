@@ -28,6 +28,7 @@ import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.ai.chat.client.ChatClient;
@@ -71,6 +72,7 @@ import static org.mockito.Mockito.verify;
  * ConcurrentMapCacheManager(in-memory)를 사용하여 실제 Redis 없이
  * Spring Cache Abstraction(@Cacheable / @CacheEvict)의 DB 호출 횟수 감소 효과를 결정론적으로 검증.
  */
+@Tag("bulk")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 @Import(CachePerformanceTest.CachePerformanceTestConfig.class)
