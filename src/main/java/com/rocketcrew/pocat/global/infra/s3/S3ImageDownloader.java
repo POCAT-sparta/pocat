@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 public class S3ImageDownloader {
 
     private static final String DEFAULT_CONTENT_TYPE = "image/jpeg";
+    private static final int MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
     private final RestTemplate restTemplate;
 
@@ -38,6 +39,9 @@ public class S3ImageDownloader {
             if (bytes == null || bytes.length == 0) {
                 throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
             }
+            if (bytes.length > MAX_SIZE_BYTES) {
+                throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
+            }
             String contentType = response.getHeaders().getContentType() != null
                     ? response.getHeaders().getContentType().toString()
                     : DEFAULT_CONTENT_TYPE;
@@ -45,7 +49,7 @@ public class S3ImageDownloader {
         } catch (CardException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("[S3ImageDownloader] 다운로드 실패 url={}: {}", imageUrl, e.getMessage());
+            log.warn("[S3ImageDownloader] 다운로드 실패 url={}", imageUrl, e);
             throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
         }
     }

@@ -153,7 +153,7 @@ nameKo는 처음엔 null → 어드민 API로 수동 입력하거나 시더가 �
 
 ### 4-2. ApplicationReadyEvent 시더
 
-```
+```text
 기존 cards 순회 → 카드명에서 포켓몬명 추출 → pokemon_id UPDATE
   (POKEMON category이고 pokemon_id IS NULL인 카드만)
 ```
@@ -211,20 +211,18 @@ Flyway가 JPA보다 먼저 실행되므로 Flyway 스크립트가 새 테이블 
 ### ApplicationReadyEvent 시더 (Java)
 
 pokemon_id 매핑은 슬라이딩 윈도우 알고리즘이 필요하므로 Java로 처리.
+Pokemon 테이블 `nameKo`는 DB에 이미 데이터가 있으므로 YAML 시더 불필요 — `seedPokemon()` 로직 제거됨.
 
-```
-Pokemon 테이블이 비어있으면:
-  pokemon-names.yml 로드 → Pokemon INSERT
-
+```text
 cards.pokemon_id IS NULL인 POKEMON 카드에 대해:
-  기존 PokemonNameDictionary 슬라이딩 윈도우 로직으로 포켓몬명 추출
+  슬라이딩 윈도우 로직으로 포켓몬명 추출
   Pokemon 조회 → pokemon_id UPDATE
 ```
 
 | 담당 | 역할 |
 |------|------|
 | Flyway V3 | 테이블 생성, series/set 시드, FK 컬럼 추가/이관, 구 컬럼 DROP |
-| Java 시더 | pokemon 시드 + cards.pokemon_id 채우기 |
+| Java 시더 | cards.pokemon_id 채우기 (pokemon 시드는 DB에 기존재) |
 | JPA ddl-auto:update | 엔티티 변경사항 보조 |
 
 ---

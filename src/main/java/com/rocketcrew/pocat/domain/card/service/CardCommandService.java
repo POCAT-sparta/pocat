@@ -31,6 +31,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URI;
 
 @Slf4j
 @Service
@@ -121,8 +122,8 @@ public class CardCommandService {
             String contentType = image.getContentType() != null ? image.getContentType() : "image/jpeg";
             String s3Url = s3Uploader.upload(S3Uploader.cardPendingImageKey(card.getId()), bytes, contentType);
             card.updateImageUrl(s3Url);
-        } catch (IOException e) {
-            log.warn("[CardCommandService] 이미지 업로드 실패 cardId={}: {}", card.getId(), e.getMessage());
+        } catch (Exception e) {
+            log.warn("[CardCommandService] 이미지 업로드 실패 cardId={}", card.getId(), e);
             throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
         }
 
@@ -170,6 +171,7 @@ public class CardCommandService {
 
         if (card.getImageUrl() != null) {
             String currentUrl = card.getImageUrl();
+            validateImageUrl(currentUrl);
             boolean isPending = isPendingS3Url(currentUrl);
 
             S3ImageDownloader.DownloadResult result = s3ImageDownloader.download(currentUrl);
@@ -243,12 +245,42 @@ public class CardCommandService {
         }
     }
 
+    private void validateImageUrl(String url) {
+        try {
+            URI uri = URI.create(url);
+            String scheme = uri.getScheme();
+            if (!"http".equals(scheme) && !"https".equals(scheme)) {
+                throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
+            }
+            String host = uri.getHost();
+            if (host == null) {
+                throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
+            }
+            // SSRF 방어: 내부망 / 루프백 / 링크로컬 차단
+            if (host.equals("localhost")
+                    || host.startsWith("127.")
+                    || host.startsWith("10.")
+                    || host.startsWith("192.168.")
+                    || host.startsWith("169.254.")
+                    || host.matches("172\\.(1[6-9]|2\\d|3[01])\\..*")) {
+                throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
+            }
+        } catch (CardException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CardException(ErrorCode.CARD_IMAGE_DOWNLOAD_FAILED);
+        }
+    }
+
     private boolean isPendingS3Url(String url) {
-        return url.contains("/cards/pending/");
+        return url.contains(".amazonaws.com/") && url.contains("/cards/pending/");
     }
 
     private String pendingKeyFromUrl(String url) {
         int idx = url.indexOf(".amazonaws.com/");
+        if (idx == -1) {
+            throw new IllegalArgumentException("S3 URL 형식이 아닙니다: " + url);
+        }
         return url.substring(idx + ".amazonaws.com/".length());
     }
 

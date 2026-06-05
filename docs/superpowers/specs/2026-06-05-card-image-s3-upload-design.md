@@ -17,14 +17,14 @@
 
 ### 외부 URL 신청 (기존 엔드포인트 유지)
 
-```
+```text
 POST /api/v1/cards (JSON)
   → Card 저장 (status=PENDING, imageUrl=외부URL)
 ```
 
 ### 파일 업로드 신청 (신규 엔드포인트)
 
-```
+```text
 POST /api/v1/cards/upload (multipart/form-data)
   → Card 저장 (status=PENDING, imageUrl=null)
   → S3 업로드: cards/pending/{cardId}/image
@@ -33,7 +33,7 @@ POST /api/v1/cards/upload (multipart/form-data)
 
 ### 관리자 승인
 
-```
+```text
 PATCH /api/v1/admin/cards/{cardId}/approve
   → card.getImageUrl()에서 bytes + content-type 다운로드
   → S3 최종 업로드: cards/manual/{cardId}/image
@@ -44,7 +44,7 @@ PATCH /api/v1/admin/cards/{cardId}/approve
 
 ### 관리자 거절
 
-```
+```text
 PATCH /api/v1/admin/cards/{cardId}/reject
   → imageUrl이 pending 경로("cards/pending/")이면 S3 삭제
   → Card.status = REJECTED
