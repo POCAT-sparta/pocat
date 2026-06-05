@@ -1,35 +1,22 @@
 spring:
   application:
     name: POCAT
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+
   flyway:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
     locations: classpath:db/migration
+
   jpa:
-    hibernate:
-      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092,localhost:9094,localhost:9095}
-  elasticsearch:
-    uris: ${ES_URI:http://localhost:9200}
+
   ai:
     openai:
-      api-key: ${GEMINI_API_KEY}
       base-url: https://generativelanguage.googleapis.com/v1beta/openai
       chat:
         options:
@@ -45,34 +32,6 @@ spring:
         dimensions: 768
         similarity: cosine
         initialize-schema: true
-
-cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}
-
-view:
-  ip-secret: ${VIEW_IP_SECRET}
-
-jwt:
-  secret: ${JWT_SECRET}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:86400000}
-
-# == AWS S3 ==
-cloud:
-  aws:
-    credentials:
-      access-key: ${AWS_ACCESS_KEY}
-      secret-key: ${AWS_SECRET_KEY}
-    region:
-      static: ${AWS_REGION:ap-northeast-2}
-    s3:
-      bucket: ${AWS_S3_BUCKET}
-
-# == 포트원 ==
-portone:
-  secret: ${PORTONE_SECRET}
-  webhook-secret: ${PORTONE_WEBHOOK_SECRET}
-  webhook-allowed-ips: ${PORTONE_WEBHOOK_ALLOWED_IPS:}
 
 pocat:
   internal:
@@ -92,15 +51,10 @@ ranking:
     cache-size: 100
     max-response-size: 50
 
-loki:
-  url: ${LOKI_URL:http://localhost:3100}
 
 management:
   health:
     elasticsearch:
-      # spring-boot-actuator 3.5.x 가 elasticsearch-java 8.17+ API(activeShardsPercentAsNumber)를 호출하는데
-      # spring-ai 1.0.0 과의 호환 버전(8.16.x)에는 해당 메서드가 없어 헬스체크가 NoSuchMethodError로 터짐.
-      # ES 연결 자체는 정상 동작하므로 액추에이터 헬스 지표만 비활성화.
       enabled: false
 
 rate-limit:
@@ -151,9 +105,3 @@ resilience4j:
         limitForPeriod: 10
         limitRefreshPeriod: 60s
         timeoutDuration: 0s
-
-springdoc:
-  swagger-ui:
-    enabled: false
-  api-docs:
-    enabled: false

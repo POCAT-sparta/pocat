@@ -94,6 +94,9 @@ dependencies {
 
     // Loki logback appender
     implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
+
+    // parameter store
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
 }
 
 tasks.named('test') {

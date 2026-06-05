@@ -1,6 +1,66 @@
 spring:
+  config:
+    import: aws-parameterstore:/pocat/prod/
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+
   jpa:
     hibernate:
       ddl-auto: validate
-  flyway:
-    enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  elasticsearch:
+    uris: ${ES_URI}
+
+  ai:
+    openai:
+      api-key: ${GEMINI_API_KEY}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+view:
+  ip-secret: ${VIEW_IP_SECRET}
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:86400000}
+
+loki:
+  url: ${LOKI_URL}
+
+# == AWS S3 ==
+cloud:
+  aws:
+    region:
+      static: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+
+portone:
+  secret: ${PORTONE_SECRET}
+  webhook-secret: ${PORTONE_WEBHOOK_SECRET}
+  webhook-allowed-ips: ${PORTONE_WEBHOOK_ALLOWED_IPS:}
+
+pocat:
+  internal:
+    token: ${POCAT_INTERNAL_TOKEN}
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
