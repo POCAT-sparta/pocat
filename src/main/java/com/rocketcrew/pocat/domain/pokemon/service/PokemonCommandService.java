@@ -81,7 +81,8 @@ public class PokemonCommandService {
     }
 
     private static String normalize(String word) {
-        String decomposed = Normalizer.normalize(word, Normalizer.Form.NFD);
+        String replaced = word.replace('♀', 'f').replace('♂', 'm');
+        String decomposed = Normalizer.normalize(replaced, Normalizer.Form.NFD);
         return decomposed.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 }
