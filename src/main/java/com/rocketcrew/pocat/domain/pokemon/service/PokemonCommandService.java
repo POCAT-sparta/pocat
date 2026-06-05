@@ -52,6 +52,15 @@ public class PokemonCommandService {
         return Optional.empty();
     }
 
+    public Pokemon findOrCreate(String name, String nameKo) {
+        return pokemonRepository.findByName(name).orElseGet(() -> {
+            Pokemon saved = pokemonRepository.save(
+                    Pokemon.builder().name(name).nameKo(nameKo).build());
+            nameCache.put(normalize(name), saved);
+            return saved;
+        });
+    }
+
     public PokemonResponse updateNameKo(Long id, String nameKo) {
         Pokemon pokemon = pokemonRepository.findById(id)
                 .orElseThrow(() -> new PokemonException(ErrorCode.POKEMON_NOT_FOUND));
