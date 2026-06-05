@@ -74,11 +74,11 @@ public class AuctionEsMigrationService {
 
             auctionSearchRepository.saveAll(docs);
             totalCount += docs.size();
-            log.info("[AuctionEsMigration] 배치 인덱싱 완료 (누적: {}/{})", totalCount, batch.getTotalElements());
+            log.info("[ES_MIGRATION] 경매 배치 인덱싱 완료 누적={} 전체={}", totalCount, batch.getTotalElements());
 
         } while (batch.hasNext());
 
-        log.info("[AuctionEsMigration] 전체 {}개 경매 ES 인덱싱 완료", totalCount);
+        log.info("[ES_MIGRATION] 경매 전체 ES 인덱싱 완료 count={}", totalCount);
         return totalCount;
     }
 }

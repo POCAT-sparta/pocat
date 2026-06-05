@@ -195,7 +195,7 @@ public class CardQueryService {
                 return objectMapper.readValue(cached, CardAveragePriceResponse.class);
             }
         } catch (Exception e) {
-            log.warn("[CardCache] 평균가 캐시 조회/역직렬화 실패, DB 조회로 폴백: {}", e.getMessage());
+            log.warn("[CACHE] 카드 평균가 캐시 조회/역직렬화 실패, DB 조회로 폴백 cardId={}: {}", cardId, e.getMessage());
         }
 
         CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(cardId);
@@ -206,7 +206,7 @@ public class CardQueryService {
                     objectMapper.writeValueAsString(response),
                     AVG_PRICE_CACHE_TTL_HOURS, TimeUnit.HOURS);
         } catch (Exception e) {
-            log.warn("[CardCache] 평균가 캐시 저장 실패: {}", e.getMessage());
+            log.warn("[CACHE] 카드 평균가 캐시 저장 실패 cardId={}: {}", cardId, e.getMessage());
         }
 
         return response;

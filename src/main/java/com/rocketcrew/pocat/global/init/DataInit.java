@@ -75,7 +75,7 @@ public class DataInit implements ApplicationRunner {
                 .billingKey(billingKey)
                 .build();
         User saved = userRepository.save(user);
-        log.info("[DataInit] 유저 생성: {} ({})", email, role);
+        log.info("[DATA_SEEDING] 유저 생성: {} ({})", email, role);
         return saved;
     }
 
@@ -154,7 +154,7 @@ public class DataInit implements ApplicationRunner {
                 .endedAt(now.plusDays(7))
                 .build());
 
-        log.info("[DataInit] 카드 3장, 경매 3건 시드 완료 (판매자: {})", seller.getEmail());
+        log.info("[DATA_SEEDING] 카드 3장, 경매 3건 시드 완료 (판매자: {})", seller.getEmail());
     }
 
     private void seedAuctionsFromExistingCards(List<User> users) {
@@ -167,7 +167,7 @@ public class DataInit implements ApplicationRunner {
                 .toList();
 
         if (cards.isEmpty()) {
-            log.info("[DataInit] 시드용 카드 없음, 경매 시드 건너뜁니다.");
+            log.info("[DATA_SEEDING] 시드용 카드 없음, 경매 시드 건너뜁니다.");
             return;
         }
 
@@ -186,7 +186,7 @@ public class DataInit implements ApplicationRunner {
                     .endedAt(now.plusDays(3L + i * 2L))
                     .build());
         }
-        log.info("[DataInit] 기존 카드 {}장으로 경매 {}건 시드 완료 (판매자: {})",
+        log.info("[DATA_SEEDING] 기존 카드 {}장으로 경매 {}건 시드 완료 (판매자: {})",
                 cards.size(), cards.size(), seller.getEmail());
     }
 }

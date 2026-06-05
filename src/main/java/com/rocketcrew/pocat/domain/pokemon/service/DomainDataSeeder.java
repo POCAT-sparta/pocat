@@ -55,7 +55,7 @@ public class DomainDataSeeder {
             String joined = String.join(" ", koList);
             seriesRepository.findByName(en).ifPresent(s -> {
                 s.updateNameKo(joined);
-                log.info("[Seeder] Series nameKo 업데이트: {} → {}", en, joined);
+                log.info("[DATA_SEEDING] Series nameKo 업데이트: {} → {}", en, joined);
             });
         });
     }
@@ -71,11 +71,10 @@ public class DomainDataSeeder {
                     .filter(ps -> ps.getName().equals(en))
                     .forEach(ps -> {
                         ps.updateNameKo(joined);
-                        log.info("[Seeder] PokemonSet nameKo 업데이트: {} → {}", en, joined);
+                        log.info("[DATA_SEEDING] PokemonSet nameKo 업데이트: {} → {}", en, joined);
                     });
         });
     }
-
     /**
      * POKEMON 카드 중 pokemon_id 미설정 카드에 pokemon 연결.
      * 커서(keyset) 페이지네이션으로 처리 — pokemon_id를 채우면서 오프셋이 틀어지는 문제 방지.
@@ -98,7 +97,7 @@ public class DomainDataSeeder {
                 }
             }
         } while (!batch.isEmpty());
-        log.info("[Seeder] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, total);
+        log.info("[DATA_SEEDING] {}개 카드 pokemon 연결 완료 (전체 미연결: {}개)", linked, total);
     }
 
     /**
@@ -109,7 +108,7 @@ public class DomainDataSeeder {
         Map<String, List<String>> enToKoList = new LinkedHashMap<>();
         try (InputStream is = getClass().getResourceAsStream(resource)) {
             if (is == null) {
-                log.debug("[Seeder] {} 파일 없음 (스킵)", resource);
+                log.debug("[DATA_SEEDING] {} 파일 없음 (스킵)", resource);
                 return enToKoList;
             }
             Map<Object, Object> root = new Yaml().load(is);
@@ -122,7 +121,7 @@ public class DomainDataSeeder {
                 }
             }
         } catch (Exception e) {
-            log.warn("[Seeder] {} 로드 실패: {}", resource, e.getMessage());
+            log.warn("[DATA_SEEDING] {} 로드 실패: {}", resource, e.getMessage());
         }
         return enToKoList;
     }

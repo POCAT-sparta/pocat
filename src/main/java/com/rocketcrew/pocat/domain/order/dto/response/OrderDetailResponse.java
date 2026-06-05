@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 public record OrderDetailResponse(
         String orderUid,
+        Long auctionId,
         UserInfo buyer,
         UserInfo seller,
         CardInfo card,
@@ -25,6 +26,7 @@ public record OrderDetailResponse(
     public static OrderDetailResponse of(Order order, User buyer, User seller, Card card) {
         return new OrderDetailResponse(
                 order.getOrderUid(),
+                order.getAuctionId(),
                 new UserInfo(buyer.getNickname()),
                 new UserInfo(seller.getNickname()),
                 new CardInfo(card.getName(), card.getGrade().name(), card.getImageUrl()),

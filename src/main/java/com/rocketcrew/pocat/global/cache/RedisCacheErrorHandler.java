@@ -9,21 +9,21 @@ public class RedisCacheErrorHandler implements CacheErrorHandler {
 
     @Override
     public void handleCacheGetError(RuntimeException ex, Cache cache, Object key) {
-        log.warn("[Cache] GET error on cache='{}' key='{}': {}", cache.getName(), key, ex.getMessage());
+        log.warn("[CACHE] 캐시 조회 실패 cache={} key={}: {}", cache.getName(), key, ex.getMessage());
     }
 
     @Override
     public void handleCachePutError(RuntimeException ex, Cache cache, Object key, Object value) {
-        log.warn("[Cache] PUT error on cache='{}' key='{}': {}", cache.getName(), key, ex.getMessage());
+        log.warn("[CACHE] 캐시 저장 실패 cache={} key={}: {}", cache.getName(), key, ex.getMessage());
     }
 
     @Override
     public void handleCacheEvictError(RuntimeException ex, Cache cache, Object key) {
-        log.warn("[Cache] EVICT error on cache='{}' key='{}': {}", cache.getName(), key, ex.getMessage());
+        log.warn("[CACHE] 캐시 삭제 실패 cache={} key={}: {}", cache.getName(), key, ex.getMessage());
     }
 
     @Override
     public void handleCacheClearError(RuntimeException ex, Cache cache) {
-        log.warn("[Cache] CLEAR error on cache='{}': {}", cache.getName(), ex.getMessage());
+        log.warn("[CACHE] 캐시 전체 삭제 실패 cache={}: {}", cache.getName(), ex.getMessage());
     }
 }
