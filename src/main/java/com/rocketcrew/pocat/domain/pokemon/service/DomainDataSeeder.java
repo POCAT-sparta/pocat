@@ -18,7 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -41,7 +45,6 @@ public class DomainDataSeeder {
         enrichPokemonSetNameKo();
         pokemonSetQueryService.rebuildCache();
 
-        seedPokemon();
         linkPokemonToCards();
     }
 
@@ -72,32 +75,6 @@ public class DomainDataSeeder {
                     });
         });
     }
-
-    /** pokemon-names.yml → Pokemon 테이블 시드 (이미 있으면 스킵) */
-    private void seedPokemon() {
-        if (pokemonCommandService.getCacheSize() > 0) {
-            log.info("[DATA_SEEDING] Pokemon 이미 {}개 로드됨, 시드 스킵", pokemonCommandService.getCacheSize());
-            return;
-        }
-        try (InputStream is = getClass().getResourceAsStream("/pokemon-names.yml")) {
-            if (is == null) {
-                log.warn("[DATA_SEEDING] pokemon-names.yml 파일을 찾을 수 없음");
-                return;
-            }
-            Map<String, Map<String, String>> root = new Yaml().load(is);
-            Map<String, String> koToEn = root.getOrDefault("names", Collections.emptyMap());
-            // koToEn: {한글명 → 영문명} — 같은 EN에 여러 KO가 있을 수 있으므로 first-win
-            Map<String, String> enToKo = new LinkedHashMap<>();
-            koToEn.forEach((ko, en) -> enToKo.putIfAbsent(en, ko));
-            enToKo.forEach((en, ko) -> pokemonCommandService.findOrCreate(en, ko));
-            log.info("[DATA_SEEDING] Pokemon {}개 시드 완료", enToKo.size());
-        } catch (Exception e) {
-            log.warn("[DATA_SEEDING] pokemon-names.yml 로드 실패: {}", e.getMessage());
-        }
-        // 시드 후 캐시 재빌드
-        pokemonCommandService.buildCache();
-    }
-
     /**
      * POKEMON 카드 중 pokemon_id 미설정 카드에 pokemon 연결.
      * 커서(keyset) 페이지네이션으로 처리 — pokemon_id를 채우면서 오프셋이 틀어지는 문제 방지.

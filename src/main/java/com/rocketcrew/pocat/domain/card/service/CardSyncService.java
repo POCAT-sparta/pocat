@@ -15,6 +15,9 @@ import com.rocketcrew.pocat.domain.series.service.SeriesCommandService;
 import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.set.service.PokemonSetCommandService;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
+import com.rocketcrew.pocat.global.infra.s3.S3Uploader;
+import static com.rocketcrew.pocat.global.infra.s3.S3Uploader.CARD_IMAGE_CONTENT_TYPE;
+import static com.rocketcrew.pocat.global.infra.s3.S3Uploader.cardImageKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,6 +31,7 @@ import org.springframework.web.client.RestTemplate;
 public class CardSyncService {
 
     private final CardCommandService cardCommandService;
+    private final S3Uploader s3Uploader;
 
     private static final String TCGDEX_SETS_URL = "https://api.tcgdex.net/v2/en/sets";
     private static final String TCGDEX_SET_URL  = "https://api.tcgdex.net/v2/en/sets/";
@@ -114,7 +118,7 @@ public class CardSyncService {
                 String name      = cardRoot.path("name").asText();
                 String localId   = cardRoot.path("localId").asText();
                 String imageBase = cardRoot.path("image").asText("");
-                String imageUrl  = imageBase.isEmpty() ? null : imageBase + "/high.webp";
+                String imageUrl  = resolveImageUrl(restTemplate, tcgdexId, imageBase);
                 String rarity    = cardRoot.path("rarity").asText("");
                 CardCategory category = parseCategory(cardRoot.path("category").asText(""));
                 CardGrade grade = GRADES[(offset + synced) % GRADES.length];
@@ -156,6 +160,19 @@ public class CardSyncService {
         }
 
         return synced;
+    }
+
+    private String resolveImageUrl(RestTemplate restTemplate, String tcgdexId, String imageBase) {
+        if (imageBase.isEmpty()) return null;
+        String tcgdexImageUrl = imageBase + "/high.webp";
+        try {
+            byte[] imageBytes = restTemplate.getForObject(tcgdexImageUrl, byte[].class);
+            if (imageBytes == null || imageBytes.length == 0) return tcgdexImageUrl;
+            return s3Uploader.upload(cardImageKey(tcgdexId), imageBytes, CARD_IMAGE_CONTENT_TYPE);
+        } catch (Exception e) {
+            log.warn("[CardSync] S3 업로드 실패 ({}), TCGDex URL 유지: {}", tcgdexId, e.getMessage());
+            return tcgdexImageUrl;
+        }
     }
 
     private RestTemplate createRestTemplate() {

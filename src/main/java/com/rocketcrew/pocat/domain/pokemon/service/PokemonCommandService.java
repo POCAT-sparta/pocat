@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
@@ -40,7 +41,7 @@ public class PokemonCommandService {
      */
     public Optional<Pokemon> findOrCreateForCardName(String cardName) {
         if (cardName == null) return Optional.empty();
-        String[] words = cardName.split("\\s+");
+        String[] words = cardName.split("[\\s\\-]+");
         for (int len = words.length; len >= 1; len--) {
             for (int start = 0; start <= words.length - len; start++) {
                 String candidate = String.join("", Arrays.copyOfRange(words, start, start + len));
@@ -51,7 +52,6 @@ public class PokemonCommandService {
         return Optional.empty();
     }
 
-    /** pokemon-names.yml 에서 읽어온 (nameEn, nameKo) 쌍으로 일괄 저장 */
     public Pokemon findOrCreate(String name, String nameKo) {
         return pokemonRepository.findByName(name).orElseGet(() -> {
             Pokemon saved = pokemonRepository.save(
@@ -81,6 +81,8 @@ public class PokemonCommandService {
     }
 
     private static String normalize(String word) {
-        return word.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+        String replaced = word.replace('♀', 'f').replace('♂', 'm');
+        String decomposed = Normalizer.normalize(replaced, Normalizer.Form.NFD);
+        return decomposed.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 }

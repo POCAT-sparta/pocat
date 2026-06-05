@@ -83,6 +83,15 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+    // Flyway
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-mysql'
+
+    // AWS S3
+    implementation platform('software.amazon.awssdk:bom:2.25.0')
+    implementation 'software.amazon.awssdk:s3'
+
+    implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
 
 }
 

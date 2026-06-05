@@ -24,6 +24,7 @@ public enum ErrorCode {
     CARD_NOT_FOUND(HttpStatus.NOT_FOUND, "카드를 찾을 수 없습니다."),
     CARD_NOT_ACTIVE(HttpStatus.CONFLICT, "ACTIVE 상태의 카드만 경매에 등록할 수 있습니다."),
     CARD_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 카드입니다."),
+    CARD_IMAGE_DOWNLOAD_FAILED(HttpStatus.BAD_GATEWAY, "카드 이미지를 다운로드할 수 없습니다."),
 
     // Series
     SERIES_NOT_FOUND(HttpStatus.NOT_FOUND, "시리즈를 찾을 수 없습니다."),
