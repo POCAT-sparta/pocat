@@ -4,6 +4,12 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:3.3.1"
+    }
+}
+
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 description = 'POCAT'
@@ -93,6 +99,8 @@ dependencies {
 
     implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
 
+    // parameter store
+    implementation "io.awspring.cloud:spring-cloud-aws-starter-parameter-store"
 }
 
 tasks.named('test') {
