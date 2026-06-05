@@ -24,9 +24,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -80,6 +82,21 @@ public class CardController {
             throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
         }
         CardResponse response = cardCommandService.createCard(userDetails.getUserId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponseDto.success(HttpStatus.CREATED, response));
+    }
+
+    @PostMapping(value = "/v1/cards/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponseDto<CardResponse>> createCardWithImage(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestPart("image") MultipartFile image,
+            @RequestPart("request") @Valid CreateCardRequest request) {
+        if (!redisRateLimiter.isAllowed("rate:user:card:" + userDetails.getUserId(),
+                rateLimitProperties.getCardLimit(),
+                rateLimitProperties.getCardWindowSeconds())) {
+            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
+        CardResponse response = cardCommandService.createCardWithImage(userDetails.getUserId(), request, image);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponseDto.success(HttpStatus.CREATED, response));
     }

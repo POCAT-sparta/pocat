@@ -19,6 +19,8 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,7 @@ public class PaymentApplicationService {
     private final PaymentCommandService paymentCommandService;
     private final PaymentQueryService paymentQueryService;
     private final OrderQueryService orderQueryService;
+    private final PaymentMetrics paymentMetrics;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -46,6 +49,7 @@ public class PaymentApplicationService {
      */
     @Transactional
     public PaymentResponse generatePayment(Long buyerId, CreatePaymentRequest request) {
+        paymentMetrics.incrementDirectAttempt();
         Order order = orderQueryService.findByOrderIdWithLock(request.orderId());
 
         if (!order.getBuyerId().equals(buyerId)) {
@@ -71,60 +75,68 @@ public class PaymentApplicationService {
     }
 
     public PaymentResponse autoPayment(String orderUid) {
-        Order order = orderQueryService.findByOrderUid(orderUid);
+        paymentMetrics.incrementAutoAttempt();
+        Timer.Sample sample = paymentMetrics.startTimer();
+        try {
+            Order order = orderQueryService.findByOrderUid(orderUid);
 
-        if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) {
-            return paymentQueryService.findByOrderId(order.getId());
-        }
+            if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) {
+                return paymentQueryService.findByOrderId(order.getId());
+            }
 
-        User user = userQueryService.getUserEntity(order.getBuyerId());
-        String billingKey = user.getBillingKey();
+            User user = userQueryService.getUserEntity(order.getBuyerId());
+            String billingKey = user.getBillingKey();
 
-        if (billingKey == null || billingKey.isEmpty()) {
-            throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
-        }
+            if (billingKey == null || billingKey.isEmpty()) {
+                paymentMetrics.incrementAutoFail();
+                throw new PaymentException(ErrorCode.BILLING_KEY_NOT_FOUND);
+            }
 
-        PaymentCommandService.BillingKeyPayment billingKeyPayment =
-                paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId());
-        Payment payment = billingKeyPayment.payment();
+            PaymentCommandService.BillingKeyPayment billingKeyPayment =
+                    paymentCommandService.createBillingKeyPaymentIfAbsent(order.getId());
+            Payment payment = billingKeyPayment.payment();
 
-        if (payment.isFinalized() || payment.getStatus() != PaymentStatus.PENDING) {
+            if (payment.isFinalized() || payment.getStatus() != PaymentStatus.PENDING) {
+                return PaymentResponse.from(payment);
+            }
+
+            PortOnePaymentResponse response;
+            if (payment.getBillingKeyRequestedAt() == null && paymentCommandService.markBillingKeyRequested(payment.getId())) {
+                response = portOneClientService.attemptBillingKeyPayment(
+                        payment.getPaymentUid(), billingKey, payment.getAmount()
+                );
+            } else {
+                response = portOneClientService.getPayment(payment.getPaymentUid());
+            }
+
+            // 네트워크 에러, 대기, 준비 건은 3번 재시도 하여 데이터 조회
+            if (PortOneStatus.NETWORK_ERROR.equals(response.status())
+                    || PortOneStatus.READY.equals(response.status())
+                    || PortOneStatus.PAY_PENDING.equals(response.status())
+            ) {
+                response = attemptWithRetry(payment.getPaymentUid());
+            }
+            // 이후 성공이 아니면 실패처리
+            if (!PortOneStatus.PAID.equals(response.status())) {
+                paymentMetrics.incrementAutoFail();
+                failureService.handleAutoPaymentFailure(payment.getId(), order.getId());
+                throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
+            }
+
+            // 금액이 맞지 않으면 취소
+            if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
+                paymentMetrics.incrementAmountMismatch();
+                Long cancelAmount = response.amount() != null ? response.amount() : payment.getAmount();
+                attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
+                failureService.autoPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+                throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+            }
+            paymentMetrics.incrementAutoSuccess();
+            paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
             return PaymentResponse.from(payment);
+        } finally {
+            paymentMetrics.recordAutoPaymentDuration(sample);
         }
-
-        PortOnePaymentResponse response;
-        if (payment.getBillingKeyRequestedAt() == null && paymentCommandService.markBillingKeyRequested(payment.getId())) {
-            response = portOneClientService.attemptBillingKeyPayment(
-                    payment.getPaymentUid(), billingKey, payment.getAmount()
-            );
-        } else {
-            response = portOneClientService.getPayment(payment.getPaymentUid());
-        }
-
-        // 네트워크 에러, 대기, 준비 건은 3번 재시도 하여 데이터 조회
-        if(PortOneStatus.NETWORK_ERROR.equals(response.status())
-                || PortOneStatus.READY.equals(response.status())
-                || PortOneStatus.PAY_PENDING.equals(response.status())
-        ) {
-            response = attemptWithRetry(payment.getPaymentUid());
-        }
-
-        // 이후 성공이 아니면 실패처리
-        if (!PortOneStatus.PAID.equals(response.status())) {
-            failureService.handleAutoPaymentFailure(payment.getId(), order.getId());
-            throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
-        }
-
-        // 금액이 맞지 않으면 취소
-        if (response.amount() == null || !payment.getAmount().equals(response.amount())) {
-            Long cancelAmount = response.amount() != null ? response.amount() : payment.getAmount();
-            attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
-            failureService.autoPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
-            throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
-        }
-
-        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
-        return PaymentResponse.from(payment);
     }
     /**
      * 6.2 결제 확정 요청 — Client Confirm 경로
@@ -133,41 +145,50 @@ public class PaymentApplicationService {
      * Webhook과 멱등성을 공유한다 (먼저 도착한 쪽이 처리, 나머지는 스킵).
      */
     public PaymentResponse confirmPayment(Long buyerId, String paymentUid) {
-        Payment payment = paymentQueryService.findPaymentByUid(paymentUid);
-        Order order = orderQueryService.findByOrderid(payment.getOrderId());
+        Timer.Sample sample = paymentMetrics.startTimer();
+        try {
+            Payment payment = paymentQueryService.findPaymentByUid(paymentUid);
+            Order order = orderQueryService.findByOrderid(payment.getOrderId());
 
-        if (!order.getBuyerId().equals(buyerId)) {
-            throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
+            if (!order.getBuyerId().equals(buyerId)) {
+                throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
+            }
+
+            if (payment.isFinalized()) return PaymentResponse.from(payment);
+
+            PortOnePaymentResponse portOneClientPayment = portOneClientService.getPayment(paymentUid);
+
+            payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
+
+            if (payment.isFinalized()) return PaymentResponse.from(payment);
+
+            if (PortOneStatus.NETWORK_ERROR.equals(portOneClientPayment.status())
+                    || PortOneStatus.READY.equals(portOneClientPayment.status())
+                    || PortOneStatus.PAY_PENDING.equals(portOneClientPayment.status())
+            ) {
+                portOneClientPayment = attemptWithRetry(payment.getPaymentUid());
+            }
+
+            if (!PortOneStatus.PAID.equals(portOneClientPayment.status())) {
+                paymentMetrics.incrementDirectFail();
+                failureService.markFailed(paymentUid, order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+                throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
+            }
+
+            if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
+                paymentMetrics.incrementAmountMismatch();
+                paymentMetrics.incrementDirectFail();
+                Long cancelAmount = portOneClientPayment.amount() != null ? portOneClientPayment.amount() : payment.getAmount();
+                attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
+                failureService.directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+                throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+            }
+            paymentMetrics.incrementDirectSuccess();
+            paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
+            return PaymentResponse.from(payment);
+        } finally {
+            paymentMetrics.recordDirectPaymentDuration(sample);
         }
-
-        if (payment.isFinalized()) return PaymentResponse.from(payment);
-
-        PortOnePaymentResponse portOneClientPayment = portOneClientService.getPayment(paymentUid);
-
-        payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
-
-        if (payment.isFinalized()) return PaymentResponse.from(payment);
-
-        if(PortOneStatus.NETWORK_ERROR.equals(portOneClientPayment.status())
-                || PortOneStatus.READY.equals(portOneClientPayment.status())
-                || PortOneStatus.PAY_PENDING.equals(portOneClientPayment.status())
-        ) {
-            portOneClientPayment = attemptWithRetry(payment.getPaymentUid());
-        }
-
-        if (!PortOneStatus.PAID.equals(portOneClientPayment.status())) {
-            failureService.markFailed(paymentUid,order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
-            throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
-        }
-
-        if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
-            Long cancelAmount = portOneClientPayment.amount() != null ? portOneClientPayment.amount() : payment.getAmount();
-            attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
-            failureService.directPaymentFailEvent(order.getOrderUid(),order.getBuyerId(),order.getSellerId());
-            throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
-        }
-        payment = paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
-        return PaymentResponse.from(payment);
     }
 
     // resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요

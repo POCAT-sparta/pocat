@@ -16,6 +16,7 @@ import com.rocketcrew.pocat.domain.payment.service.FailureService;
 import com.rocketcrew.pocat.domain.payment.service.PaymentCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class PortOneWebhookService {
     private final PortOneSignatureVerifier portOneSignatureVerifier;
     private final WebhookEventCommandService webhookEventCommandService;
     private final SetExpireService setExpireService;
+    private final PaymentMetrics paymentMetrics;
 
     /**
      * 6.4 PortOne Webhook 수신
@@ -89,6 +91,8 @@ public class PortOneWebhookService {
             log.debug("비결제 웹훅 수신 type={} — 200 반환", webhookType);
             return;
         }
+
+        paymentMetrics.incrementWebhookAttempt();
 
         // 결제 이벤트인데 핵심 필드 누락 — 손상된 payload → non-200으로 재전송 유도
         if (request.data() == null || request.data().paymentId() == null) {
@@ -154,6 +158,7 @@ public class PortOneWebhookService {
 
             if (paidAmount == null) {
                 log.error("웹훅 PortOne 응답 amount null paymentId={}", paymentId);
+                paymentMetrics.incrementAmountMismatch();
                 paymentCommandService.handleCancel(payment.getPaymentUid(), payment.getOrderId());
                 PortOneCancelResponse nullCancelResponse = portOneClientService.cancelPayment(
                         payment.getPaymentUid(), payment.getAmount(), "결제금액 불일치");
@@ -170,6 +175,7 @@ public class PortOneWebhookService {
             if (!payment.getAmount().equals(paidAmount)) {
                 log.error("웹훅 금액 불일치 paymentId={} expected={} actual={}",
                         paymentId, payment.getAmount(), paidAmount);
+                paymentMetrics.incrementAmountMismatch();
                 paymentCommandService.handleCancel(payment.getPaymentUid(), payment.getOrderId());
                 PortOneCancelResponse cancelResponse = portOneClientService.cancelPayment(
                         payment.getPaymentUid(), paidAmount, "결제금액 불일치");
@@ -187,18 +193,21 @@ public class PortOneWebhookService {
                     payment.getId(), payment.getOrderId(),
                     portOnePayment.paymentMethod(), portOnePayment.paidAt()
             );
+            paymentMetrics.incrementWebhookSuccess();
             webhookEventCommandService.markProcessed(webhookEvent.getId());
 
         } else if ("CANCELLED".equals(status)) {
             log.info("결제창 사용자 취소 웹훅 수신 paymentId={}", paymentId);
-            failureService.markFailed(payment.getPaymentUid(),payment.getOrderId(), PaymentErrorReason.USER_CANCELLED);
+            paymentMetrics.incrementWebhookUserCancel();
+            failureService.markFailed(payment.getPaymentUid(), payment.getOrderId(), PaymentErrorReason.USER_CANCELLED);
             setExpireService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
 
         } else {
             // FAILED 또는 미지원 상태 — 결제 실패 처리
             log.info("결제 실패 웹훅 수신 paymentId={} status={}", paymentId, status);
-            failureService.markFailed(payment.getPaymentUid(),payment.getOrderId(), PaymentErrorReason.WEBHOOK_FAILED);
+            paymentMetrics.incrementWebhookFail();
+            failureService.markFailed(payment.getPaymentUid(), payment.getOrderId(), PaymentErrorReason.WEBHOOK_FAILED);
             setExpireService.cancelExpiry(payment.getOrderId());
             webhookEventCommandService.markProcessed(webhookEvent.getId());
         }

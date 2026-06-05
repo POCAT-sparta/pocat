@@ -1,0 +1,101 @@
+﻿{
+  "name": "POCAT Flow2 - 경매 이상 거래 감지",
+  "nodes": [
+    {
+      "id": "f2-001",
+      "name": "Grafana Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "pocat-auction-anomaly-wh",
+      "parameters": {
+        "path": "pocat-auction-anomaly",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      }
+    },
+    {
+      "id": "f2-002",
+      "name": "Parse AUCTION_ANOMALY Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst alerts = body.alerts || [];\nconst alert = alerts[0] || {};\nconst desc = (alert.annotations && (alert.annotations.description || alert.annotations.__value_string__) || '');\n\nfunction parseFields(line) {\n  var fields = {};\n  var regex = /(\\w+)=([^\\s]+)/g;\n  var m;\n  while ((m = regex.exec(line)) !== null) {\n    fields[m[1]] = m[2];\n  }\n  return fields;\n}\n\nvar fields = parseFields(desc);\n\nreturn [{\n  json: {\n    type: fields.type || 'UNKNOWN',\n    auctionId: fields.auctionId || '',\n    cardId: fields.cardId || '',\n    sellerId: fields.sellerId || '',\n    winnerId: fields.winnerId || fields.buyerId || '',\n    finalPrice: Number(fields.finalPrice) || 0,\n    marketPrice: Number(fields.marketPrice) || 0,\n    ratio: fields.ratio || '0',\n    alertTime: alert.startsAt || new Date().toISOString(),\n    generatorURL: alert.generatorURL || '',\n    rawLog: desc,\n    geminiRequest: {\n      model: 'gemini-2.0-flash',\n      max_tokens: 250,\n      messages: [\n        {\n          role: 'system',\n          content: 'POCAT 카드 거래 이상 감지 AI입니다. 거래 정보를 분석하고 한국어로 3줄 이내 답변하세요.'\n        },\n        {\n          role: 'user',\n          content: '이상 경매 거래 감지\\n타입: ' + (fields.type || '') + '\\n경매ID: ' + (fields.auctionId || '') + '\\n카드ID: ' + (fields.cardId || '') + '\\n판매자: ' + (fields.sellerId || '') + '\\n낙찰자: ' + (fields.winnerId || fields.buyerId || '') + '\\n최종가: ' + (fields.finalPrice || '') + '원\\n시장 평균가: ' + (fields.marketPrice || '') + '원\\n비율: ' + (fields.ratio || '') + '배 (기준 3.0배)\\n\\n유형 분류(가격조작/희귀카드정상거래/봇의심/일시적시장변동)와 필요 조치를 답변하세요.'\n        }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f2-003",
+      "name": "Gemini 이상 거래 분석",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.GEMINI_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ \"Bearer \" + $vars.GEMINI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.geminiRequest) }}"
+      }
+    },
+    {
+      "id": "f2-004",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "parameters": {
+        "jsCode": "const geminiResp = $json;\nconst analysis = (geminiResp.choices && geminiResp.choices[0] && geminiResp.choices[0].message && geminiResp.choices[0].message.content) || '분석 실패';\nconst prev = $('Parse AUCTION_ANOMALY Log').first().json;\nconst ratio = parseFloat(prev.ratio) || 0;\nconst color = ratio > 5 ? 'danger' : 'warning';\nconst emoji = ratio > 5 ? '🚨' : '⚠️';\n\nreturn [{\n  json: {\n    slackPayload: {\n      text: emoji + ' *[AUCTION_ANOMALY] 이상 경매 거래 감지*',\n      attachments: [{\n        color: color,\n        fields: [\n          { title: '타입', value: prev.type || '-', short: true },\n          { title: '경매 ID', value: prev.auctionId || '-', short: true },\n          { title: '카드 ID', value: prev.cardId || '-', short: true },\n          { title: '비율', value: prev.ratio + '배', short: true },\n          { title: '최종가', value: (prev.finalPrice || 0).toLocaleString() + '원', short: true },\n          { title: '시장 평균가', value: (prev.marketPrice || 0).toLocaleString() + '원', short: true },\n          { title: '판매자 ID', value: prev.sellerId || '-', short: true },\n          { title: '낙찰자 ID', value: prev.winnerId || '-', short: true },\n          { title: 'AI 분석', value: analysis, short: false }\n        ],\n        footer: 'POCAT Monitoring | ' + prev.alertTime\n      }]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f2-005",
+      "name": "Slack #admin-alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SLACK_WEBHOOK_ADMIN_ALERT }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.slackPayload) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Grafana Webhook": {
+      "main": [[{"node": "Parse AUCTION_ANOMALY Log", "type": "main", "index": 0}]]
+    },
+    "Parse AUCTION_ANOMALY Log": {
+      "main": [[{"node": "Gemini 이상 거래 분석", "type": "main", "index": 0}]]
+    },
+    "Gemini 이상 거래 분석": {
+      "main": [[{"node": "Format Slack Message", "type": "main", "index": 0}]]
+    },
+    "Format Slack Message": {
+      "main": [[{"node": "Slack #admin-alert", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "pinData": {},
+  "versionId": "pocat-flow2-v1",
+  "meta": {"instanceId": "pocat-monitoring"},
+  "id": "pocat-flow2",
+  "tags": []
+}

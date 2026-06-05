@@ -1,0 +1,101 @@
+﻿{
+  "name": "POCAT Flow5 - 슬로우 쿼리 감지",
+  "nodes": [
+    {
+      "id": "f5-001",
+      "name": "Grafana Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "pocat-slow-query-wh",
+      "parameters": {
+        "path": "pocat-slow-query",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      }
+    },
+    {
+      "id": "f5-002",
+      "name": "Parse Query Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst alerts = body.alerts || [];\nconst alert = alerts[0] || {};\nconst labels = alert.labels || {};\nconst values = alert.values || {};\nconst desc = (alert.annotations && (alert.annotations.description || alert.annotations.summary) || '').slice(0, 600);\nconst durationMs = values.A || values.query_duration_ms || 0;\n\nreturn [{\n  json: {\n    alertName: labels.alertname || 'Slow Query',\n    instance: labels.instance || 'pocat-db',\n    durationMs: durationMs,\n    description: desc,\n    startTime: alert.startsAt || new Date().toISOString(),\n    generatorURL: alert.generatorURL || '',\n    geminiRequest: {\n      model: 'gemini-2.0-flash',\n      max_tokens: 300,\n      messages: [\n        {\n          role: 'system',\n          content: 'POCAT 데이터베이스 슬로우 쿼리 분석 AI입니다. 한국어로 3줄 이내 답변하세요.'\n        },\n        {\n          role: 'user',\n          content: '슬로우 쿼리 감지\\n인스턴스: ' + (labels.instance || '') + '\\n소요 시간: ' + durationMs + 'ms\\n내용: ' + desc + '\\n\\n쿼리 최적화 방법, 인덱스 추가 필요 여부, 즉시 조치를 각 1줄로 답변하세요.'\n        }\n      ]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f5-003",
+      "name": "Gemini 쿼리 분석",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.GEMINI_BASE_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "={{ \"Bearer \" + $vars.GEMINI_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.geminiRequest) }}"
+      }
+    },
+    {
+      "id": "f5-004",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 300],
+      "parameters": {
+        "jsCode": "const geminiResp = $json;\nconst analysis = (geminiResp.choices && geminiResp.choices[0] && geminiResp.choices[0].message && geminiResp.choices[0].message.content) || '분석 실패';\nconst prev = $('Parse Query Alert').first().json;\n\nreturn [{\n  json: {\n    slackPayload: {\n      text: '⏱️ *[슬로우 쿼리] ' + prev.instance + ' — ' + prev.durationMs + 'ms*',\n      attachments: [{\n        color: 'warning',\n        fields: [\n          { title: '인스턴스', value: prev.instance || '-', short: true },\n          { title: '소요 시간', value: prev.durationMs + 'ms', short: true },\n          { title: '내용', value: prev.description || '-', short: false },\n          { title: 'AI 최적화 제안', value: analysis, short: false }\n        ],\n        footer: 'POCAT Monitoring | ' + prev.startTime\n      }]\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "f5-005",
+      "name": "Slack #backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SLACK_WEBHOOK_BACKEND }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify($json.slackPayload) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Grafana Webhook": {
+      "main": [[{"node": "Parse Query Alert", "type": "main", "index": 0}]]
+    },
+    "Parse Query Alert": {
+      "main": [[{"node": "Gemini 쿼리 분석", "type": "main", "index": 0}]]
+    },
+    "Gemini 쿼리 분석": {
+      "main": [[{"node": "Format Slack Message", "type": "main", "index": 0}]]
+    },
+    "Format Slack Message": {
+      "main": [[{"node": "Slack #backend", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "pinData": {},
+  "versionId": "pocat-flow5-v1",
+  "meta": {"instanceId": "pocat-monitoring"},
+  "id": "pocat-flow5",
+  "tags": []
+}

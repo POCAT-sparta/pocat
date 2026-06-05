@@ -16,6 +16,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.exception.domain.BidException;
 import com.rocketcrew.pocat.global.event.BaseEvent;
+import com.rocketcrew.pocat.global.metrics.BidMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class AuctionBidCommandService {
     private final ApplicationEventPublisher eventPublisher;
     private final com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService auctionEsIndexService;
     private final OutboxEventWriter outboxEventWriter;
+    private final BidMetrics metrics;
 
     public CreateAuctionBidResponse createBid(Long userId, Long auctionId, CreateBidRequest request) {
         if (request == null) {
@@ -95,6 +97,7 @@ public class AuctionBidCommandService {
             @Override
             public void afterCommit() {
                 auctionEsIndexService.updateHighestPrice(bidAuctionId, newHighestPrice);
+                metrics.incrementCreated();
             }
         });
 

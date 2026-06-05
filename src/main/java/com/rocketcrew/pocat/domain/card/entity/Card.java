@@ -118,6 +118,10 @@ public class Card extends BaseEntity {
         if (source != null) this.source = source;
     }
 
+    public void updateImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public void linkPokemon(Pokemon pokemon) {
         this.pokemon = pokemon;
     }

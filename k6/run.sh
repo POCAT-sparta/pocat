@@ -60,15 +60,8 @@ setup_bid_test() {
     exit 1
   fi
 
-  echo "▶ [입찰 동시성] 테스트 입찰자 5명 생성 (k6-bidder-1~5@test.com)..." >&2
-  for i in 1 2 3 4 5; do
-    curl -sf -X POST "$BASE_URL/api/v1/auth/signup" \
-      -H "Content-Type: application/json" \
-      -d "{\"email\":\"k6-bidder-${i}@test.com\",\"password\":\"Test1234!\",\"nickname\":\"k6bidder${i}\"}" \
-      > /dev/null 2>&1 || true  # 409(중복) 무시
-  done
-
-  echo "▶ [입찰 동시성] 경매 생성 (seed-bid-test-data.sql)..." >&2
+  # 입찰자 생성은 seed SQL에서 INSERT IGNORE로 처리 (signup API rate limit 우회)
+  echo "▶ [입찰 동시성] 입찰자 생성 + 경매 생성 (seed-bid-test-data.sql)..." >&2
   local raw_output
   raw_output=$(docker exec -i pocat-db \
     mysql -uroot -p"$DB_PASSWORD" -N pocat 2>/dev/null \

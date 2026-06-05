@@ -57,11 +57,28 @@ jwt:
   access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:86400000}
 
+# == AWS S3 ==
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    region:
+      static: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+
 # == 포트원 ==
 portone:
   secret: ${PORTONE_SECRET}
   webhook-secret: ${PORTONE_WEBHOOK_SECRET}
   webhook-allowed-ips: ${PORTONE_WEBHOOK_ALLOWED_IPS:}
+
+pocat:
+  internal:
+    token: ${POCAT_INTERNAL_TOKEN}
+  monitoring:
+    auction-anomaly-threshold: 3.0
 
 outbox:
   relay:
@@ -74,6 +91,9 @@ ranking:
     ttl-seconds: 70
     cache-size: 100
     max-response-size: 50
+
+loki:
+  url: ${LOKI_URL:http://localhost:3100}
 
 management:
   health:

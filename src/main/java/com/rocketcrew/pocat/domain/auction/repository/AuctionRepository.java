@@ -71,4 +71,8 @@ public interface AuctionRepository extends JpaRepository<Auction, Long>, Auction
     List<Auction> findCompletedByCardIdSince(@Param("cardId") Long cardId, @Param("status") AuctionStatus status, @Param("cutoffDate") LocalDateTime cutoffDate, Pageable pageable);
 
     Page<Auction> findByStatusIn(List<AuctionStatus> statuses, Pageable pageable);
+
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByStatus(AuctionStatus status);
 }
