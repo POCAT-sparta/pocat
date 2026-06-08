@@ -17,6 +17,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.connection.RedisPassword;
+import org.springframework.util.StringUtils;
 
 @Configuration
 public class RedisConfig {
@@ -24,22 +26,31 @@ public class RedisConfig {
     @Value("${spring.data.redis.cluster.nodes}")
     private List<String> clusterNodes;
 
+    @Value("${spring.data.redis.password:}")
+    private String password;
+
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisClusterConfiguration clusterConfig = new RedisClusterConfiguration(clusterNodes);
         clusterConfig.setMaxRedirects(3);
+        if (StringUtils.hasText(password)) {
+            clusterConfig.setPassword(RedisPassword.of(password));
+        }
         return new LettuceConnectionFactory(clusterConfig);
     }
 
     @Bean(destroyMethod = "shutdown")
     public RedissonClient redissonClient() {
         Config config = new Config();
-        config.useClusterServers()
+        var clusterServersConfig = config.useClusterServers()
                 .addNodeAddress(
                         clusterNodes.stream()
                                 .map(node -> "redis://" + node)
                                 .toArray(String[]::new)
                 );
+        if (StringUtils.hasText(password)) {
+            clusterServersConfig.setPassword(password);
+        }
         return Redisson.create(config);
     }
 
