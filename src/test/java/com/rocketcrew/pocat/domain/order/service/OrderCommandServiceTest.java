@@ -169,15 +169,5 @@ class OrderCommandServiceTest {
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_CANNOT_CANCEL);
         }
 
-        @Test
-        @DisplayName("실패: 배송 중(SHIPPING) 주문은 취소 불가 → ORDER_CANNOT_CANCEL")
-        void fail_shippingCannotCancel() {
-            Order order = TestFixtures.aShippingOrder(); // deliveryStatus=SHIPPING
-            given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
-
-            assertThatThrownBy(() -> orderCommandService.cancelOrder(1L, "ORD-001", "사유"))
-                    .isInstanceOf(OrderException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ORDER_CANNOT_CANCEL);
-        }
     }
 }

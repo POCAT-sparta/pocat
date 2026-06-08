@@ -14,7 +14,6 @@ import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
 import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
@@ -153,7 +152,6 @@ class PaymentKafkaAtLeastOnceDeliveryTest {
                     .orderUid(TEST_ORDER_UID)
                     .finalPrice(10_000L)
                     .status(OrderStatus.PAYMENT_PENDING)
-                    .deliveryStatus(DeliveryStatus.PREPARING)
                     .orderType(OrderType.AUCTION)
                     .build());
             orderId = order.getId();

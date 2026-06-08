@@ -9,7 +9,6 @@ import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
 import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
@@ -186,7 +185,6 @@ class AuctionBuyoutServiceTest {
                 .orderUid("ORD-001")
                 .finalPrice(10000L)
                 .status(OrderStatus.PAYMENT_COMPLETED)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .build();
         ReflectionTestUtils.setField(order, "id", 20L);
 
@@ -350,7 +348,6 @@ class AuctionBuyoutServiceTest {
                 .orderUid("ORD-FAILED")
                 .finalPrice(10000L)
                 .status(OrderStatus.CANCELLED)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.BUYOUT)
                 .build();
         ReflectionTestUtils.setField(failedOrder, "id", 20L);
@@ -410,7 +407,6 @@ class AuctionBuyoutServiceTest {
                 .auctionId(10L).cardId(3L).sellerId(2L).buyerId(1L)
                 .orderUid("ORD-001").finalPrice(10000L)
                 .status(OrderStatus.PAYMENT_COMPLETED)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .build();
         ReflectionTestUtils.setField(order, "id", 20L);
 

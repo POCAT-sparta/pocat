@@ -3,7 +3,6 @@ package com.rocketcrew.pocat.domain.order.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.dto.request.AdminOrderSearchCondition;
 import com.rocketcrew.pocat.domain.order.dto.response.AdminOrderResponse;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.AdminOrderQueryService;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
@@ -88,7 +87,6 @@ class AdminOrderControllerTest {
                 "피카츄", "PSA_10",
                 10000L,
                 OrderStatus.PAYMENT_COMPLETED,
-                DeliveryStatus.PREPARING,
                 LocalDateTime.now()
         );
     }

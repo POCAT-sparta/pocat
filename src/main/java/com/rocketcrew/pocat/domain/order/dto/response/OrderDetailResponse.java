@@ -14,7 +14,6 @@ public record OrderDetailResponse(
         CardInfo card,
         Long finalPrice,
         String orderStatus,
-        String deliveryStatus,
         String cancelReason,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -32,7 +31,6 @@ public record OrderDetailResponse(
                 new CardInfo(card.getName(), card.getGrade().name(), card.getImageUrl()),
                 order.getFinalPrice(),
                 order.getStatus().name(),
-                order.getDeliveryStatus() != null ? order.getDeliveryStatus().name() : null,
                 order.getCancelReason(),
                 order.getCreatedAt(),
                 order.getUpdatedAt()

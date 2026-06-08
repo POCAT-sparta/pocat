@@ -14,7 +14,6 @@ import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
 import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
@@ -131,7 +130,6 @@ class ConfirmPaymentIdempotencyIntegrationTest {
                     .orderUid(TEST_ORDER_UID)
                     .finalPrice(10_000L)
                     .status(OrderStatus.AUTO_PAYMENT_FAILED)
-                    .deliveryStatus(DeliveryStatus.PREPARING)
                     .orderType(OrderType.AUCTION)
                     .paymentDeadline(LocalDateTime.now().plusHours(1))
                     .build());

@@ -3,8 +3,6 @@ package com.rocketcrew.pocat.domain.order.producer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.order.event.OrderCancelledEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
-import com.rocketcrew.pocat.domain.order.event.OrderDeliveryCompletedEvent;
-import com.rocketcrew.pocat.domain.order.event.OrderDeliveryStartedEvent;
 import com.rocketcrew.pocat.global.event.BaseEventProducer;
 import com.rocketcrew.pocat.global.outbox.repository.OutboxRepository;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -31,13 +29,4 @@ public class OrderEventProducer extends BaseEventProducer {
         send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
     }
 
-    // 배송 시작
-    public void sendDeliveryStarted(OrderDeliveryStartedEvent event) {
-        send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
-    }
-
-    // 배송 완료
-    public void sendDeliveryCompleted(OrderDeliveryCompletedEvent event) {
-        send(TOPIC, event.getOrderUid(), event.getOutboxId(), event);
-    }
 }
