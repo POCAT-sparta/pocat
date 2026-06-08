@@ -59,24 +59,28 @@ public class OrderCommandService {
         );
         outboxEventWriter.write("order", order.getOrderUid(), event);
         eventPublisher.publishEvent(event);
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                metrics.incrementCreatedFromAuction();
-            }
-        });
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    metrics.incrementCreatedFromAuction();
+                }
+            });
+        }
     }
 
     // 즉시구매 주문만 생성한다. 자동결제는 주문 커밋 이후 상위 유스케이스에서 호출한다.
     public Order createOrderFromBuyout(Long auctionId, Long cardId, Long sellerId,
                                        Long buyerId, Long finalPrice) {
         Order order = orderRepository.save(Order.fromBuyout(auctionId, cardId, sellerId, buyerId, finalPrice));
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                metrics.incrementCreatedFromBuyout();
-            }
-        });
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    metrics.incrementCreatedFromBuyout();
+                }
+            });
+        }
         return order;
     }
 
@@ -192,12 +196,14 @@ public class OrderCommandService {
         Card card = cardRepository.findById(order.getCardId())
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         order.cancel(reason);
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                metrics.incrementCancelled();
-            }
-        });
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    metrics.incrementCancelled();
+                }
+            });
+        }
 
         // 주문 취소 이벤트 발행
         eventPublisher.publishEvent(new OrderCancelledEvent(

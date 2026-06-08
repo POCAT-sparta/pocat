@@ -132,8 +132,8 @@ public class PaymentApplicationService {
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             paymentMetrics.incrementAutoSuccess();
-            paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
-            return PaymentResponse.from(payment);
+            Payment completedPayment = paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
+            return PaymentResponse.from(completedPayment);
         } finally {
             paymentMetrics.recordAutoPaymentDuration(sample);
         }

@@ -27,6 +27,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -68,6 +69,7 @@ import static org.mockito.Mockito.*;
  * ─────────────────────────────────────────────────────────────
  */
 @Tag("bulk")
+@Tag("integration")
 @SpringBootTest
 @Testcontainers
 @Import(MockRedisTestConfig.class)
