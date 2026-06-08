@@ -5,10 +5,14 @@
                     source="spring.application.name" defaultValue="springboot-lecture"/>
     <springProperty scope="context" name="LOKI_URL"
                     source="loki.url" defaultValue="http://localhost:3100"/>
+    <springProperty scope="context" name="LOGSTASH_HOST"
+                    source="logstash.host" defaultValue="localhost"/>
+    <springProperty scope="context" name="LOGSTASH_PORT"
+                    source="logstash.port" defaultValue="5000"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{requestId}] [userId=%X{userId}] %X{method} %X{uri} - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -27,11 +31,19 @@
         </format>
     </appender>
 
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${LOGSTASH_HOST}:${LOGSTASH_PORT}</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${APP_NAME}"}</customFields>
+        </encoder>
+        <keepAliveDuration>5 minutes</keepAliveDuration>
+        <reconnectionDelay>10 seconds</reconnectionDelay>
+    </appender>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <springProfile name="prod,local">
-            <appender-ref ref="LOKI"/>
-        </springProfile>
+        <appender-ref ref="LOKI"/>
+        <appender-ref ref="LOGSTASH"/>
     </root>
 
 </configuration>

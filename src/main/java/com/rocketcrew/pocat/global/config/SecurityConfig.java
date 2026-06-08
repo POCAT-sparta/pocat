@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.config;
 
+import com.rocketcrew.pocat.global.filter.MdcLoggingFilter;
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import com.rocketcrew.pocat.global.security.JwtAuthenticationFilter;
 import com.rocketcrew.pocat.global.security.InternalTokenAuthFilter;
@@ -106,6 +107,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtUtil, redisTemplate),
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterBefore(
+                        new MdcLoggingFilter(),
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();
