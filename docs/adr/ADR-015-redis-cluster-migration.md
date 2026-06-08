@@ -108,7 +108,7 @@ Hash Tag(`{tag}`) 방식은 슬롯을 강제로 같은 곳에 몰아 클러스�
 - [ ] EC2 t3.medium 프로비저닝 및 docker-compose 6노드 클러스터 구성
 - [ ] `redis.conf`: `maxmemory 400mb`, `maxmemory-policy allkeys-lru`, `cluster-enabled yes`
 - [ ] `application.yml`: `spring.data.redis.cluster.nodes` 설정 (6노드 주소)
-- [ ] Lettuce `ClusterTopologyRefreshOptions` 활성화 (`enablePeriodicRefresh`, `enableAdaptiveRefreshTrigger`)
+- [x] Lettuce `ClusterTopologyRefreshOptions` 활성화 (`enablePeriodicRefresh`, `enableAdaptiveRefreshTrigger`)
 - [ ] Redisson 설정: `useSingleServer()` → `useClusterServers()`
 - [ ] `UserNicknameCacheService`: `mget`/`mset` → `executePipelined` 개별 처리로 변경
 - [ ] `PostCommentCacheEvictor`: `delete(Collection)` → `executePipelined` 개별 `delete`로 변경

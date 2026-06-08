@@ -11,7 +11,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import io.lettuce.core.cluster.ClusterClientOptions;
+import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
@@ -36,7 +40,19 @@ public class RedisConfig {
         if (StringUtils.hasText(password)) {
             clusterConfig.setPassword(RedisPassword.of(password));
         }
-        return new LettuceConnectionFactory(clusterConfig);
+
+        ClusterTopologyRefreshOptions refreshOptions = ClusterTopologyRefreshOptions.builder()
+                .enablePeriodicRefresh(Duration.ofMinutes(1))
+                .enableAllAdaptiveRefreshTriggers()
+                .build();
+
+        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                .clientOptions(ClusterClientOptions.builder()
+                        .topologyRefreshOptions(refreshOptions)
+                        .build())
+                .build();
+
+        return new LettuceConnectionFactory(clusterConfig, clientConfig);
     }
 
     @Bean(destroyMethod = "shutdown")
