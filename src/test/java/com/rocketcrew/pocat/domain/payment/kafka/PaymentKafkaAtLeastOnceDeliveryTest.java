@@ -68,7 +68,6 @@ import static org.mockito.Mockito.*;
  * - 실제 오프셋 커밋 · 수동 Ack(MANUAL) · 재전달 동작까지 검증
  * ─────────────────────────────────────────────────────────────
  */
-@Tag("bulk")
 @Tag("integration")
 @SpringBootTest
 @Testcontainers
