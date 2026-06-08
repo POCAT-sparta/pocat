@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.community.freepost.cache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -36,7 +37,12 @@ public class PostCommentCacheEvictor {
         }
 
         if (!keysToDelete.isEmpty()) {
-            stringRedisTemplate.delete(keysToDelete);
+            stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                keysToDelete.forEach(key ->
+                        connection.keyCommands().del(key.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                );
+                return null;
+            });
             log.debug("[CACHE] 댓글 캐시 삭제 완료 evictedKeys={} postId={}", keysToDelete.size(), postId);
         }
     }

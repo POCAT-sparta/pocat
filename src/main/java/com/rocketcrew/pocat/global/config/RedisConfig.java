@@ -9,8 +9,10 @@ import com.rocketcrew.pocat.domain.notification.service.NotificationRedisSubscri
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import java.util.List;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -19,22 +21,25 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String host;
-
-    @Value("${spring.data.redis.port}")
-    private int port;
+    @Value("${spring.data.redis.cluster.nodes}")
+    private List<String> clusterNodes;
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(host, port);
+        RedisClusterConfiguration clusterConfig = new RedisClusterConfiguration(clusterNodes);
+        clusterConfig.setMaxRedirects(3);
+        return new LettuceConnectionFactory(clusterConfig);
     }
 
     @Bean(destroyMethod = "shutdown")
     public RedissonClient redissonClient() {
         Config config = new Config();
-        config.useSingleServer()
-                .setAddress("redis://" + host + ":" + port);
+        config.useClusterServers()
+                .addNodeAddress(
+                        clusterNodes.stream()
+                                .map(node -> "redis://" + node)
+                                .toArray(String[]::new)
+                );
         return Redisson.create(config);
     }
 

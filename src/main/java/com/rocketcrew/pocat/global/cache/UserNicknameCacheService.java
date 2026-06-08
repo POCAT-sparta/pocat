@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.global.cache;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +34,17 @@ public class UserNicknameCacheService {
 
         List<String> values;
         try {
-            values = stringRedisTemplate.opsForValue().multiGet(keys);
+            List<Object> pipelined = stringRedisTemplate.executePipelined(
+                    (RedisCallback<Object>) connection -> {
+                        for (String key : keys) {
+                            connection.stringCommands().get(key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        }
+                        return null;
+                    }
+            );
+            values = pipelined.stream()
+                    .map(v -> v instanceof String ? (String) v : null)
+                    .toList();
         } catch (Exception e) {
             values = null;
         }
