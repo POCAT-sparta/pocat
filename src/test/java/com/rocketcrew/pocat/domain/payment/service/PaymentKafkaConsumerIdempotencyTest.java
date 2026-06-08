@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
@@ -28,6 +29,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -52,6 +54,7 @@ import static org.mockito.Mockito.*;
  * 동일 메시지 중복 소비 시 결제가 1건만 생성되는지 검증한다.
  * 실제 Kafka 브로커 없이 consumer 메서드를 직접 호출하는 방식으로 격리한다.
  */
+@Tag("concurrency")
 @SpringBootTest
 @Import(MockRedisTestConfig.class)
 @DisplayName("Kafka consumer 멱등성 통합 테스트")
@@ -67,6 +70,7 @@ class PaymentKafkaConsumerIdempotencyTest {
     @MockBean private CardSearchRepository cardSearchRepository;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
     @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEsIndexService auctionEsIndexService;
     @MockBean private AuctionEventHandler auctionEventHandler;
     @MockBean private BidEventHandler bidEventHandler;
     @MockBean private OrderEventHandler orderEventHandler;

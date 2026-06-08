@@ -18,6 +18,8 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
+import com.rocketcrew.pocat.support.MockElasticsearchTestConfig;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -41,7 +43,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@Import(MockRedisTestConfig.class)
+@Import({MockRedisTestConfig.class, MockElasticsearchTestConfig.class})
 class UserQueryServiceCacheTest {
 
     // Redis 인프라 빈을 @MockBean으로 교체 (실제 연결 방지)
@@ -56,6 +58,9 @@ class UserQueryServiceCacheTest {
 
     @MockBean
     private RedisMessageListenerContainer redisMessageListenerContainer;
+
+    @MockBean
+    private AuctionEsIndexService auctionEsIndexService;
 
     @Autowired
     private UserQueryService userQueryService;

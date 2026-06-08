@@ -12,6 +12,8 @@ import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import com.rocketcrew.pocat.support.TestCustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +44,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -60,6 +65,12 @@ class OrderControllerTest {
     @Mock
     private OrderCommandService orderCommandService;
 
+    @Mock
+    private RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    private RateLimitProperties rateLimitProperties;
+
     private CustomUserDetails userDetails;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -67,6 +78,7 @@ class OrderControllerTest {
     @BeforeEach
     void setUp() {
         userDetails = new TestCustomUserDetails(1L, "USER");
+        given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
         mockMvc = MockMvcBuilders.standaloneSetup(orderController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(

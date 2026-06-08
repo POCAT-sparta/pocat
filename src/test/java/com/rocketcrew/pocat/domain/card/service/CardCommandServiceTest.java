@@ -16,6 +16,8 @@ import com.rocketcrew.pocat.domain.series.service.SeriesCommandService;
 import com.rocketcrew.pocat.domain.set.service.PokemonSetCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
+import com.rocketcrew.pocat.global.infra.s3.S3ImageDownloader;
+import com.rocketcrew.pocat.global.infra.s3.S3Uploader;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,6 +70,12 @@ class CardCommandServiceTest {
 
     @Mock
     ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    S3Uploader s3Uploader;
+
+    @Mock
+    S3ImageDownloader s3ImageDownloader;
 
     @BeforeEach
     void setUp() {
@@ -206,6 +214,10 @@ class CardCommandServiceTest {
         void success() {
             Card card = buildCard(1L, CardStatus.PENDING);
             given(cardRepository.findById(1L)).willReturn(Optional.of(card));
+            given(s3ImageDownloader.download(anyString()))
+                    .willReturn(new S3ImageDownloader.DownloadResult(new byte[]{1, 2, 3}, "image/jpeg"));
+            given(s3Uploader.upload(anyString(), any(byte[].class), anyString()))
+                    .willReturn("https://s3.amazonaws.com/cards/approved/1.jpg");
 
             CardResponse response = service.approveCard(1L);
 

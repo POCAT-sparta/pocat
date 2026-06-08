@@ -13,6 +13,8 @@ import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
 import com.rocketcrew.pocat.global.exception.domain.UserException;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import com.rocketcrew.pocat.support.TestCustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,6 +43,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
@@ -62,6 +67,12 @@ class UserControllerTest {
     @Mock
     private UserCommandService userCommandService;
 
+    @Mock
+    private RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    private RateLimitProperties rateLimitProperties;
+
     private CustomUserDetails userDetails;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -77,6 +88,7 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userDetails = new TestCustomUserDetails(1L, "USER");
+        given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
         mockMvc = MockMvcBuilders.standaloneSetup(userController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(

@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
+import com.rocketcrew.pocat.global.outbox.OutboxEventWriter;
 
 @Slf4j
 @Service
@@ -29,6 +30,7 @@ public class SettlementCommandService {
     private final SettlementRepository settlementRepository;
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventWriter outboxEventWriter;
 
     public void createSettlement(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
@@ -66,10 +68,12 @@ public class SettlementCommandService {
             // orderId 중복이 아닌 다른 무결성 오류(settlementUid 충돌 등) — 정산 누락 방지를 위해 전파
             throw e;
         }
-        eventPublisher.publishEvent(new SettlementCreatedEvent(
+        SettlementCreatedEvent event = new SettlementCreatedEvent(
                 settlement.getSettlementUid(),
                 settlement.getSellerId(),
                 settlement.getSellerAmount()
-        ));
+        );
+        outboxEventWriter.write("settlement", settlement.getSettlementUid(), event);
+        eventPublisher.publishEvent(event);
     }
 }

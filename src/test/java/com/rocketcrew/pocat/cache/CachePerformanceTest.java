@@ -34,6 +34,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
+import com.rocketcrew.pocat.support.MockElasticsearchTestConfig;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,10 +74,10 @@ import static org.mockito.Mockito.verify;
  * ConcurrentMapCacheManager(in-memory)를 사용하여 실제 Redis 없이
  * Spring Cache Abstraction(@Cacheable / @CacheEvict)의 DB 호출 횟수 감소 효과를 결정론적으로 검증.
  */
-@Tag("bulk")
+@Tag("performance")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
-@Import(CachePerformanceTest.CachePerformanceTestConfig.class)
+@Import({CachePerformanceTest.CachePerformanceTestConfig.class, MockElasticsearchTestConfig.class})
 class CachePerformanceTest {
 
     @TestConfiguration
@@ -170,6 +172,9 @@ class CachePerformanceTest {
 
     @MockBean
     private AiChatSessionService aiChatSessionService;
+
+    @MockBean
+    private AuctionEsIndexService auctionEsIndexService;
 
     @Autowired
     private CacheManager cacheManager;

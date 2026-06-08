@@ -17,6 +17,7 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.service.UserQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -47,6 +48,7 @@ class PaymentApplicationServiceTest {
     @Mock private PaymentCommandService paymentCommandService;
     @Mock private PaymentQueryService paymentQueryService;
     @Mock private OrderQueryService orderQueryService;
+    @Mock private PaymentMetrics paymentMetrics;
 
     // ── generatePayment ────────────────────────────────────────────────
 

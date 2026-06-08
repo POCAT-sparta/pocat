@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.refund.service;
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
@@ -34,6 +35,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -63,6 +65,7 @@ import static org.mockito.Mockito.*;
  * retryCount >= 5 → FAILED_FINAL     (수동 처리 필요)
  * ─────────────────────────────────────────────────────────────
  */
+@Tag("concurrency")
 @SpringBootTest
 @Import(MockRedisTestConfig.class)
 @DisplayName("환불 재시도 통합 테스트")
@@ -78,6 +81,7 @@ class RefundRetryIntegrationTest {
     @MockBean private CardSearchRepository cardSearchRepository;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
     @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEsIndexService auctionEsIndexService;
     @MockBean private AuctionEventHandler auctionEventHandler;
     @MockBean private BidEventHandler bidEventHandler;
     @MockBean private OrderEventHandler orderEventHandler;

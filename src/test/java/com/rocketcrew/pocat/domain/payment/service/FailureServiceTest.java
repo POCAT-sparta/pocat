@@ -36,6 +36,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.rocketcrew.pocat.domain.payment.enums.PaymentErrorReason;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -56,6 +57,9 @@ class FailureServiceTest {
 
     @Mock
     private OutboxEventWriter outboxEventWriter;
+
+    @Mock
+    private PaymentMetrics paymentMetrics;
 
     // ── markFailed ─────────────────────────────────────────────────────
 

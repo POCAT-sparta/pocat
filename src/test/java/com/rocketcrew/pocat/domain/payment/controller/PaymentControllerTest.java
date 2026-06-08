@@ -11,6 +11,8 @@ import com.rocketcrew.pocat.domain.payment.client.in.portone.PortOneWebhookServi
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.common.GlobalExceptionHandler;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import com.rocketcrew.pocat.support.TestCustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +37,9 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -58,12 +63,19 @@ class PaymentControllerTest {
     @Mock
     private PortOneWebhookService portOneWebhookService;
 
+    @Mock
+    private RedisRateLimiter redisRateLimiter;
+
+    @Mock
+    private RateLimitProperties rateLimitProperties;
+
     private CustomUserDetails userDetails;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         userDetails = new TestCustomUserDetails(1L, "USER");
+        given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
         mockMvc = MockMvcBuilders.standaloneSetup(paymentController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(
