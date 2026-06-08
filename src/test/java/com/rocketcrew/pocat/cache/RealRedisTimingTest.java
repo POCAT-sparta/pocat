@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 전제 조건: Docker Desktop 실행 중, Redis 컨테이너 localhost:6379 리스닝.
  */
 @Disabled("Requires live Redis on localhost:6379")
-@Tag("bulk")
+@Tag("performance")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
 class RealRedisTimingTest {

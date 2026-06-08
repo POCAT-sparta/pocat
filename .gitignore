@@ -51,3 +51,4 @@ manual-test/
 ### Scripts ###
 scripts/start.sh
 scripts/stop.sh
+.gstack/

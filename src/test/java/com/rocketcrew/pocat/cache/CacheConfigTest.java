@@ -13,6 +13,9 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.test.context.ActiveProfiles;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
+import com.rocketcrew.pocat.support.MockElasticsearchTestConfig;
+import org.springframework.context.annotation.Import;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
+@Import(MockElasticsearchTestConfig.class)
 class CacheConfigTest {
 
     // Redis 인프라 빈을 @MockBean으로 교체 (실제 연결 방지)
@@ -46,6 +50,9 @@ class CacheConfigTest {
 
     @MockBean
     private RedisMessageListenerContainer redisMessageListenerContainer;
+
+    @MockBean
+    private AuctionEsIndexService auctionEsIndexService;
 
     @Autowired
     private ApplicationContext applicationContext;

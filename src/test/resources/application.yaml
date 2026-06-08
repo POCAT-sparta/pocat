@@ -33,6 +33,11 @@ spring:
         request.timeout.ms: 500  # 요청 타임아웃도 짧게 설정
     admin:
       fail-fast: false           # 토픽 생성 실패 시 컨텍스트 기동 중단 방지
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
 
 jwt:
   secret: pocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkeypocatjwttestsecretkey
@@ -45,3 +50,17 @@ view:
 portone:
   secret: test-portone-secret
   webhook-secret: test-webhook-secret
+
+pocat:
+  internal:
+    token: test-internal-token
+
+cloud:
+  aws:
+    credentials:
+      access-key: test-access-key
+      secret-key: test-secret-key
+    region:
+      static: ap-northeast-2
+    s3:
+      bucket: test-bucket

@@ -16,6 +16,7 @@ import com.rocketcrew.pocat.domain.payment.entity.PaymentStatus;
 import com.rocketcrew.pocat.domain.payment.repository.PaymentRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
+import com.rocketcrew.pocat.global.metrics.PaymentMetrics;
 import com.rocketcrew.pocat.support.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -53,6 +54,7 @@ class PortOneWebhookServiceTest {
     @Mock private PortOneSignatureVerifier portOneSignatureVerifier;
     @Mock private WebhookEventCommandService webhookEventCommandService;
     @Mock private SetExpireService setExpireService;
+    @Mock private PaymentMetrics paymentMetrics;
 
     // ── handleWebhook ──────────────────────────────────────────────────
 

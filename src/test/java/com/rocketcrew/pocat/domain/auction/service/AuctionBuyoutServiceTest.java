@@ -45,6 +45,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -116,7 +117,7 @@ class AuctionBuyoutServiceTest {
         lenient().when(anomalyProperties.getAuctionAnomalyThreshold()).thenReturn(3.0);
         lenient().when(cardQueryService.getAveragePrice(anyLong()))
                 .thenReturn(new CardAveragePriceResponse(3L, 1000L, 5L,
-                        LocalDateTime.now().minusDays(90), LocalDateTime.now()));
+                        LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusDays(90), LocalDateTime.now(ZoneId.of("Asia/Seoul"))));
         service = new AuctionBuyoutService(
                 orderRepository,
                 paymentRepository,
@@ -163,8 +164,8 @@ class AuctionBuyoutServiceTest {
                 .buyoutPrice(10000L)
                 .highestPrice(5000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusHours(1))
-                .endedAt(LocalDateTime.now().plusHours(1))
+                .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
+                .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", 10L);
 
@@ -196,8 +197,8 @@ class AuctionBuyoutServiceTest {
                 PaymentType.BILLING_KEY,
                 "card",
                 PaymentStatus.COMPLETED,
-                LocalDateTime.now(),
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneId.of("Asia/Seoul")),
+                LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         );
         given(orderCommandService.createOrderFromBuyout(10L, 3L, 2L, 1L, 10000L)).willReturn(order);
         given(paymentApplicationService.autoPayment("ORD-001")).willReturn(payment);
@@ -279,8 +280,8 @@ class AuctionBuyoutServiceTest {
                 .buyoutPrice(10000L)
                 .highestPrice(5000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusHours(1))
-                .endedAt(LocalDateTime.now().plusHours(1))
+                .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
+                .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", 10L);
 
@@ -324,8 +325,8 @@ class AuctionBuyoutServiceTest {
                 .buyoutPrice(10000L)
                 .highestPrice(5000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusHours(1))
-                .endedAt(LocalDateTime.now().plusHours(1))
+                .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
+                .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", 10L);
 
@@ -339,7 +340,7 @@ class AuctionBuyoutServiceTest {
                 null,
                 PaymentStatus.FAILED,
                 null,
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneId.of("Asia/Seoul"))
         );
         Order failedOrder = Order.builder()
                 .auctionId(10L)
@@ -393,8 +394,8 @@ class AuctionBuyoutServiceTest {
                 .buyoutPrice(10000L)
                 .highestPrice(5000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusHours(1))
-                .endedAt(LocalDateTime.now().plusHours(1))
+                .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
+                .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", 10L);
 
@@ -415,7 +416,7 @@ class AuctionBuyoutServiceTest {
 
         PaymentResponse payment = new PaymentResponse(
                 "PAY-001", 20L, 10000L, PaymentType.BILLING_KEY, "card",
-                PaymentStatus.COMPLETED, LocalDateTime.now(), LocalDateTime.now());
+                PaymentStatus.COMPLETED, LocalDateTime.now(ZoneId.of("Asia/Seoul")), LocalDateTime.now(ZoneId.of("Asia/Seoul")));
 
         given(userQueryService.getUserEntity(1L)).willReturn(buyer);
         given(auctionRepository.findById(10L)).willReturn(Optional.of(auction));

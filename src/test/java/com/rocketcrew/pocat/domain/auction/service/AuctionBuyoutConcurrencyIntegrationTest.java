@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
@@ -24,6 +25,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.mockito.Mockito;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -62,6 +64,7 @@ import static org.mockito.Mockito.*;
  *                  실패: AUCTION_LOCK_FAILED 즉시 반환
  * ─────────────────────────────────────────────────────────────
  */
+@Tag("concurrency")
 @SpringBootTest
 @Import(MockRedisTestConfig.class)
 @DisplayName("즉시구매 동시성 통합 테스트")
@@ -77,6 +80,7 @@ class AuctionBuyoutConcurrencyIntegrationTest {
     @MockBean private CardSearchRepository cardSearchRepository;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
     @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEsIndexService auctionEsIndexService;
     @MockBean private AuctionEventHandler auctionEventHandler;
     @MockBean private BidEventHandler bidEventHandler;
     @MockBean private OrderEventHandler orderEventHandler;

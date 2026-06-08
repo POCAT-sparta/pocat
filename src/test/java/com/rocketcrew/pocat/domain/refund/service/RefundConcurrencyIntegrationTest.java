@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.refund.service;
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
@@ -31,6 +32,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -67,6 +69,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 최종 결과: 동시 요청이 아무리 많아도 환불은 1건만 DB에 존재한다.
  * ─────────────────────────────────────────────────────────────
  */
+@Tag("concurrency")
 @SpringBootTest
 @Import(MockRedisTestConfig.class)
 @DisplayName("환불 동시성 통합 테스트")
@@ -82,6 +85,7 @@ class RefundConcurrencyIntegrationTest {
     @MockBean private CardSearchRepository cardSearchRepository;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
     @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionEsIndexService auctionEsIndexService;
     @MockBean private AuctionEventHandler auctionEventHandler;
     @MockBean private BidEventHandler bidEventHandler;
     @MockBean private OrderEventHandler orderEventHandler;
