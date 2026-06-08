@@ -19,7 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import com.rocketcrew.pocat.global.util.PlatformFeePolicy;
 import com.rocketcrew.pocat.global.util.TsidGenerator;
-import com.rocketcrew.pocat.global.outbox.OutboxEventWriter;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 
 @Slf4j
 @Service

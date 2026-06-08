@@ -20,7 +20,7 @@ public class NotificationController {
     private final NotificationQueryService notificationQueryService;
     private final NotificationCommandService notificationCommandService;
 
-    @GetMapping("/notifications")
+    @GetMapping("/v1/notifications")
     public ResponseEntity<ApiResponseDto<NotificationListResponse>> getNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Long cursor
@@ -30,7 +30,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/notifications/{notificationId}/read")
+    @PutMapping("/v1/notifications/{notificationId}/read")
     public ResponseEntity<ApiResponseDto<NotificationResponse>> read(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long notificationId
@@ -40,7 +40,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/notifications/read")
+    @PutMapping("/v1/notifications/read")
     public ResponseEntity<ApiResponseDto<Void>> readAll(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -48,7 +48,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 
-    @DeleteMapping("/notifications/{notificationId}")
+    @DeleteMapping("/v1/notifications/{notificationId}")
     public ResponseEntity<ApiResponseDto<Void>> delete(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long notificationId
@@ -57,7 +57,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
     }
 
-    @DeleteMapping("/notifications")
+    @DeleteMapping("/v1/notifications")
     public ResponseEntity<ApiResponseDto<Void>> deleteAll(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
