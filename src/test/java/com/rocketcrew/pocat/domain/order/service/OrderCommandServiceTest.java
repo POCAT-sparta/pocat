@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Optional;
 
@@ -51,6 +52,16 @@ class OrderCommandServiceTest {
 
     @Mock
     private OutboxEventWriter outboxEventWriter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clearSynchronization();
+    }
 
     // ── createOrderFromAuction ─────────────────────────────────────────
 
