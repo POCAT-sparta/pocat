@@ -6,8 +6,6 @@ public enum OrderStatus {
     AUTO_PAYMENT_FAILED, // 자동결제 실패
     CANCELLED,
     PAYMENT_COMPLETED,
-    SHIPPING,
-    SHIPPING_COMPLETED,
     ORDER_COMPLETED,
     REFUNDED
 }

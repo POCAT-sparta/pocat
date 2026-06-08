@@ -116,6 +116,13 @@ public class Order extends BaseEntity {
         this.status = OrderStatus.PAYMENT_COMPLETED;
     }
 
+    public void completeOrder() {
+        if (this.status != OrderStatus.PAYMENT_COMPLETED) {
+            throw new OrderException(ErrorCode.ORDER_CANNOT_COMPLETE);
+        }
+        this.status = OrderStatus.ORDER_COMPLETED;
+    }
+
     // 빌링키 자동결제 실패(PAYMENT_PENDING→AUTO) 또는 PG 직접결제 실패(AUTO/DIRECT→DIRECT, 멱등) 시 호출
     public void failPayment() {
         if (this.status != OrderStatus.PAYMENT_PENDING

@@ -1,0 +1,10 @@
+ALTER TABLE orders
+    MODIFY COLUMN status ENUM(
+        'PAYMENT_PENDING',
+        'DIRECT_PAYMENT_FAILED',
+        'AUTO_PAYMENT_FAILED',
+        'CANCELLED',
+        'PAYMENT_COMPLETED',
+        'ORDER_COMPLETED',
+        'REFUNDED'
+    ) NOT NULL;
