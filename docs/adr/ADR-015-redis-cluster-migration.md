@@ -129,6 +129,29 @@ Hash Tag(`{tag}`) 방식은 슬롯을 강제로 같은 곳에 몰아 클러스�
 
 ---
 
+## 보안 고려사항
+
+| 항목 | 로컬 개발 | 프로덕션 |
+|------|---------|---------|
+| `protected-mode` | `no` (Docker 네트워크 내부 전용) | AWS VPC 보안그룹으로 제어 |
+| `bind` | `0.0.0.0` (컨테이너 내부) | VPC 내부 IP만 허용 |
+| 포트 노출 | `127.0.0.1:700X` (호스트 로컬만) | 보안그룹 인바운드 차단 |
+| 패스워드 | 선택적 (`REDIS_PASSWORD` env var) | 필수 (`REDIS_PASSWORD` Parameter Store) |
+| TLS | 미사용 (로컬 개발) | 향후 `rediss://` 전환 검토 |
+
+---
+
+## 구현 후 검증 체크리스트
+
+- [ ] `redis-cli -p 7001 cluster info` → `cluster_state:ok`, `cluster_slots_assigned:16384`
+- [ ] Spring Boot Actuator `/actuator/health` → `redis: UP`
+- [ ] 경매 만료 이벤트 수신 확인 (`AuctionExpirationRedisSubscriber`)
+- [ ] 주문 만료 이벤트 수신 확인 (`ExpiryEventListener`)
+- [ ] Redisson RLock 입찰/즉시구매 정상 동작 확인
+- [ ] `./gradlew test` GREEN
+
+---
+
 ## 관련 문서
 
 - [ADR-002: 경매 인기 랭킹 — Redis ZSet](ADR-002-auction-popular-ranking.md)
