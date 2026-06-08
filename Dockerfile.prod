@@ -1,0 +1,17 @@
+FROM amazoncorretto:17-alpine
+
+WORKDIR /app
+
+COPY build/libs/*.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", \
+  "-Xms512m", \
+  "-Xmx1024m", \
+  "-Dspring.profiles.active=prod", \
+  "-jar", \
+  "/app/app.jar"]
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
+  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
