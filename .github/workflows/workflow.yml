@@ -10,14 +10,13 @@ permissions:
   contents: read
   id-token: write
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    concurrency:
+      group: test-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout
@@ -47,10 +46,21 @@ jobs:
       - name: 테스트 및 빌드
         run: ./gradlew build
 
+      - name: jar artifact 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs/*.jar
+          retention-days: 1
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     needs: test
+    if: github.ref == 'refs/heads/dev' && needs.test.result == 'success'
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false
 
     steps:
       - name: Checkout
@@ -58,33 +68,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: jar artifact 다운로드
+        uses: actions/download-artifact@v4
         with:
-          java-version: '17'
-          distribution: 'corretto'
-
-      - name: Gradle 캐시
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: 실행 권한 부여
-        run: chmod +x gradlew
-
-      - name: jar 빌드
-        run: ./gradlew build -x test
+          name: app-jar
+          path: build/libs
 
       - name: AWS 자격증명 설정
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::494966207118:role/pocat-app-actions-role
           aws-region: ap-northeast-2
 
       - name: ECR 로그인
@@ -101,7 +94,9 @@ jobs:
           file: Dockerfile.prod
           platforms: linux/arm64
           push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/pocat-backend:latest
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/pocat-backend:latest
+            ${{ steps.login-ecr.outputs.registry }}/pocat-backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -111,3 +106,9 @@ jobs:
             --cluster pocat-app-cluster \
             --service pocat-backend-service \
             --force-new-deployment
+
+      - name: 배포 안정화 대기
+        run: |
+          aws ecs wait services-stable \
+            --cluster pocat-app-cluster \
+            --services pocat-backend-service
