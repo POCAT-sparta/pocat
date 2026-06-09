@@ -42,8 +42,8 @@
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="LOKI"/>
-        <appender-ref ref="LOGSTASH"/>
+        <!-- <appender-ref ref="LOKI"/> -->
+        <!-- <appender-ref ref="LOGSTASH"/> -->
     </root>
 
 </configuration>
