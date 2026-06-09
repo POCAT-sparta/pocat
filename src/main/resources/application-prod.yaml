@@ -5,7 +5,9 @@ spring:
   cloud:
     aws:
       region:
-        static: ${AWS_REGION:ap-northeast-2}
+        static: ap-northeast-2
+      s3:
+        bucket: ${AWS_S3_BUCKET}
 
   datasource:
     url: ${DB_URL}
