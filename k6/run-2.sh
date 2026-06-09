@@ -4,7 +4,7 @@
 #
 # 사전 조건:
 #   - Docker Compose 실행 중 (docker compose up -d)
-#   - k6 설치됨 (brew install k6 / choco install k6)
+#   - k6 설치됨 (brew install k6 / choco install k6)  ※ 최소 v0.31.0 필요 (responseCallback/http.expectedStatuses)
 #   - .env 파일에 DB_PASSWORD 설정
 #
 # 사용법:
