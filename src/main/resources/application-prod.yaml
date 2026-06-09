@@ -19,9 +19,10 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES}
+        max-redirects: 3
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
