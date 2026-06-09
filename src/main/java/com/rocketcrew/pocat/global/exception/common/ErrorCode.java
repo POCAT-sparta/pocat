@@ -70,6 +70,7 @@ public enum ErrorCode {
     ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문 상태입니다."),
     ORDER_CANNOT_COMPLETE_PAYMENT(HttpStatus.CONFLICT, "결제 완료 처리가 불가능한 주문 상태입니다."),
     ORDER_CANNOT_FAIL_PAYMENT(HttpStatus.CONFLICT, "결제 실패 처리가 불가능한 주문 상태입니다."),
+    ORDER_CANNOT_COMPLETE(HttpStatus.CONFLICT, "주문 완료 처리가 불가능한 주문 상태입니다."),
     ORDER_CREATION_FAILED(HttpStatus.CONFLICT, "주문 생성에 실패했습니다."),
 
     // Payment

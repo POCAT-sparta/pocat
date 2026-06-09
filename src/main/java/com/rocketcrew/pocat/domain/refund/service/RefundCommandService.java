@@ -49,7 +49,7 @@ public class RefundCommandService {
 
     // 환불 요청 가능한 주문 상태
     private static final Set<OrderStatus> REFUNDABLE_STATUSES =
-            EnumSet.of(OrderStatus.PAYMENT_COMPLETED, OrderStatus.SHIPPING, OrderStatus.ORDER_COMPLETED);
+            EnumSet.of(OrderStatus.PAYMENT_COMPLETED, OrderStatus.ORDER_COMPLETED);
 
     // 중복 환불 차단 대상 상태 (활성 환불이 있으면 새로 만들지 않음)
     private static final List<RefundStatus> ACTIVE_REFUND_STATUSES = List.of(
@@ -61,7 +61,7 @@ public class RefundCommandService {
 
     /**
      * 7.1 환불 요청
-     * - 결제 완료된 주문만 가능 (PAYMENT_COMPLETED / SHIPPING / COMPLETED)
+     * - 결제 완료된 주문만 가능 (PAYMENT_COMPLETED / ORDER_COMPLETED)
      * - 동일 주문에 활성 환불이 이미 있으면 중복 요청 차단
      * - 환불 금액은 payments.amount 전액 자동 적용 (클라이언트 금액 신뢰 금지)
      */

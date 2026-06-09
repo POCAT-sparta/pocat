@@ -2,7 +2,6 @@ package com.rocketcrew.pocat.domain.order.service;
 
 import com.rocketcrew.pocat.domain.order.dto.request.AdminOrderSearchCondition;
 import com.rocketcrew.pocat.domain.order.dto.response.AdminOrderResponse;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -47,7 +46,6 @@ class AdminOrderQueryServiceTest {
         void success() {
             AdminOrderSearchCondition condition = new AdminOrderSearchCondition(
                     OrderStatus.PAYMENT_COMPLETED,
-                    DeliveryStatus.PREPARING,
                     null,
                     null,
                     null,
@@ -58,7 +56,7 @@ class AdminOrderQueryServiceTest {
 
             AdminOrderResponse sampleResponse = new AdminOrderResponse(
                     1L, "ORD-001", "구매자", "판매자", "피카츄", "PSA_10",
-                    10000L, OrderStatus.PAYMENT_COMPLETED, DeliveryStatus.PREPARING,
+                    10000L, OrderStatus.PAYMENT_COMPLETED,
                     LocalDateTime.now()
             );
             Page<AdminOrderResponse> expectedPage = new PageImpl<>(
@@ -78,7 +76,7 @@ class AdminOrderQueryServiceTest {
         @DisplayName("성공: 조건이 모두 null 이어도 결과를 반환한다 (전체 조회)")
         void success_emptyCondition() {
             AdminOrderSearchCondition condition = new AdminOrderSearchCondition(
-                    null, null, null, null, null, null, null);
+                    null, null, null, null, null, null);
             Pageable pageable = PageRequest.of(0, 20);
 
             given(orderRepository.searchOrders(condition, pageable))

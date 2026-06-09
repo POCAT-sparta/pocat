@@ -7,10 +7,8 @@ import lombok.NoArgsConstructor;
 /**
  * "order" 토픽에서 수신하는 모든 이벤트의 공통 역직렬화 DTO.
  * eventType 값:
- *   "order.created"            - orderUid, buyerId, sellerId, finalPrice
- *   "order.cancelled"          - orderUid, buyerId, sellerId
- *   "order.delivery.started"   - orderUid, buyerId, sellerId
- *   "order.delivery.completed" - orderUid, buyerId, sellerId
+ *   "order.created"   - orderUid, buyerId, sellerId, finalPrice
+ *   "order.cancelled" - orderUid, buyerId, sellerId
  */
 @Getter
 @NoArgsConstructor

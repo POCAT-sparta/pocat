@@ -8,7 +8,6 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.payment.entity.Payment;
@@ -100,7 +99,7 @@ public final class TestFixtures {
 
     /**
      * id=1L, orderUid="ORD-001", buyerId=1L, sellerId=2L, cardId=3L,
-     * finalPrice=10000L, deliveryStatus=PREPARING
+     * finalPrice=10000L
      */
     public static Order anOrder(OrderStatus status) {
         Order order = Order.builder()
@@ -111,7 +110,6 @@ public final class TestFixtures {
                 .orderUid("ORD-001")
                 .finalPrice(10000L)
                 .status(status)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.AUCTION)
                 .paymentDeadline(LocalDateTime.now().plusHours(1))
                 .build();
@@ -133,7 +131,6 @@ public final class TestFixtures {
                 .orderUid("ORD-002")
                 .finalPrice(10000L)
                 .status(status)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.BUYOUT)
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
@@ -154,7 +151,6 @@ public final class TestFixtures {
                 .orderUid("ORD-001")
                 .finalPrice(10000L)
                 .status(OrderStatus.AUTO_PAYMENT_FAILED)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.AUCTION)
                 .paymentDeadline(LocalDateTime.now().plusMinutes(30))
                 .build();
@@ -176,34 +172,12 @@ public final class TestFixtures {
                 .orderUid("ORD-001")
                 .finalPrice(10000L)
                 .status(OrderStatus.AUTO_PAYMENT_FAILED)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.AUCTION)
                 .paymentDeadline(LocalDateTime.now().minusHours(1))
                 .build();
         ReflectionTestUtils.setField(order, "id", 1L);
         ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusHours(3));
         ReflectionTestUtils.setField(order, "updatedAt", LocalDateTime.now().minusHours(2));
-        return order;
-    }
-
-    /**
-     * 배송 중인 주문 (PAYMENT_COMPLETED + SHIPPING).
-     */
-    public static Order aShippingOrder() {
-        Order order = Order.builder()
-                .auctionId(10L)
-                .cardId(3L)
-                .sellerId(2L)
-                .buyerId(1L)
-                .orderUid("ORD-001")
-                .finalPrice(10000L)
-                .status(OrderStatus.PAYMENT_COMPLETED)
-                .deliveryStatus(DeliveryStatus.SHIPPING)
-                .orderType(OrderType.AUCTION)
-                .build();
-        ReflectionTestUtils.setField(order, "id", 1L);
-        ReflectionTestUtils.setField(order, "createdAt", LocalDateTime.now().minusDays(1));
-        ReflectionTestUtils.setField(order, "updatedAt", LocalDateTime.now().minusHours(6));
         return order;
     }
 

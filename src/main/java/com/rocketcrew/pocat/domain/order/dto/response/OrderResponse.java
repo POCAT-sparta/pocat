@@ -13,7 +13,6 @@ public record OrderResponse(
         String cardImageUrl,
         Long finalPrice,
         String orderStatus,
-        String deliveryStatus,
         LocalDateTime createdAt
 ) {
     public static OrderResponse of(
@@ -31,7 +30,6 @@ public record OrderResponse(
                 cardImageUrl,
                 order.getFinalPrice(),
                 order.getStatus().name(),
-                order.getDeliveryStatus().name(),
                 order.getCreatedAt()
         );
     }

@@ -69,7 +69,6 @@ public class OrderSnapshotCommandService {
         data.put("buyerId", order.getBuyerId());
         data.put("finalPrice", order.getFinalPrice());
         data.put("status", order.getStatus().name());
-        data.put("deliveryStatus", order.getDeliveryStatus() != null ? order.getDeliveryStatus().name() : null);
         try {
             return objectMapper.writeValueAsString(data);
         } catch (JsonProcessingException e) {

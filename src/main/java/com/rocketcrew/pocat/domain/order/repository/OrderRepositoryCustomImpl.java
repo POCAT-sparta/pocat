@@ -42,7 +42,6 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
                         card.grade.stringValue(),
                         order.finalPrice,
                         order.status,
-                        order.deliveryStatus,
                         order.createdAt))
                 .from(order)
                 .leftJoin(buyer).on(order.buyerId.eq(buyer.id))
@@ -71,9 +70,6 @@ public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
 
         if (condition.orderStatus() != null) {
             builder.and(order.status.eq(condition.orderStatus()));
-        }
-        if (condition.deliveryStatus() != null) {
-            builder.and(order.deliveryStatus.eq(condition.deliveryStatus()));
         }
         if (condition.cardGrade() != null) {
             builder.and(card.grade.eq(condition.cardGrade()));

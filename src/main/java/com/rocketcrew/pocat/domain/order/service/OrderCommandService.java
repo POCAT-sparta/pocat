@@ -6,7 +6,6 @@ import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.event.OrderCancelledEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
@@ -183,9 +182,6 @@ public class OrderCommandService {
             throw new OrderException(ErrorCode.ORDER_ALREADY_CANCELLED);
         }
         if (order.getStatus() == OrderStatus.REFUNDED) {
-            throw new OrderException(ErrorCode.ORDER_CANNOT_CANCEL);
-        }
-        if (order.getDeliveryStatus() == DeliveryStatus.SHIPPING) {
             throw new OrderException(ErrorCode.ORDER_CANNOT_CANCEL);
         }
 

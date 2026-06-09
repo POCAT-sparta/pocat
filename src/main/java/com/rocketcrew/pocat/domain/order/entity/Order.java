@@ -1,6 +1,5 @@
 package com.rocketcrew.pocat.domain.order.entity;
 
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.global.entity.BaseEntity;
@@ -52,10 +51,6 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "delivery_status", length = 20)
-    private DeliveryStatus deliveryStatus;
-
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
@@ -80,9 +75,6 @@ public class Order extends BaseEntity {
     public void cancel(String reason) {
         this.status = OrderStatus.CANCELLED;
         this.cancelReason = reason;
-        if (this.deliveryStatus != null) {
-            this.deliveryStatus = DeliveryStatus.CANCELLED;
-        }
     }
 
     // 경매구매용
@@ -95,7 +87,6 @@ public class Order extends BaseEntity {
                 .orderUid(TsidGenerator.generateOrderUid())
                 .finalPrice(finalPrice)
                 .status(OrderStatus.PAYMENT_PENDING)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .bidderRank(bidderRank)
                 .orderType(OrderType.AUCTION)
                 .build();
@@ -111,7 +102,6 @@ public class Order extends BaseEntity {
                 .orderUid(TsidGenerator.generateOrderUid())
                 .finalPrice(finalPrice)
                 .status(OrderStatus.PAYMENT_PENDING)
-                .deliveryStatus(DeliveryStatus.PREPARING)
                 .orderType(OrderType.BUYOUT)
                 .build();
     }
@@ -124,6 +114,13 @@ public class Order extends BaseEntity {
             throw new OrderException(ErrorCode.ORDER_CANNOT_COMPLETE_PAYMENT);
         }
         this.status = OrderStatus.PAYMENT_COMPLETED;
+    }
+
+    public void completeOrder() {
+        if (this.status != OrderStatus.PAYMENT_COMPLETED) {
+            throw new OrderException(ErrorCode.ORDER_CANNOT_COMPLETE);
+        }
+        this.status = OrderStatus.ORDER_COMPLETED;
     }
 
     // 빌링키 자동결제 실패(PAYMENT_PENDING→AUTO) 또는 PG 직접결제 실패(AUTO/DIRECT→DIRECT, 멱등) 시 호출
@@ -140,8 +137,5 @@ public class Order extends BaseEntity {
 
     public void refund() {
         this.status = OrderStatus.REFUNDED;
-        if (this.deliveryStatus != null) {
-            this.deliveryStatus = DeliveryStatus.CANCELLED;
-        }
     }
 }

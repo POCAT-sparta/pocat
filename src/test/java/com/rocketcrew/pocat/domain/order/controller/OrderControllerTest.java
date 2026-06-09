@@ -5,7 +5,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.order.dto.request.CancelOrderRequest;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
@@ -24,6 +23,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -51,6 +52,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("OrderController")
 class OrderControllerTest {
 
@@ -105,19 +107,19 @@ class OrderControllerTest {
                 1L, "ORD-001", 10L, "피카츄", "PSA_10",
                 "https://images.pocat.io/pikachu.jpg",
                 10000L, OrderStatus.PAYMENT_COMPLETED.name(),
-                DeliveryStatus.PREPARING.name(), LocalDateTime.now());
+                LocalDateTime.now());
     }
 
     private OrderDetailResponse sampleOrderDetailResponse() {
         return new OrderDetailResponse(
                 "ORD-001",
+                10L,
                 new OrderDetailResponse.UserInfo("구매자"),
                 new OrderDetailResponse.UserInfo("판매자"),
                 new OrderDetailResponse.CardInfo("피카츄", "PSA_10",
                         "https://images.pocat.io/pikachu.jpg"),
                 10000L,
                 OrderStatus.PAYMENT_COMPLETED.name(),
-                DeliveryStatus.PREPARING.name(),
                 null,
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -191,7 +193,7 @@ class OrderControllerTest {
                     1L, "ORD-001", 10L, "피카츄", "PSA_10",
                     "https://images.pocat.io/pikachu.jpg",
                     10000L, OrderStatus.CANCELLED.name(),
-                    DeliveryStatus.CANCELLED.name(), LocalDateTime.now());
+                    LocalDateTime.now());
 
             given(orderCommandService.cancelOrder(1L, "ORD-001", "단순 변심"))
                     .willReturn(cancelledResponse);

@@ -2,7 +2,6 @@ package com.rocketcrew.pocat.domain.payment.service;
 
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.domain.order.entity.Order;
-import com.rocketcrew.pocat.domain.order.enums.DeliveryStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
@@ -132,7 +131,6 @@ class PaymentConcurrencyIntegrationTest {
                     .orderUid(TEST_ORDER_UID)
                     .finalPrice(10000L)
                     .status(OrderStatus.AUTO_PAYMENT_FAILED)
-                    .deliveryStatus(DeliveryStatus.PREPARING)
                     .orderType(OrderType.AUCTION)
                     .paymentDeadline(LocalDateTime.now().plusHours(1))
                     .build());
@@ -235,7 +233,6 @@ class PaymentConcurrencyIntegrationTest {
                         .orderUid("IT-EXPIRED-ORDER-001")
                         .finalPrice(10000L)
                         .status(OrderStatus.AUTO_PAYMENT_FAILED)
-                        .deliveryStatus(DeliveryStatus.PREPARING)
                         .orderType(OrderType.AUCTION)
                         .paymentDeadline(LocalDateTime.now().minusHours(2))  // 이미 만료
                         .build());
