@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   test:
@@ -58,6 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/dev' && needs.test.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
     concurrency:
       group: deploy-${{ github.ref }}
       cancel-in-progress: false
