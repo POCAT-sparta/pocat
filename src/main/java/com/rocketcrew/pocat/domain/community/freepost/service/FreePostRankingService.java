@@ -29,7 +29,7 @@ public class FreePostRankingService {
     private final FreePostRepository freePostRepository;
     private final UserRepository userRepository;
 
-    static final String RANKING_KEY = "ranking:free:popular";
+    static final String RANKING_KEY = "{ranking:free}:popular";
     private static final int RANKING_TTL_SECONDS = 70;
     private static final int COMMENT_WEIGHT = FreePostRepository.COMMENT_WEIGHT;
     private static final int POPULAR_DAYS = 7;

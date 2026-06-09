@@ -28,8 +28,8 @@ public class AuthService {
 
     private static final int MAX_FAIL_COUNT = 5;
     private static final long LOCK_DURATION_SECONDS = 300; // 5분
-    private static final String FAIL_KEY_PREFIX = "login:fail:";
-    private static final String LOCK_KEY_PREFIX = "login:lock:";
+    private static final String FAIL_KEY_PREFIX = "login:fail:{";
+    private static final String LOCK_KEY_PREFIX = "login:lock:{";
 
     /**
      * Lua 스크립트: INCR + 첫 실패 TTL 설정 + 임계치 도달 시 잠금 전환을 원자적으로 처리.
@@ -84,7 +84,7 @@ public class AuthService {
         String email = request.email();
 
         // 잠금 확인 — 5회 실패 후 5분 잠금 (존재하지 않는 이메일도 동일하게 적용)
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(LOCK_KEY_PREFIX + email))) {
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(LOCK_KEY_PREFIX + email + "}"))) {
             throw new AuthException(ErrorCode.LOGIN_LOCKED);
         }
 
@@ -98,7 +98,7 @@ public class AuthService {
         }
 
         // 로그인 성공 시 실패 카운터 초기화
-        redisTemplate.delete(FAIL_KEY_PREFIX + email);
+        redisTemplate.delete(FAIL_KEY_PREFIX + email + "}");
         return issueTokens(user);
     }
 
@@ -111,7 +111,7 @@ public class AuthService {
     private void handleLoginFailure(String email) {
         redisTemplate.execute(
                 LOGIN_FAIL_SCRIPT,
-                List.of(FAIL_KEY_PREFIX + email, LOCK_KEY_PREFIX + email),
+                List.of(FAIL_KEY_PREFIX + email + "}", LOCK_KEY_PREFIX + email + "}"),
                 String.valueOf(MAX_FAIL_COUNT),
                 String.valueOf(LOCK_DURATION_SECONDS)
         );
