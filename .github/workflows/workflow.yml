@@ -106,7 +106,7 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster pocat-app-cluster \
-            --service pocat-backend-service \
+            --service pocat-app-service \
             --force-new-deployment
 
       - name: 배포 안정화 대기
