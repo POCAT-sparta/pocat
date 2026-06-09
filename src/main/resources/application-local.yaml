@@ -4,6 +4,12 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}
     driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+    hikari:
+      maximum-pool-size: 10     # k6 BP 테스트 병목 포인트 — 기본값 명시 (변경 후 재실행 시 BP 이동 확인 가능)
+      minimum-idle: 10
+      connection-timeout: 30000  # 30초
+      idle-timeout: 600000       # 10분
+      max-lifetime: 1800000      # 30분
 
   jpa:
     hibernate:
