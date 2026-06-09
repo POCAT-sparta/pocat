@@ -82,7 +82,7 @@ class NotificationControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/notifications")
+    @DisplayName("GET /api/v1/notifications")
     class GetNotifications {
 
         @Test
@@ -93,7 +93,7 @@ class NotificationControllerTest {
             given(notificationQueryService.getNotifications(eq(1L), any()))
                     .willReturn(listResponse);
 
-            mockMvc.perform(get("/api/notifications"))
+            mockMvc.perform(get("/api/v1/notifications"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.content[0].notificationId").value(10L))
@@ -102,7 +102,7 @@ class NotificationControllerTest {
     }
 
     @Nested
-    @DisplayName("PUT /api/notifications/{notificationId}/read")
+    @DisplayName("PATCH /api/v1/notifications/{notificationId}/read")
     class ReadNotification {
 
         @Test
@@ -110,7 +110,7 @@ class NotificationControllerTest {
         void success() throws Exception {
             given(notificationCommandService.read(1L, 10L)).willReturn(sampleResponse());
 
-            mockMvc.perform(put("/api/notifications/10/read"))
+            mockMvc.perform(patch("/api/v1/notifications/10/read"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.notificationId").value(10L))
@@ -123,7 +123,7 @@ class NotificationControllerTest {
             given(notificationCommandService.read(1L, 999L))
                     .willThrow(new NotificationException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
-            mockMvc.perform(put("/api/notifications/999/read"))
+            mockMvc.perform(patch("/api/v1/notifications/999/read"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_FOUND"));
         }
@@ -134,14 +134,14 @@ class NotificationControllerTest {
             given(notificationCommandService.read(1L, 10L))
                     .willThrow(new NotificationException(ErrorCode.NOTIFICATION_ACCESS_DENIED));
 
-            mockMvc.perform(put("/api/notifications/10/read"))
+            mockMvc.perform(patch("/api/v1/notifications/10/read"))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("NOTIFICATION_ACCESS_DENIED"));
         }
     }
 
     @Nested
-    @DisplayName("PUT /api/notifications/read")
+    @DisplayName("PATCH /api/v1/notifications/read-all")
     class ReadAllNotifications {
 
         @Test
@@ -149,14 +149,14 @@ class NotificationControllerTest {
         void success() throws Exception {
             willDoNothing().given(notificationCommandService).readAll(1L);
 
-            mockMvc.perform(put("/api/notifications/read"))
+            mockMvc.perform(patch("/api/v1/notifications/read-all"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
         }
     }
 
     @Nested
-    @DisplayName("DELETE /api/notifications/{notificationId}")
+    @DisplayName("DELETE /api/v1/notifications/{notificationId}")
     class DeleteNotification {
 
         @Test
@@ -164,7 +164,7 @@ class NotificationControllerTest {
         void success() throws Exception {
             willDoNothing().given(notificationCommandService).delete(1L, 10L);
 
-            mockMvc.perform(delete("/api/notifications/10"))
+            mockMvc.perform(delete("/api/v1/notifications/10"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
         }
@@ -175,14 +175,14 @@ class NotificationControllerTest {
             willThrow(new NotificationException(ErrorCode.NOTIFICATION_NOT_FOUND))
                     .given(notificationCommandService).delete(1L, 999L);
 
-            mockMvc.perform(delete("/api/notifications/999"))
+            mockMvc.perform(delete("/api/v1/notifications/999"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("NOTIFICATION_NOT_FOUND"));
         }
     }
 
     @Nested
-    @DisplayName("DELETE /api/notifications")
+    @DisplayName("DELETE /api/v1/notifications")
     class DeleteAllNotifications {
 
         @Test
@@ -190,7 +190,7 @@ class NotificationControllerTest {
         void success() throws Exception {
             willDoNothing().given(notificationCommandService).deleteAll(1L);
 
-            mockMvc.perform(delete("/api/notifications"))
+            mockMvc.perform(delete("/api/v1/notifications"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
         }
