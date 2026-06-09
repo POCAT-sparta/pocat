@@ -38,7 +38,7 @@ public class AuctionRankingService {
     private final UserQueryService userQueryService;
     private final AuctionRankingProperties properties;
 
-    static final String RANKING_KEY = "ranking:auction:popular";
+    static final String RANKING_KEY = "{ranking:auction}:popular";
 
     public List<SearchAuctionResponse> getPopular(int size) {
         int clampedSize = Math.min(Math.max(size, 1), properties.getMaxResponseSize());

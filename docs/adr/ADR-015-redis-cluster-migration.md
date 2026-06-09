@@ -106,14 +106,18 @@ Hash Tag(`{tag}`) 방식은 슬롯을 강제로 같은 곳에 몰아 클러스�
 ## 구현 체크리스트
 
 - [ ] EC2 t3.medium 프로비저닝 및 docker-compose 6노드 클러스터 구성
-- [ ] `redis.conf`: `maxmemory 400mb`, `maxmemory-policy allkeys-lru`, `cluster-enabled yes`
-- [ ] `application.yml`: `spring.data.redis.cluster.nodes` 설정 (6노드 주소)
+- [x] `redis.conf`: `maxmemory 400mb`, `maxmemory-policy allkeys-lru`, `cluster-enabled yes`
+- [x] `application.yml`: `spring.data.redis.cluster.nodes` 설정 (6노드 주소)
 - [x] Lettuce `ClusterTopologyRefreshOptions` 활성화 (`enablePeriodicRefresh`, `enableAdaptiveRefreshTrigger`)
-- [ ] Redisson 설정: `useSingleServer()` → `useClusterServers()`
-- [ ] `UserNicknameCacheService`: `mget`/`mset` → `executePipelined` 개별 처리로 변경
-- [ ] `PostCommentCacheEvictor`: `delete(Collection)` → `executePipelined` 개별 `delete`로 변경
+- [x] Redisson 설정: `useSingleServer()` → `useClusterServers()` (backend + batch 모두)
+- [x] `UserNicknameCacheService`: `mget`/`mset` → `executePipelined` 개별 처리로 변경
+- [x] `PostCommentCacheEvictor`: `delete(Collection)` → `executePipelined` 개별 `delete`로 변경
+- [x] AuthService Lua: `login:fail:{email}`, `login:lock:{email}` hash tag 적용 — CROSSSLOT 방지
+- [x] FreePostRankingService / FreePostRankingTasklet: `{ranking:free}:popular` hash tag 적용
+- [x] AuctionRankingService (backend+batch): `{ranking:auction}:popular` hash tag 적용
+- [x] ViewCountFlushTasklet: `{view:free}:buffer`, `{comment:free}:buffer` hash tag 적용
 - [ ] 통합 테스트: Testcontainers Redis Cluster 또는 `embedded-redis-cluster` 전환
-- [ ] 로컬 개발 docker-compose: 단일 Redis → 6노드 클러스터로 교체
+- [x] 로컬 개발 docker-compose: 단일 Redis → 6노드 클러스터로 교체
 
 ---
 
