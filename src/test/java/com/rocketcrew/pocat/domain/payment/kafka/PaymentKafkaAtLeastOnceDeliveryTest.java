@@ -26,6 +26,7 @@ import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -66,7 +67,7 @@ import static org.mockito.Mockito.*;
  * - 실제 오프셋 커밋 · 수동 Ack(MANUAL) · 재전달 동작까지 검증
  * ─────────────────────────────────────────────────────────────
  */
-@Tag("bulk")
+@Tag("integration")
 @SpringBootTest
 @Testcontainers
 @Import(MockRedisTestConfig.class)

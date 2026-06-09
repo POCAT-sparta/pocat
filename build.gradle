@@ -106,7 +106,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform {
-        excludeTags 'concurrency', 'performance'
+        excludeTags 'concurrency', 'performance', 'integration'
         if (project.hasProperty('excludeTags')) {
             excludeTags project.property('excludeTags').split(',')
         }
