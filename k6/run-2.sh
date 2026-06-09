@@ -14,7 +14,8 @@
 #   mixed   — 08 혼합 실사용 (익명+인증+폴링, ~10분)
 #   peak    — 09 경매 피크 타임 (다중 경매 동시 입찰, ~9분)
 #   soak    — 10 장기 내구성 (메모리·커넥션 누수 탐지, 기본 20분)
-#   all     — mixed → peak → soak 순차 실행 (기본값)
+#   bp      — 11 Breaking Point 탐색 (HikariCP 한계점, ~12분)
+#   all     — mixed → peak → soak 순차 실행 (기본값, bp 제외)
 #
 # 환경변수:
 #   BASE_URL       서버 주소 (기본: http://localhost:8080)
@@ -24,6 +25,7 @@
 # 예시:
 #   ./k6/run-2.sh mixed
 #   ./k6/run-2.sh soak
+#   ./k6/run-2.sh bp
 #   SOAK_DURATION=45m ./k6/run-2.sh soak
 #   BASE_URL=http://staging.example.com ./k6/run-2.sh all
 # ============================================================
@@ -151,7 +153,18 @@ case "$SCENARIO" in
     run_scenario "10-soak.js" "-e AUCTION_IDS=$AUCTION_IDS"
     ;;
 
-  # ── all: 순차 실행 ─────────────────────────────────────────────
+  # ── 11: Breaking Point 탐색 ────────────────────────────────────
+  bp)
+    AUCTION_IDS=$(setup_heavy_test)
+    echo ""
+    warn "Breaking Point 탐색 시작 (~12분)"
+    warn "임계치 실패 = BP 발견 (오류 아님) — 단계별 p(95) 추이와 5xx 첫 발생 VU 확인"
+    warn "HikariCP 기본 풀(10) 고갈 예상 구간: readers 150~300 VU"
+    echo ""
+    run_scenario "11-bid-breaking-point.js" "-e AUCTION_IDS=$AUCTION_IDS"
+    ;;
+
+  # ── all: 순차 실행 (bp 별도 실행 권장) ─────────────────────────
   all|*)
     AUCTION_IDS=$(setup_heavy_test)
     flush_avg_price_cache

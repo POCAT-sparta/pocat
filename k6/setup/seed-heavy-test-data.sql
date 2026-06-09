@@ -67,7 +67,49 @@ VALUES
     (2, 1, 'K6-HEAVY-10',  9000, 9999999, 'ACTIVE',
      DATE_SUB(NOW(), INTERVAL 1 HOUR), DATE_ADD(NOW(), INTERVAL 20 HOUR), NOW(), NOW());
 
--- ── 4. 삽입된 경매 ID 목록 반환 (콤마 구분, run-2.sh 에서 AUCTION_IDS 로 파싱) ──
+-- ── 4. 경매당 입찰 이력 50건 삽입 (쿼리 부하 현실화) ────────────────
+-- 목적: auction_bids 테이블에 실제 데이터가 없으면 GET /bids 쿼리가
+--       즉시 반환되어 HikariCP 커넥션을 거의 점유하지 않음.
+--       50건/경매(총 500건)를 삽입하여 paginate 쿼리에 실질 I/O 부하 부여.
+-- 입찰가: 100,000 ~ 1,050,000 원 범위 (k6 writer 최소가 2,000,000 보다 낮아 간섭 없음)
+-- 상태: 모두 OUTBID (히스토리 데이터 — k6 실행 중 새 LEADING 입찰이 정상 생성됨)
+
+SET @bid1 = (SELECT id FROM users WHERE email = 'k6-bidder-1@test.com' LIMIT 1);
+SET @bid2 = (SELECT id FROM users WHERE email = 'k6-bidder-2@test.com' LIMIT 1);
+SET @bid3 = (SELECT id FROM users WHERE email = 'k6-bidder-3@test.com' LIMIT 1);
+SET @bid4 = (SELECT id FROM users WHERE email = 'k6-bidder-4@test.com' LIMIT 1);
+SET @bid5 = (SELECT id FROM users WHERE email = 'k6-bidder-5@test.com' LIMIT 1);
+
+INSERT INTO auction_bids (auction_id, user_id, bid_price, status, created_at, updated_at)
+SELECT
+    a.id AS auction_id,
+    CASE (n.seq % 5)
+        WHEN 0 THEN @bid1
+        WHEN 1 THEN @bid2
+        WHEN 2 THEN @bid3
+        WHEN 3 THEN @bid4
+        WHEN 4 THEN @bid5
+    END AS user_id,
+    100000 + (n.seq * 19000) AS bid_price,  -- 119,000 ~ 1,050,000
+    'OUTBID' AS status,
+    DATE_SUB(NOW(), INTERVAL (51 - n.seq) * 5 MINUTE) AS created_at,
+    DATE_SUB(NOW(), INTERVAL (51 - n.seq) * 5 MINUTE) AS updated_at
+FROM auctions a
+CROSS JOIN (
+    SELECT  1 AS seq UNION ALL SELECT  2 UNION ALL SELECT  3 UNION ALL SELECT  4 UNION ALL SELECT  5
+    UNION ALL SELECT  6 UNION ALL SELECT  7 UNION ALL SELECT  8 UNION ALL SELECT  9 UNION ALL SELECT 10
+    UNION ALL SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15
+    UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19 UNION ALL SELECT 20
+    UNION ALL SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23 UNION ALL SELECT 24 UNION ALL SELECT 25
+    UNION ALL SELECT 26 UNION ALL SELECT 27 UNION ALL SELECT 28 UNION ALL SELECT 29 UNION ALL SELECT 30
+    UNION ALL SELECT 31 UNION ALL SELECT 32 UNION ALL SELECT 33 UNION ALL SELECT 34 UNION ALL SELECT 35
+    UNION ALL SELECT 36 UNION ALL SELECT 37 UNION ALL SELECT 38 UNION ALL SELECT 39 UNION ALL SELECT 40
+    UNION ALL SELECT 41 UNION ALL SELECT 42 UNION ALL SELECT 43 UNION ALL SELECT 44 UNION ALL SELECT 45
+    UNION ALL SELECT 46 UNION ALL SELECT 47 UNION ALL SELECT 48 UNION ALL SELECT 49 UNION ALL SELECT 50
+) n
+WHERE a.title LIKE 'K6-HEAVY-%';
+
+-- ── 5. 삽입된 경매 ID 목록 반환 (콤마 구분, run-2.sh 에서 AUCTION_IDS 로 파싱) ──
 SELECT GROUP_CONCAT(id ORDER BY id SEPARATOR ',') AS auction_ids
 FROM auctions
 WHERE title LIKE 'K6-HEAVY-%';
