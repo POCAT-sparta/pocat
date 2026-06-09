@@ -30,7 +30,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/v1/notifications/{notificationId}/read")
+    @PatchMapping("/v1/notifications/{notificationId}/read")
     public ResponseEntity<ApiResponseDto<NotificationResponse>> read(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long notificationId
@@ -40,7 +40,7 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
-    @PutMapping("/v1/notifications/read")
+    @PatchMapping("/v1/notifications/read-all")
     public ResponseEntity<ApiResponseDto<Void>> readAll(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {

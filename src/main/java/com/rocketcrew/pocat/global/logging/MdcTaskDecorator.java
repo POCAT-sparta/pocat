@@ -1,4 +1,4 @@
-    package com.rocketcrew.pocat.global.logging;
+package com.rocketcrew.pocat.global.logging;
 
 import org.slf4j.MDC;
 import org.springframework.core.task.TaskDecorator;
