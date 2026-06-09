@@ -149,7 +149,7 @@ class AuthServiceTest {
         void success() {
             // given
             LoginRequest request = new LoginRequest("test@example.com", "Password1!");
-            given(redisTemplate.hasKey("login:lock:test@example.com")).willReturn(false);
+            given(redisTemplate.hasKey("login:lock:{test@example.com}")).willReturn(false);
             given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(testUser));
             given(passwordEncoder.matches("Password1!", "encodedPassword")).willReturn(true);
             given(jwtUtil.generateAccessToken(1L, "USER")).willReturn("accessToken");
@@ -162,7 +162,7 @@ class AuthServiceTest {
             // then
             assertThat(response.accessToken()).isEqualTo("accessToken");
             assertThat(response.refreshToken()).isEqualTo("refreshToken");
-            verify(redisTemplate).delete("login:fail:test@example.com");
+            verify(redisTemplate).delete("login:fail:{test@example.com}");
             verify(valueOps).set(eq("refresh:1"), eq("refreshToken"), anyLong(), any());
         }
 
@@ -171,7 +171,7 @@ class AuthServiceTest {
         void fail_accountLocked() {
             // given
             LoginRequest request = new LoginRequest("test@example.com", "Password1!");
-            given(redisTemplate.hasKey("login:lock:test@example.com")).willReturn(true);
+            given(redisTemplate.hasKey("login:lock:{test@example.com}")).willReturn(true);
 
             // when & then
             assertThatThrownBy(() -> authService.login(request))
@@ -185,7 +185,7 @@ class AuthServiceTest {
         void fail_emailNotFound() {
             // given
             LoginRequest request = new LoginRequest("notfound@example.com", "Password1!");
-            given(redisTemplate.hasKey("login:lock:notfound@example.com")).willReturn(false);
+            given(redisTemplate.hasKey("login:lock:{notfound@example.com}")).willReturn(false);
             given(userRepository.findByEmail("notfound@example.com")).willReturn(Optional.empty());
 
             // when & then
@@ -200,7 +200,7 @@ class AuthServiceTest {
         void fail_passwordMismatch() {
             // given
             LoginRequest request = new LoginRequest("test@example.com", "WrongPassword1!");
-            given(redisTemplate.hasKey("login:lock:test@example.com")).willReturn(false);
+            given(redisTemplate.hasKey("login:lock:{test@example.com}")).willReturn(false);
             given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(testUser));
             given(passwordEncoder.matches("WrongPassword1!", "encodedPassword")).willReturn(false);
 

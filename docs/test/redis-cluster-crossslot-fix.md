@@ -9,6 +9,7 @@
 ## 수정 내역
 
 ### 원인
+
 Redis Cluster에서 단일 명령으로 서로 다른 슬롯의 키를 처리하면 `CROSSSLOT Keys in request don't hash to the same slot` 오류 발생.
 
 ### 수정 파일 및 방법
@@ -24,6 +25,7 @@ Redis Cluster에서 단일 명령으로 서로 다른 슬롯의 키를 처리하
 | `RedissonConfig.java` (batch) | `useSingleServer()` | `useClusterServers()` | Cluster 라우팅 지원 |
 
 ### Hash Tag 원리
+
 `{tag}:suffix` 형식에서 Redis CRC16은 `tag` 부분만 계산. 동일 tag를 공유하는 키들은 항상 동일 슬롯에 배치됨.
 
 ## 코드 리뷰 결과
