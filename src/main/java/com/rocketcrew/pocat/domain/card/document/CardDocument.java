@@ -27,7 +27,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "cards")
+@Document(indexName = "cards", createIndex = false)
 @Setting(settingPath = "es-settings/cards-settings.json")
 public class CardDocument {
 

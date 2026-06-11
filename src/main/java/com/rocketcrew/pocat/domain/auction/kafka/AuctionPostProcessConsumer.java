@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.auction.event.AuctionEventType;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
+import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
@@ -26,6 +27,7 @@ public class AuctionPostProcessConsumer {
     private final AuctionExpirationRedisService auctionExpirationRedisService;
     private final AuctionSnapshotCommandService auctionSnapshotCommandService;
     private final NotificationCommandService notificationCommandService;
+    private final AuctionLifecycleService auctionLifecycleService;
 
     @KafkaListener(
             topics = "auction",
@@ -117,6 +119,13 @@ public class AuctionPostProcessConsumer {
 
     private void handleInspectionPassed(AuctionEventPayload event) {
         requireAuctionId(event);
+        try {
+            boolean activated = auctionLifecycleService.activateApprovedAuction(event.getAuctionId());
+            log.info("검수 통과 경매 활성화: auctionId={}, activated={}", event.getAuctionId(), activated);
+        } catch (Exception e) {
+            log.error("검수 통과 경매 활성화 실패: auctionId={}", event.getAuctionId(), e);
+            throw e;
+        }
         try {
             notificationCommandService.send(
                     event.getSellerId(),

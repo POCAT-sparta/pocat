@@ -1,0 +1,81 @@
+{
+  "properties": {
+    "_class": {
+      "type": "keyword",
+      "index": false,
+      "doc_values": false
+    },
+    "userId": {
+      "type": "long"
+    },
+    "tcgdexId": {
+      "type": "keyword"
+    },
+    "name": {
+      "type": "text"
+    },
+    "nameKo": {
+      "type": "text",
+      "analyzer": "ngram_analyzer",
+      "search_analyzer": "standard"
+    },
+    "series": {
+      "type": "keyword",
+      "fields": {
+        "text": {
+          "type": "text"
+        }
+      }
+    },
+    "seriesKo": {
+      "type": "text",
+      "analyzer": "ngram_analyzer",
+      "search_analyzer": "standard"
+    },
+    "setId": {
+      "type": "keyword"
+    },
+    "setName": {
+      "type": "keyword",
+      "fields": {
+        "text": {
+          "type": "text"
+        }
+      }
+    },
+    "setNameKo": {
+      "type": "text",
+      "analyzer": "ngram_analyzer",
+      "search_analyzer": "standard"
+    },
+    "cardNumber": {
+      "type": "keyword"
+    },
+    "rarity": {
+      "type": "keyword"
+    },
+    "category": {
+      "type": "keyword"
+    },
+    "grade": {
+      "type": "keyword"
+    },
+    "imageUrl": {
+      "type": "keyword"
+    },
+    "source": {
+      "type": "keyword"
+    },
+    "status": {
+      "type": "keyword"
+    },
+    "createdAt": {
+      "type": "date",
+      "format": "uuuu-MM-dd'T'HH:mm:ss.SSS"
+    },
+    "updatedAt": {
+      "type": "date",
+      "format": "uuuu-MM-dd'T'HH:mm:ss.SSS"
+    }
+  }
+}

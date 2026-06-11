@@ -17,6 +17,7 @@ import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import static net.logstash.logback.argument.StructuredArguments.kv;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -171,6 +172,17 @@ public class OrderCommandService {
         // 이미 완료된 건은 리턴 (createSnapshot 실패 후 Kafka 재처리 시 멱등 보장)
         if (order.getStatus() == OrderStatus.PAYMENT_COMPLETED) return;
         order.completePayment();
+        // ── Analytics: 거래 완료 이벤트 ─────────────────────────────
+        String tradedCardName = cardRepository.findById(order.getCardId())
+                .map(c -> c.getName())
+                .orElse(String.valueOf(order.getCardId()));
+        log.info("[ANALYTICS] card_trade",
+                kv("event_type", "card_trade"),
+                kv("card_id", order.getCardId()),
+                kv("card_name", tradedCardName),
+                kv("final_price", order.getFinalPrice()),
+                kv("buyer_id", String.valueOf(order.getBuyerId())),
+                kv("seller_id", String.valueOf(order.getSellerId())));
         // 직접결제 창 만료 키 취소 — 미취소 시 1시간 후 ExpiryEventListener가 완료된 주문을 다음 순위로 잘못 승격
         setExpireService.cancelExpiry(order.getId());
     }

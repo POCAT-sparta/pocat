@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.support;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.rocketcrew.pocat.domain.auction.repository.AuctionSearchRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardSearchRepository;
 import org.mockito.Mockito;
@@ -10,6 +11,12 @@ import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 
 @TestConfiguration
 public class MockElasticsearchTestConfig {
+
+    @Bean
+    @Primary
+    public ElasticsearchClient elasticsearchClient() {
+        return Mockito.mock(ElasticsearchClient.class);
+    }
 
     @Bean
     @Primary

@@ -60,6 +60,11 @@ management:
   health:
     elasticsearch:
       enabled: false
+    kafka:
+      enabled: false
+  endpoint:
+    health:
+      show-details: when_authorized
 
 rate-limit:
   signup-limit: 5
