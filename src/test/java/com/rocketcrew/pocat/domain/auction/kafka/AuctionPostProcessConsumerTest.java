@@ -3,6 +3,7 @@ package com.rocketcrew.pocat.domain.auction.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
+import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
@@ -36,6 +37,9 @@ class AuctionPostProcessConsumerTest {
     @Mock
     NotificationCommandService notificationCommandService;
 
+    @Mock
+    AuctionLifecycleService auctionLifecycleService;
+
     AuctionPostProcessConsumer consumer;
 
     @BeforeEach
@@ -46,7 +50,8 @@ class AuctionPostProcessConsumerTest {
                 objectMapper,
                 auctionExpirationRedisService,
                 auctionSnapshotCommandService,
-                notificationCommandService
+                notificationCommandService,
+                auctionLifecycleService
         );
     }
 
@@ -191,8 +196,8 @@ class AuctionPostProcessConsumerTest {
     }
 
     @Test
-    @DisplayName("auction.inspection.passed 이벤트는 후처리 대상이 아니므로 명시적으로 스킵한다")
-    void consumeInspectionPassedEvent_skipsPostProcess() {
+    @DisplayName("auction.inspection.passed 이벤트는 경매를 ACTIVE 상태로 전환하고 알림을 발송한다")
+    void consumeInspectionPassedEvent_activatesAuctionAndSendsNotification() {
         String message = """
                 {
                   "eventType": "auction.inspection.passed",
@@ -203,6 +208,7 @@ class AuctionPostProcessConsumerTest {
 
         consumer.consume(message);
 
+        verify(auctionLifecycleService).activateApprovedAuction(1L);
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
         verify(notificationCommandService).send(
                 eq(10L),
