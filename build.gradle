@@ -102,6 +102,9 @@ dependencies {
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
     // parameter store
     implementation "io.awspring.cloud:spring-cloud-aws-starter-parameter-store"
+
+    // Prometheus 메트릭 수집
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 }
 
 tasks.named('test') {
