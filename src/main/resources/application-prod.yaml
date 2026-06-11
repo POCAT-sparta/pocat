@@ -12,6 +12,16 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+    read:
+      # #206: Parameter Store에 DB_READ_URL=jdbc:mysql://pocat-slave.czykgqcswy2z.ap-northeast-2.rds.amazonaws.com:3306/pocat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8 설정 완료
+      url: ${DB_READ_URL:${DB_URL}}
+      username: ${DB_READ_USERNAME:${DB_USERNAME}}
+      password: ${DB_READ_PASSWORD:${DB_PASSWORD}}
+      driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+      hikari:
+        # #206: db.t4g.micro replica(max_connections≈85) 기준 확정값. write는 기존 정책상 hikari 미설정(기본 10/10) 유지.
+        maximum-pool-size: 5
+        minimum-idle: 2
 
   jpa:
     hibernate:
