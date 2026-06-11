@@ -6,7 +6,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,9 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>{@code src/test/resources/application.yaml}의 {@code spring.datasource.read.*}는
  * write와 동일한 H2 URL을 가리키므로(fallback), 컨텍스트 로딩이 실패 없이 성공해야 한다.
- *
- * <p>현재 {@code DataSourceConfig}/{@code RoutingDataSource} 클래스가 존재하지 않으므로
- * 컴파일 에러(RED)가 발생하는 것이 정상이다 (Phase 3b BACKEND 구현 예정).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ActiveProfiles("test")
@@ -57,9 +53,6 @@ class DataSourceConfigTest {
 
     @MockBean
     private AuctionEsIndexService auctionEsIndexService;
-
-    @Autowired
-    private ApplicationContext applicationContext;
 
     @Autowired
     @org.springframework.beans.factory.annotation.Qualifier("dataSource")
@@ -87,9 +80,6 @@ class DataSourceConfigTest {
     @DisplayName("@Primary dataSource 빈은 LazyConnectionDataSourceProxy 타입으로 등록된다")
     void dataSource_isLazyConnectionDataSourceProxyType() {
         assertThat(dataSource).isInstanceOf(LazyConnectionDataSourceProxy.class);
-
-        Object primaryBean = applicationContext.getBean("dataSource");
-        assertThat(primaryBean).isInstanceOf(LazyConnectionDataSourceProxy.class);
     }
 
     @Test

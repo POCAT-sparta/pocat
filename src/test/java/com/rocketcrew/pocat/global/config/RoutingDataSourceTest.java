@@ -14,9 +14,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>{@code RoutingDataSource.determineCurrentLookupKey()}는 현재 트랜잭션의
  * readOnly 여부({@link TransactionSynchronizationManager#isCurrentTransactionReadOnly()})에 따라
  * {@link DataSourceType#READ} 또는 {@link DataSourceType#WRITE}를 반환해야 한다.
- *
- * <p>현재 {@code RoutingDataSource}/{@code DataSourceType} 클래스가 존재하지 않으므로
- * 컴파일 에러(RED)가 발생하는 것이 정상이다 (Phase 3b BACKEND 구현 예정).
  */
 class RoutingDataSourceTest {
 

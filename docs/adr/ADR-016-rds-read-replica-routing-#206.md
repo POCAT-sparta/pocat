@@ -6,7 +6,7 @@
 | **상태** | Accepted |
 | **결정자** | POCAT 팀 |
 | **이슈** | #206 |
-| **구현 상태** | 코드 구현 완료 + Replica 인프라 프로비저닝 완료 (db.t4g.micro), read pool 확정 — 커밋 대기 |
+| **구현 상태** | 코드 구현 완료 + Replica 인프라 프로비저닝 완료 (db.t4g.micro), read pool 확정 (5/2) + 커밋(`ac3709a`) 및 PR #210 생성 완료 (2026-06-11) |
 
 ---
 
@@ -16,9 +16,9 @@ POCAT은 현재 단일 RDS 인스턴스(MySQL)를 모든 read/write 트래픽에
 
 ### 인프라 vs 코드 — 단계적 진행
 
-Replica 인스턴스, 보안그룹, Parameter Store(`DB_READ_URL` 등), ECS Task Definition 환경변수 주입 등 **인프라 작업은 별도 배포팀이 진행 중이며 아직 미완료** 상태다.
+설계 초기에는 Replica 인스턴스, 보안그룹, Parameter Store(`DB_READ_URL` 등), ECS Task Definition 환경변수 주입 등 **인프라 작업을 별도 배포팀이 별도 트랙으로 진행**하는 것을 전제로, 인프라 완료를 기다리지 않고 **코드 레벨 라우팅 인프라를 선제 구축**하는 코드 우선 전략을 채택했다.
 
-본 ADR은 인프라 완료를 기다리지 않고, **코드 레벨 라우팅 인프라를 선제 구축**하는 것을 목표로 한다(코드 우선 전략). Replica가 아직 없는 환경(로컬, 현재 prod)에서는 read 프로퍼티가 비어 있으므로 write DataSource로 fallback되어 기존과 동일하게 동작해야 하며, Replica가 추가되는 시점에는 **코드 변경 없이 환경변수만 주입**하면 즉시 read 트래픽이 분산되어야 한다.
+이후 배포팀이 Replica 인스턴스(`db.t4g.micro`, `pocat-slave` 엔드포인트) 프로비저닝과 read pool 사이즈(5/2) 확정을 완료했고(상세는 "Replica 인프라 정보" 절 참고), 코드 레벨 변경 또한 cascading default(`${DB_READ_URL:${DB_URL:...}}`)를 통해 환경변수 주입만으로 즉시 read 트래픽이 분산되도록 구성을 마쳤다. Replica가 없는 환경(로컬)에서는 read 프로퍼티가 write 값으로 fallback되어 기존과 동일하게 동작한다.
 
 ---
 
@@ -28,7 +28,7 @@ Replica 인스턴스, 보안그룹, Parameter Store(`DB_READ_URL` 등), ECS Task
 
 `AbstractRoutingDataSource`를 상속한 `RoutingDataSource`를 만들고, 이를 `LazyConnectionDataSourceProxy`로 감싸 `@Primary` Bean으로 등록한다.
 
-```
+```text
 LazyConnectionDataSourceProxy (@Primary)
   └─ RoutingDataSource (AbstractRoutingDataSource)
        ├─ WRITE → write HikariDataSource
@@ -72,16 +72,19 @@ Spring `@Transactional`의 전파(propagation) 규칙상, 이미 진행 중인 �
 ## 신규/수정 파일
 
 ### 신규
+
 - `global/config/DataSourceType.java` — `enum { WRITE, READ }`
 - `global/config/RoutingDataSource.java` — `AbstractRoutingDataSource` 구현, `determineCurrentLookupKey()`
 - `global/config/DataSourceConfig.java` — write/read `HikariDataSource` Bean, `RoutingDataSource` 조립, `LazyConnectionDataSourceProxy`(`@Primary`) 등록
 
 ### 수정
+
 - `application-local.yaml` — `spring.datasource.read.*` 추가 (cascading default로 write 값 fallback)
 - `application-prod.yaml` — `spring.datasource.read.*` 추가 (cascading default로 write 값 fallback)
-- `src/test/resources/application.yaml` — read 프로퍼티 추가(또는 H2 단일 DataSource 유지 — 구현 시 결정)
+- `src/test/resources/application.yaml` — read 프로퍼티 추가 (H2 fallback URL로 구성 완료)
 
 ### 변경 없음
+
 - `JpaConfig.java` — `@EnableJpaAuditing`만 유지, EMF/TransactionManager 커스텀 빈 불필요
 - `build.gradle` — 신규 외부 의존성 없음 (`spring-boot-starter-jdbc`/HikariCP는 기존 `spring-boot-starter-data-jpa`에 포함)
 
@@ -116,6 +119,7 @@ Spring `@Transactional`의 전파(propagation) 규칙상, 이미 진행 중인 �
 ## 구현 체크리스트
 
 ### Phase 3b (이번 PR 범위)
+
 - [x] `DataSourceType.java` 작성 (`enum { WRITE, READ }`)
 - [x] `RoutingDataSource.java` 작성 (`AbstractRoutingDataSource` 상속, `determineCurrentLookupKey()` — `TransactionSynchronizationManager.isCurrentTransactionReadOnly()` 분기)
 - [x] `DataSourceConfig.java` 작성 (write/read `HikariDataSource` Bean, `RoutingDataSource` 조립 + targetDataSources 매핑, `LazyConnectionDataSourceProxy`를 `@Primary`로 등록)
@@ -125,14 +129,16 @@ Spring `@Transactional`의 전파(propagation) 규칙상, 이미 진행 중인 �
 - [x] `./gradlew test` GREEN 확인 (기존 테스트가 read/write 분리로 인해 깨지지 않는지 검증)
 
 ### 보류 항목 (TODO(#206))
+
 - [x] **`local`/`prod`의 `read.hikari` 풀 사이즈 확정** — `maximum-pool-size=5`, `minimum-idle=2`. 근거: Replica 인스턴스 `db.t4g.micro`(1GiB)의 `max_connections ≈ 85`(공식 `{DBInstanceClassMemory/12582880}` = `1,073,741,824/12,582,880 ≈ 85.33` → 85). write(10) + read(5) = 15/task 기준, ECS 태스크 5개까지 `15 × 5 = 75 ≤ 85`로 여유 확보
 - [ ] **(보류, TODO(#206))** `RoutingDataSource` readOnly 라우팅 통합 테스트 — Testcontainers 등 실제 멀티 DB 환경 필요
 - [ ] **(보류, TODO(#206))** `open-in-view=false` 전환 검토 — 별도 후속 이슈
 
 ### 인프라팀 작업 (별도 트랙)
-- [ ] Replica RDS 인스턴스 생성
+
+- [x] Replica RDS 인스턴스 생성 — `db.t4g.micro`, `pocat-slave` 엔드포인트 (상세는 "Replica 인프라 정보" 절 참고)
 - [ ] 보안그룹 설정 (Replica 접근 허용)
-- [ ] Parameter Store에 `DB_READ_URL`(및 필요 시 `DB_READ_USERNAME`/`DB_READ_PASSWORD`) 등록
+- [x] Parameter Store에 `DB_READ_URL` 등록 완료
 - [ ] ECS Task Definition에 read 관련 환경변수 주입
 
 ---

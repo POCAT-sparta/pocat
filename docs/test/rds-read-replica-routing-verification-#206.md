@@ -69,4 +69,4 @@
 
 ## 커밋 상태
 
-배포팀으로부터 Replica 인프라(엔드포인트, 인스턴스 클래스, `max_connections`, Parameter Store의 `DB_READ_URL` 등) 정보를 전달받아 코드/문서 반영을 완료했다. **코드/문서 반영 완료, 커밋 및 PR 생성 예정**.
+배포팀으로부터 Replica 인프라(엔드포인트, 인스턴스 클래스, `max_connections`, Parameter Store의 `DB_READ_URL` 등) 정보를 전달받아 코드/문서 반영을 완료했다. **코드/문서 반영 완료, 커밋 및 PR 생성 완료 (PR #210, 2026-06-11)**.
