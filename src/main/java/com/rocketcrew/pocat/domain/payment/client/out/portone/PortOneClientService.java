@@ -7,8 +7,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Map;
 
@@ -27,8 +29,12 @@ public class PortOneClientService {
                     .body(PortOnePaymentRawResponse.class);
 
             return PortOnePaymentRawResponse.toResponse(raw);
-        } catch (RestClientException e) {
-            log.warn("PortOne 결제 조회 실패 paymentUid={}", paymentUid, e);
+        } catch (RestClientResponseException e) {
+            log.error("PortOne 결제 조회 실패 status={}, body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+        } catch (ResourceAccessException e) {
+           log.warn("PortOne 결제 조회 실패 paymentUid={}", paymentUid, e);
             return PortOnePaymentRawResponse.toNetworkError();
         }
     }
@@ -56,9 +62,15 @@ public class PortOneClientService {
             }
 
             return getPayment(paymentUid);
-        }catch (RestClientException e) {
+        } catch (RestClientResponseException e) {
+            log.error("[PortOne 빌링결제 실패] status={}, body={}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PaymentException(ErrorCode.PORTONE_NOT_INTEGRATED);
+        } catch (ResourceAccessException e) {
+            log.error("[PortOne 네트워크 오류]", e);
             return PortOnePaymentRawResponse.toNetworkError();
         }
+
     }
 
     public PortOneCancelResponse cancelPayment(String paymentUid, Long amount, String reason) {
