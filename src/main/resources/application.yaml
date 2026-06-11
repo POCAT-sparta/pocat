@@ -64,7 +64,7 @@ management:
       enabled: false
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
 
 rate-limit:
   signup-limit: 5

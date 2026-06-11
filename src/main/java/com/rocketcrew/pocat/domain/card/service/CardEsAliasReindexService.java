@@ -59,7 +59,12 @@ public class CardEsAliasReindexService {
             boolean directIndexExists = esClient.indices().exists(r -> r.index(ALIAS)).value();
             if (!directIndexExists) {
                 // ES가 완전히 비어 있는 경우 (최초 설치): 빈 cards_v1 + alias 생성
-                createNewIndex("cards_v1");
+                // 이전 시도 실패 시 cards_v1이 이미 존재할 수 있으므로 사전 확인
+                if (!esClient.indices().exists(r -> r.index("cards_v1")).value()) {
+                    createNewIndex("cards_v1");
+                } else {
+                    log.info("[ES_ALIAS_SETUP] cards_v1 이미 존재 — alias 연결 재시도");
+                }
                 esClient.indices().putAlias(r -> r.index("cards_v1").name(ALIAS));
                 log.info("[ES_ALIAS_SETUP] 신규 생성: cards_v1 + alias '{}'", ALIAS);
                 return new EsReindexResponse("(없음)", "cards_v1", 0L, "신규 생성 완료");
@@ -67,11 +72,22 @@ public class CardEsAliasReindexService {
 
             // 기존 cards 직접 인덱스 → cards_v1 마이그레이션
             log.info("[ES_ALIAS_SETUP] 기존 '{}' 직접 인덱스 → cards_v1 마이그레이션 시작", ALIAS);
-            createNewIndex("cards_v1");
-            long count = callReindex(ALIAS, "cards_v1");
+            boolean v1AlreadyExists = esClient.indices().exists(r -> r.index("cards_v1")).value();
+            long count;
+            if (!v1AlreadyExists) {
+                createNewIndex("cards_v1");
+                count = callReindex(ALIAS, "cards_v1");
+            } else {
+                // 이전 시도에서 reindex까지는 완료됐으나 이후 단계 실패 — 재시도
+                log.info("[ES_ALIAS_SETUP] cards_v1 이미 존재 — reindex 스킵, 이후 단계 재시도");
+                count = esClient.count(r -> r.index("cards_v1")).count();
+            }
 
-            // 직접 인덱스 삭제 후 alias 연결
-            esClient.indices().delete(r -> r.index(ALIAS));
+            // 직접 인덱스 삭제: 이전 시도에서 이미 삭제됐을 수 있음
+            // ES는 alias와 동일명 직접 인덱스 공존 불가이므로 삭제 후 alias 연결
+            if (esClient.indices().exists(r -> r.index(ALIAS)).value()) {
+                esClient.indices().delete(r -> r.index(ALIAS));
+            }
             esClient.indices().putAlias(r -> r.index("cards_v1").name(ALIAS));
 
             log.info("[ES_ALIAS_SETUP] 완료: cards → cards_v1 + alias 생성 ({}건)", count);
@@ -108,7 +124,12 @@ public class CardEsAliasReindexService {
             Instant reindexStart = Instant.now();
 
             // 1. 새 인덱스 생성 (CardDocument 매핑 기준)
-            createNewIndex(newIndex);
+            // 이전 시도 실패 시 newIndex가 이미 존재할 수 있으므로 사전 확인
+            if (!esClient.indices().exists(r -> r.index(newIndex)).value()) {
+                createNewIndex(newIndex);
+            } else {
+                log.info("[ES_ALIAS_REINDEX] {} 이미 존재 — createIndex 스킵, _reindex 계속", newIndex);
+            }
 
             // 2. 전체 _reindex
             long reindexed = callReindex(currentIndex, newIndex);
