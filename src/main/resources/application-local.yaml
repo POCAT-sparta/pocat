@@ -10,6 +10,19 @@ spring:
       connection-timeout: 30000  # 30초
       idle-timeout: 600000       # 10분
       max-lifetime: 1800000      # 30분
+    read:
+      url: ${DB_READ_URL:${DB_URL:jdbc:mysql://localhost:3306/pocat}}
+      username: ${DB_READ_USERNAME:${DB_USERNAME:root}}
+      password: ${DB_READ_PASSWORD:${DB_PASSWORD}}
+      driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
+      hikari:
+        # #206: db.t4g.micro replica (max_connections≈85) 기준 확정값.
+        # write(10)+read(5)=15/task, 5개 태스크까지 여유(75/85)
+        maximum-pool-size: 5
+        minimum-idle: 2
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
 
   jpa:
     hibernate:
