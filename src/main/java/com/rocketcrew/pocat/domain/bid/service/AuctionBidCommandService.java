@@ -20,7 +20,9 @@ import com.rocketcrew.pocat.global.metrics.BidMetrics;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import static net.logstash.logback.argument.StructuredArguments.kv;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -86,6 +89,14 @@ public class AuctionBidCommandService {
                 .status(BidStatus.LEADING)
                 .build();
         AuctionBid savedBid = auctionBidRepository.save(auctionBid);
+
+        // ── Analytics: 입찰 이벤트 ──────────────────────────────────
+        log.info("[ANALYTICS] auction_bid",
+                kv("event_type", "auction_bid"),
+                kv("auction_id", auctionId),
+                kv("card_id", latestAuction.getCardId()),
+                kv("bid_price", request.bidPrice()),
+                kv("user_id", String.valueOf(userId)));
 
         latestAuction.updateHighestBid(request.bidPrice(), userId);
         publishBidCreatedEvent(latestAuction, userId, request.bidPrice());

@@ -64,6 +64,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.testcontainers:elasticsearch'
     testImplementation 'org.testcontainers:junit-jupiter'
 
     implementation 'io.hypersistence:hypersistence-tsid:2.1.0'
@@ -111,6 +112,17 @@ tasks.named('test') {
             excludeTags project.property('excludeTags').split(',')
         }
     }
+}
+
+// ES Testcontainers 통합 테스트 — Docker 필요, CI에서 별도 실행
+// 사용법: ./gradlew integrationTest
+tasks.register('integrationTest', Test) {
+    description = 'ES Testcontainers 등 외부 인프라가 필요한 통합 테스트'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+    shouldRunAfter tasks.named('test')
 }
 
 jar {

@@ -25,6 +25,7 @@ import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.CardException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import static net.logstash.logback.argument.StructuredArguments.kv;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +38,9 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.rocketcrew.pocat.global.security.CustomUserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
@@ -114,6 +118,18 @@ public class CardQueryService {
         NativeQuery query = queryBuilder.build();
 
         SearchHits<CardDocument> hits = elasticsearchOperations.search(query, CardDocument.class);
+
+        // ── Analytics: 검색 키워드 이벤트 ─────────────────────────────
+        if (StringUtils.hasText(condition.keyword())) {
+            log.info("[ANALYTICS] card_search",
+                    kv("event_type", "card_search"),
+                    kv("search_keyword", condition.keyword()),
+                    kv("series_filter", condition.series()),
+                    kv("set_name_filter", condition.setName()),
+                    kv("result_count", hits.getTotalHits()),
+                    kv("user_id", resolveUserId()));
+        }
+
         List<CardDocument> documents = hits.stream()
                 .map(SearchHit::getContent)
                 .toList();
@@ -147,6 +163,14 @@ public class CardQueryService {
         if (card.getStatus() != CardStatus.ACTIVE) {
             throw new CardException(ErrorCode.CARD_NOT_FOUND);
         }
+
+        // ── Analytics: 카드 단건 조회 이벤트 ─────────────────────────────
+        log.info("[ANALYTICS] card_view",
+                kv("event_type", "card_view"),
+                kv("card_id", id),
+                kv("card_name", card.getName()),
+                kv("user_id", resolveUserId()));
+
         int count = (int) auctionRepository.countByCardIdAndStatus(id, AuctionStatus.ACTIVE);
         return CardResponse.from(card).withActiveAuctionCount(count);
     }
@@ -210,6 +234,15 @@ public class CardQueryService {
         }
 
         return response;
+    }
+
+    /** SecurityContext에서 현재 유저 ID를 추출. 비로그인이면 "anonymous" 반환 */
+    private String resolveUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails u) {
+            return String.valueOf(u.getUserId());
+        }
+        return "anonymous";
     }
 
     public Card validateRegistrableForAuction(Long cardId) {

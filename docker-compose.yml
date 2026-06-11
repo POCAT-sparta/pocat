@@ -17,6 +17,7 @@ services:
       SERVER_PORT: 8080
       SPRING_PROFILES_ACTIVE: local
       ES_URI: http://elasticsearch:9200
+      JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
@@ -60,7 +61,7 @@ services:
   redis-1:
     image: redis:7.2-alpine
     container_name: pocat-redis-1
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7001", "--cluster-announce-port", "7001", "--cluster-announce-bus-port", "17001"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7001", "--cluster-announce-port", "7001", "--cluster-announce-bus-port", "17001", "--cluster-announce-hostname", "redis-1"]
     ports:
       - "127.0.0.1:7001:7001"
       - "127.0.0.1:17001:17001"
@@ -79,7 +80,7 @@ services:
   redis-2:
     image: redis:7.2-alpine
     container_name: pocat-redis-2
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7002", "--cluster-announce-port", "7002", "--cluster-announce-bus-port", "17002"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7002", "--cluster-announce-port", "7002", "--cluster-announce-bus-port", "17002", "--cluster-announce-hostname", "redis-2"]
     ports:
       - "127.0.0.1:7002:7002"
       - "127.0.0.1:17002:17002"
@@ -98,7 +99,7 @@ services:
   redis-3:
     image: redis:7.2-alpine
     container_name: pocat-redis-3
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7003", "--cluster-announce-port", "7003", "--cluster-announce-bus-port", "17003"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7003", "--cluster-announce-port", "7003", "--cluster-announce-bus-port", "17003", "--cluster-announce-hostname", "redis-3"]
     ports:
       - "127.0.0.1:7003:7003"
       - "127.0.0.1:17003:17003"
@@ -117,7 +118,7 @@ services:
   redis-4:
     image: redis:7.2-alpine
     container_name: pocat-redis-4
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7004", "--cluster-announce-port", "7004", "--cluster-announce-bus-port", "17004"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7004", "--cluster-announce-port", "7004", "--cluster-announce-bus-port", "17004", "--cluster-announce-hostname", "redis-4"]
     ports:
       - "127.0.0.1:7004:7004"
       - "127.0.0.1:17004:17004"
@@ -136,7 +137,7 @@ services:
   redis-5:
     image: redis:7.2-alpine
     container_name: pocat-redis-5
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7005", "--cluster-announce-port", "7005", "--cluster-announce-bus-port", "17005"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7005", "--cluster-announce-port", "7005", "--cluster-announce-bus-port", "17005", "--cluster-announce-hostname", "redis-5"]
     ports:
       - "127.0.0.1:7005:7005"
       - "127.0.0.1:17005:17005"
@@ -155,7 +156,7 @@ services:
   redis-6:
     image: redis:7.2-alpine
     container_name: pocat-redis-6
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7006", "--cluster-announce-port", "7006", "--cluster-announce-bus-port", "17006"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--port", "7006", "--cluster-announce-port", "7006", "--cluster-announce-bus-port", "17006", "--cluster-announce-hostname", "redis-6"]
     ports:
       - "127.0.0.1:7006:7006"
       - "127.0.0.1:17006:17006"
@@ -175,18 +176,16 @@ services:
     image: redis:7.2-alpine
     container_name: pocat-redis-cluster-init
     restart: "no"
-    command: >
-      sh -c "
+    command:
+      - sh
+      - -c
+      - |
         if redis-cli -h redis-1 -p 7001 cluster info 2>/dev/null | grep -q 'cluster_state:ok'; then
           echo '[SKIP] Redis Cluster already initialized.';
         else
           echo '[INIT] Creating Redis Cluster...';
-          redis-cli --cluster create
-            redis-1:7001 redis-2:7002 redis-3:7003
-            redis-4:7004 redis-5:7005 redis-6:7006
-            --cluster-replicas 1 --cluster-yes;
+          redis-cli --cluster create redis-1:7001 redis-2:7002 redis-3:7003 redis-4:7004 redis-5:7005 redis-6:7006 --cluster-replicas 1 --cluster-yes;
         fi
-      "
     depends_on:
       redis-1:
         condition: service_healthy

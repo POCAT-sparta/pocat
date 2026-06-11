@@ -34,6 +34,7 @@
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
         <destination>${LOGSTASH_HOST}:${LOGSTASH_PORT}</destination>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <charset>UTF-8</charset>
             <customFields>{"app":"${APP_NAME}"}</customFields>
         </encoder>
         <keepAliveDuration>5 minutes</keepAliveDuration>
