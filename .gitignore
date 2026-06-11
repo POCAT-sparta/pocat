@@ -57,4 +57,4 @@ scripts/start.sh
 scripts/stop.sh
 .gstack/
 
-.ps1
+*.ps1

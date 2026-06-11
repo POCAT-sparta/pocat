@@ -77,7 +77,8 @@ public class AdminCardController {
     @PostMapping("/v1/admin/cards/sync")
     public ResponseEntity<ApiResponseDto<Void>> syncCards() {
         cardSyncService.syncAll();
-        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.accepted()
+                .body(ApiResponseDto.success(HttpStatus.ACCEPTED, null));
     }
 
     /**
@@ -88,6 +89,7 @@ public class AdminCardController {
     @PostMapping("/v1/admin/cards/migrate-images")
     public ResponseEntity<ApiResponseDto<Void>> migrateImages() {
         cardImageMigrationService.migrateAll();
-        return ResponseEntity.ok(ApiResponseDto.successWithNoContent());
+        return ResponseEntity.accepted()
+                .body(ApiResponseDto.success(HttpStatus.ACCEPTED, null));
     }
 }
