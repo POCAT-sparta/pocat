@@ -51,6 +51,11 @@ public class PokemonSetQueryService {
                 .map(PokemonSetResponse::from).toList();
     }
 
+    public List<PokemonSetResponse> findBySeriesId(Long seriesId) {
+        return pokemonSetRepository.findBySeries_Id(seriesId).stream()
+                .map(PokemonSetResponse::from).toList();
+    }
+
     /** 한글(또는 영문) 확장팩명 → DB 영문 set name. ES term 필터용 */
     public String translate(String input) {
         if (input == null || input.isBlank()) return input;

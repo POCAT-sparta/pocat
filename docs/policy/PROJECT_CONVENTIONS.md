@@ -18,7 +18,7 @@
 프로젝트는 도메인 중심의 계층형 아키텍처를 따릅니다.
 
 ```text
-src/main/java/com/example/kcomproject/
+src/main/java/com/rocketcrew/pocat/
 ├── config/             # 글로벌 설정 (Redis, ShedLock, Web, Async 등)
 ├── domain/             # 도메인별 패키지
 │   ├── [domain_name]/  # 예: order, user, menu
