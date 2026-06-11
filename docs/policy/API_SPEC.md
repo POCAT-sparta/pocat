@@ -1284,7 +1284,7 @@ Authorization: Bearer {accessToken}
 
 ### 4.12 경매 검수 승인 / 거절 (관리자)
 
-- **PATCH** `/api/v1/admin/auctions/{auctionId}/inspect`
+- **PATCH** `/api/v1/admin/auctions/{auctionId}/inspection`
 - **권한**: `ADMIN`
 - **설명**: `PENDING` 또는 `INSPECTING` 상태의 경매를 검수할 수 있다.
 
@@ -1934,7 +1934,7 @@ X-PortOne-Signature: {서명값}
 
 ### 8.2 정산 상세 조회 (판매자)
 
-- **GET** `/api/v1/settlements/{settlementId}`
+- **GET** `/api/v1/settlements/{settlementUid}`
 - **권한**: `USER` (본인) / `ADMIN`
 
 **Response** `200 OK`
@@ -1943,7 +1943,7 @@ X-PortOne-Signature: {서명값}
 {
   "status": "SUCCESS",
   "data": {
-    "settlementId": 1,
+    "settlementUid": "SETTLE-...",
     "orderId": 5,
     "totalPrice": 250000,
     "platformFee": 12500,
@@ -1974,7 +1974,7 @@ X-PortOne-Signature: {서명값}
 
 ### 8.4 정산 완료 처리 (관리자)
 
-- **PATCH** `/api/v1/admin/settlements/{settlementId}/complete`
+- **PATCH** `/api/v1/admin/settlements/{settlementUid}/complete`
 - **권한**: `ADMIN`
 
 **Response** `200 OK`
@@ -1983,7 +1983,7 @@ X-PortOne-Signature: {서명값}
 {
   "status": "SUCCESS",
   "data": {
-    "settlementId": 1,
+    "settlementUid": "SETTLE-...",
     "status": "COMPLETED",
     "settledAt": "2026-05-10T00:00:00"
   },

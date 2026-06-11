@@ -56,3 +56,5 @@ replay_pid*.log
 scripts/start.sh
 scripts/stop.sh
 .gstack/
+
+*.ps1
