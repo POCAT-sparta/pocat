@@ -5,7 +5,6 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisSubscriber;
-import com.rocketcrew.pocat.domain.notification.service.NotificationRedisSubscriber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -82,12 +81,10 @@ public class RedisConfig {
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
-            NotificationRedisSubscriber subscriber,
             ExpiryEventListener ExpiryEventListener,
             AuctionExpirationRedisSubscriber auctionExpirationRedisSubscriber) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        container.addMessageListener(subscriber, new PatternTopic("notification:*"));
         container.addMessageListener(ExpiryEventListener, new PatternTopic("__keyevent@*__:expired"));
         container.addMessageListener(auctionExpirationRedisSubscriber, new PatternTopic("__keyevent@*__:expired"));
         return container;
