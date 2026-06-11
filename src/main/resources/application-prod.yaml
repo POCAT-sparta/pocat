@@ -72,3 +72,9 @@ springdoc:
     enabled: false
   api-docs:
     enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,metrics
