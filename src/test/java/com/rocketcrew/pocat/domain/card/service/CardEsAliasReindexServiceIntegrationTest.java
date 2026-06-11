@@ -175,6 +175,28 @@ class CardEsAliasReindexServiceIntegrationTest {
             assertThat(response.newIndex()).isEqualTo("cards_v1");
             assertThat(response.documentCount()).isEqualTo(0L);
         }
+
+        @Test
+        @DisplayName("cards_v1이 이미 존재할 때 alias만 연결하고 데이터를 보존한다 (부분 실패 재시도)")
+        void reconnectsAliasWhenV1AlreadyExists() throws IOException {
+            // given: 이전 setupAlias()가 cards_v1 생성 후 alias 연결 전에 실패한 상태
+            indexCard("cards_v1", "99");
+            refresh("cards_v1");
+
+            // when: 재시도
+            EsReindexResponse response = service.setupAlias();
+
+            // then: 예외 없이 alias 연결 완료
+            boolean aliasExists = esClient.indices()
+                    .existsAlias(r -> r.name("cards")).value();
+            assertThat(aliasExists).isTrue();
+            assertThat(getAliasTarget("cards")).isEqualTo("cards_v1");
+
+            // cards_v1의 기존 데이터 보존 확인
+            refresh("cards");
+            long count = esClient.count(r -> r.index("cards")).count();
+            assertThat(count).isEqualTo(1L);
+        }
     }
 
     @Nested
