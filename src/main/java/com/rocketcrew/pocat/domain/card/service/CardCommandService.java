@@ -215,10 +215,15 @@ public class CardCommandService {
 
     private void doIndexCard(Card card) {
         try {
-            String nameKo    = card.getPokemon() != null ? card.getPokemon().getNameKo() : null;
-            String seriesKo  = card.getSeries() != null ? card.getSeries().getNameKo() : null;
-            String setNameKo = card.getPokemonSet() != null ? card.getPokemonSet().getNameKo() : null;
-            cardSearchRepository.save(CardDocument.from(card, nameKo, seriesKo, setNameKo));
+            Card freshCard = cardRepository.findByIdWithPokemon(card.getId()).orElse(null);
+            if (freshCard == null) {
+                log.warn("[ES_INDEXING] 카드 인덱싱 스킵 - 카드 없음 cardId={}", card.getId());
+                return;
+            }
+            String nameKo    = freshCard.getPokemon() != null ? freshCard.getPokemon().getNameKo() : null;
+            String seriesKo  = freshCard.getSeries() != null ? freshCard.getSeries().getNameKo() : null;
+            String setNameKo = freshCard.getPokemonSet() != null ? freshCard.getPokemonSet().getNameKo() : null;
+            cardSearchRepository.save(CardDocument.from(freshCard, nameKo, seriesKo, setNameKo));
         } catch (Exception e) {
             log.warn("[ES_INDEXING] 카드 인덱싱 실패 cardId={}: {}", card.getId(), e.getMessage());
         }

@@ -9,6 +9,7 @@ spring:
     locations: classpath:db/migration
 
   jpa:
+    open-in-view: false
     show-sql: false
     properties:
       hibernate:

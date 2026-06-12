@@ -214,6 +214,7 @@ class CardCommandServiceTest {
         void success() {
             Card card = buildCard(1L, CardStatus.PENDING);
             given(cardRepository.findById(1L)).willReturn(Optional.of(card));
+            given(cardRepository.findByIdWithPokemon(card.getId())).willReturn(Optional.of(card));
             given(s3ImageDownloader.download(anyString()))
                     .willReturn(new S3ImageDownloader.DownloadResult(new byte[]{1, 2, 3}, "image/jpeg"));
             given(s3Uploader.upload(anyString(), any(byte[].class), anyString()))
@@ -244,6 +245,39 @@ class CardCommandServiceTest {
 
             assertThatThrownBy(() -> service.approveCard(1L))
                     .isInstanceOf(IllegalStateException.class);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // indexCard afterCommit (#219 B2: open-in-view=false LIE 회귀)
+    // ---------------------------------------------------------------
+
+    @Nested
+    @DisplayName("indexCard afterCommit (#219 B2 회귀)")
+    class IndexCardAfterCommit {
+
+        @Test
+        @DisplayName("성공: ACTIVE 카드 승인 후 afterCommit 콜백에서 findByIdWithPokemon으로 재조회해 ES 인덱싱한다")
+        void approveCard_afterCommit_indexesUsingFindByIdWithPokemon() {
+            Card card = buildCard(1L, CardStatus.PENDING);
+            given(cardRepository.findById(1L)).willReturn(Optional.of(card));
+            given(cardRepository.findByIdWithPokemon(card.getId())).willReturn(Optional.of(card));
+            given(s3ImageDownloader.download(anyString()))
+                    .willReturn(new S3ImageDownloader.DownloadResult(new byte[]{1, 2, 3}, "image/jpeg"));
+            given(s3Uploader.upload(anyString(), any(byte[].class), anyString()))
+                    .willReturn("https://s3.amazonaws.com/cards/approved/1.jpg");
+
+            service.approveCard(1L);
+
+            // afterCommit 콜백을 수동으로 트리거해 doIndexCard()가 findByIdWithPokemon으로
+            // 재조회한 Card를 기반으로 ES 인덱싱을 수행하는지 검증한다 (open-in-view=false 환경에서
+            // detached Card.pokemon에 직접 접근하면 LazyInitializationException이 발생하므로,
+            // doIndexCard()는 findByIdWithPokemon으로 재조회한 Card를 사용해야 한다).
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(sync -> sync.afterCommit());
+
+            verify(cardRepository).findByIdWithPokemon(card.getId());
+            verify(cardSearchRepository).save(any());
         }
     }
 
@@ -311,6 +345,7 @@ class CardCommandServiceTest {
             Card card = buildCard(1L, CardStatus.ACTIVE);
             UpdateCardRequest request = new UpdateCardRequest(null, "수정된이름", null, null, null, null, null, null, null, null, null);
             given(cardRepository.findById(1L)).willReturn(Optional.of(card));
+            given(cardRepository.findByIdWithPokemon(card.getId())).willReturn(Optional.of(card));
 
             CardResponse response = service.updateCard(1L, request);
 

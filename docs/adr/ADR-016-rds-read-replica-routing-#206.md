@@ -131,8 +131,8 @@ Spring `@Transactional`의 전파(propagation) 규칙상, 이미 진행 중인 �
 ### 보류 항목 (TODO(#206))
 
 - [x] **`local`/`prod`의 `read.hikari` 풀 사이즈 확정** — `maximum-pool-size=5`, `minimum-idle=2`. 근거: Replica 인스턴스 `db.t4g.micro`(1GiB)의 `max_connections ≈ 85`(공식 `{DBInstanceClassMemory/12582880}` = `1,073,741,824/12,582,880 ≈ 85.33` → 85). write(10) + read(5) = 15/task 기준, ECS 태스크 5개까지 `15 × 5 = 75 ≤ 85`로 여유 확보
-- [ ] **(보류, TODO(#206))** `RoutingDataSource` readOnly 라우팅 통합 테스트 — Testcontainers 등 실제 멀티 DB 환경 필요
-- [ ] **(보류, TODO(#206))** `open-in-view=false` 전환 검토 — 별도 후속 이슈
+- [x] **`RoutingDataSource` readOnly 라우팅 통합 테스트** — [ADR-017](ADR-017-open-in-view-routing-sticky-fix-%23219.md)(#219)에서 `OpenInViewRoutingIntegrationTest`로 구현 완료. buyout 시나리오(readOnly 조회 → `REQUIRES_NEW` write 트랜잭션) 기준 트랜잭션 단위 재라우팅을 H2 환경에서 검증
+- [x] **`open-in-view=false` 전환 검토** — [ADR-017](ADR-017-open-in-view-routing-sticky-fix-%23219.md)(#219)에서 전환 완료. `open-in-view=true`로 인한 라우팅 고착(sticky) 버그를 해결하고, `Card.pokemon`/`PokemonSet.series` LAZY 연관관계에 대한 `LazyInitializationException` 방어 조치(`findByIdWithPokemon` fetch join 재조회)도 함께 적용됨
 
 ### 인프라팀 작업 (별도 트랙)
 
@@ -209,6 +209,7 @@ Spring `@Transactional`의 전파(propagation) 규칙상, 이미 진행 중인 �
 
 ## 관련 문서
 
+- [ADR-017: open-in-view=true로 인한 Read/Write 라우팅 고착(sticky) 버그 수정](ADR-017-open-in-view-routing-sticky-fix-%23219.md) — 본 ADR의 "보류 항목"(TODO(#206))이었던 `open-in-view=false` 전환과 `RoutingDataSource` readOnly 라우팅 통합 테스트를 #219에서 해결
 - [ADR-014: 메인 앱 @Scheduled 스케줄러 8개 pocat-batch 완전 이전](ADR-014-scheduler-batch-migration-#171.md) — 배치 서버에서도 동일한 `RoutingDataSource` 구성 적용 여부는 후속 검토
 - [ADR-015: Redis 단일 인스턴스에서 Cluster 모드로 전환](ADR-015-redis-cluster-migration.md) — 환경변수 기반 cascading default 패턴 선례
 - [ADR-006: Payment 결제 실패 재시도 정책](ADR-006-payment-failure-retry-policy.md) — `PaymentQueryService`/`PaymentCommandService` 트랜잭션 경계 관련

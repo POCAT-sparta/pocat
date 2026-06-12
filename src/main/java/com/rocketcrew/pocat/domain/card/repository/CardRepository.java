@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface CardRepository extends JpaRepository<Card, Long>, CardRepositoryCustom {
@@ -38,4 +39,7 @@ public interface CardRepository extends JpaRepository<Card, Long>, CardRepositor
 
     @Query("SELECT COUNT(c) FROM Card c WHERE c.imageUrl LIKE 'https://assets.tcgdex.net%'")
     long countTcgdexImageCards();
+
+    @Query("SELECT c FROM Card c LEFT JOIN FETCH c.pokemon WHERE c.id = :id")
+    Optional<Card> findByIdWithPokemon(@Param("id") Long id);
 }
