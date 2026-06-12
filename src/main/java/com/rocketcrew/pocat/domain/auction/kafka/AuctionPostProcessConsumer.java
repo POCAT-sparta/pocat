@@ -2,8 +2,10 @@ package com.rocketcrew.pocat.domain.auction.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.event.AuctionEventType;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
@@ -28,6 +30,7 @@ public class AuctionPostProcessConsumer {
     private final AuctionSnapshotCommandService auctionSnapshotCommandService;
     private final NotificationCommandService notificationCommandService;
     private final AuctionLifecycleService auctionLifecycleService;
+    private final AuctionEsIndexService auctionEsIndexService;
 
     @KafkaListener(
             topics = "auction",
@@ -86,6 +89,8 @@ public class AuctionPostProcessConsumer {
         requireFinalPrice(event);
         auctionExpirationRedisService.deleteExpirationKeys(event.getAuctionId());
         auctionSnapshotCommandService.createSnapshot(event.getAuctionId(), event.getFinalPrice());
+        auctionEsIndexService.updateHighestPrice(event.getAuctionId(), event.getFinalPrice());
+        auctionEsIndexService.updateStatus(event.getAuctionId(), AuctionStatus.ENDED);
     }
 
     private void handleCancelled(AuctionEventPayload event) {

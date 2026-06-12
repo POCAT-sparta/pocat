@@ -2,7 +2,9 @@ package com.rocketcrew.pocat.domain.auction.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
+import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
@@ -40,6 +42,9 @@ class AuctionPostProcessConsumerTest {
     @Mock
     AuctionLifecycleService auctionLifecycleService;
 
+    @Mock
+    AuctionEsIndexService auctionEsIndexService;
+
     AuctionPostProcessConsumer consumer;
 
     @BeforeEach
@@ -51,7 +56,8 @@ class AuctionPostProcessConsumerTest {
                 auctionExpirationRedisService,
                 auctionSnapshotCommandService,
                 notificationCommandService,
-                auctionLifecycleService
+                auctionLifecycleService,
+                auctionEsIndexService
         );
     }
 
@@ -139,6 +145,8 @@ class AuctionPostProcessConsumerTest {
 
         verify(auctionExpirationRedisService).deleteExpirationKeys(1L);
         verify(auctionSnapshotCommandService).createSnapshot(1L, 10000L);
+        verify(auctionEsIndexService).updateHighestPrice(1L, 10000L);
+        verify(auctionEsIndexService).updateStatus(1L, AuctionStatus.ENDED);
         verifyNoInteractions(notificationCommandService);
     }
 
