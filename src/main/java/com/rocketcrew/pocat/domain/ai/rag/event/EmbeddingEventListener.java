@@ -19,13 +19,25 @@ public class EmbeddingEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCardEmbedding(CardEmbeddingEvent event) {
         log.debug("Embedding card after commit: cardId={}", event.cardId());
-        embeddingService.embedCard(event.cardId(), event.cardText());
+        try {
+            embeddingService.embedCard(event.cardId(), event.cardText());
+        } catch (Exception e) {
+            // 생성 트랜잭션은 이미 커밋됨 — 임베딩 실패는 비즈니스 로직에 영향 없음 (로그만 기록)
+            log.error("[EMBEDDING_FAIL] 카드 임베딩 실패 eventType=CARD targetId={} exceptionType={} reason={}",
+                    event.cardId(), e.getClass().getSimpleName(), e.getMessage(), e);
+        }
     }
 
     @Async  // intentionally no executor — embedding doesn't require SecurityContext
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTradePostEmbedding(TradePostEmbeddingEvent event) {
         log.debug("Embedding trade post after commit: postId={}", event.postId());
-        embeddingService.embedTradePost(event.postId(), event.content());
+        try {
+            embeddingService.embedTradePost(event.postId(), event.content());
+        } catch (Exception e) {
+            // 생성 트랜잭션은 이미 커밋됨 — 임베딩 실패는 비즈니스 로직에 영향 없음 (로그만 기록)
+            log.error("[EMBEDDING_FAIL] 거래글 임베딩 실패 eventType=TRADE_POST targetId={} exceptionType={} reason={}",
+                    event.postId(), e.getClass().getSimpleName(), e.getMessage(), e);
+        }
     }
 }

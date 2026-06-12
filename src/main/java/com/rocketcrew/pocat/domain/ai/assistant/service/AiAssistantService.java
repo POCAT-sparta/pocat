@@ -44,7 +44,7 @@ public class AiAssistantService {
     private final AiChatSessionService sessionService;
 
     private static final int MAX_HISTORY_TURNS = 10;
-    private static final String MODEL_NAME = "gemini-1.5-flash";
+    private static final String MODEL_NAME = "gemini-2.5-flash";
 
     /**
      * 사용자와의 채팅 상호작용.
