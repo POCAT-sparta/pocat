@@ -13,7 +13,7 @@
 
 ### 순서
 
-```
+```text
 Step 1. [User A] 회원가입 + 로그인
   POST /api/v1/auth/signup
   POST /api/v1/auth/login
@@ -75,6 +75,7 @@ Step 15. [User A] 알림 확인
 ```
 
 ### 최종 상태 확인
+
 - [ ] 경매: `ENDED`
 - [ ] 주문: `PAYMENT_COMPLETED`
 - [ ] 결제: `COMPLETED`
@@ -88,7 +89,7 @@ Step 15. [User A] 알림 확인
 
 ### 순서 (E2E-001과 동일한 인증 세팅 가정)
 
-```
+```text
 Step 1~7. E2E-001과 동일 (카드 승인 + 경매 ACTIVE 상태까지)
 
 Step 8. [User B] 입찰
@@ -114,6 +115,7 @@ Step 14. [User B] 환불 완료 알림 확인
 ```
 
 ### 최종 상태 확인
+
 - [ ] 환불: `APPROVED`
 - [ ] User B 알림: 환불 완료
 
@@ -121,7 +123,7 @@ Step 14. [User B] 환불 완료 알림 확인
 
 ## E2E-003: 커뮤니티 → 채팅 연계 플로우
 
-```
+```text
 Step 1. [User A] 거래게시글 작성
   POST /api/v1/posts/trade { title: "리자몽 교환 원해요", ... }
   → TRADE_POST_ID 획득
@@ -147,11 +149,18 @@ Step 7. unreadCount 0 확인
   GET /api/v1/chats/me
 ```
 
+### 최종 상태 확인
+
+- [ ] 거래게시글: 조회 가능
+- [ ] 채팅방: 생성됨
+- [ ] User A 새 메시지 알림 수신
+- [ ] 채팅 읽음 처리 후 unreadCount: 0
+
 ---
 
 ## E2E-004: 카드 거절 → 재신청 플로우
 
-```
+```text
 Step 1. [User A] 카드 신청
   POST /api/v1/cards/upload
 
@@ -170,6 +179,12 @@ Step 5. [User A] 새 이미지로 재신청
 Step 6. [Admin] 재승인
   PATCH /api/v1/admin/cards/{NEW_CARD_ID}/approve
 ```
+
+### 최종 상태 확인
+
+- [ ] 거절된 카드: status `REJECTED`, rejectReason 존재
+- [ ] 재신청 카드: status `APPROVED`
+- [ ] User A 알림: 거절 알림 + 승인 알림 수신
 
 ---
 

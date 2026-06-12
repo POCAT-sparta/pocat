@@ -36,6 +36,18 @@ public class AdminEsMigrationController {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, response));
     }
 
+    @PostMapping("/v1/admin/es-migrate/cards")
+    public ResponseEntity<ApiResponseDto<EsMigrationResponse>> migrateCards() {
+        int cardsMigrated = cardEsMigrationService.migrateAll();
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, new EsMigrationResponse(cardsMigrated, 0)));
+    }
+
+    @PostMapping("/v1/admin/es-migrate/auctions")
+    public ResponseEntity<ApiResponseDto<EsMigrationResponse>> migrateAuctions() {
+        int auctionsMigrated = auctionEsMigrationService.migrateAll();
+        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, new EsMigrationResponse(0, auctionsMigrated)));
+    }
+
     /**
      * ES Index Alias 초기 세팅 (최초 1회 실행).
      * cards 직접 인덱스를 cards_v1으로 복사 후 alias "cards"로 교체한다.

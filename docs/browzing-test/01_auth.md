@@ -108,11 +108,13 @@ REFRESH_TOKEN_A = 응답의 refreshToken
 - 유효한 refreshToken 보유 (TC-AUTH-003 이후)
 
 ### 요청
-```
+```json
 POST /api/v1/auth/reissue
-Cookie: refreshToken={REFRESH_TOKEN_A}
-또는
-Authorization: Bearer {REFRESH_TOKEN_A}
+Content-Type: application/json
+
+{
+  "refreshToken": "{REFRESH_TOKEN_A}"
+}
 ```
 
 ### 확인 항목
@@ -142,11 +144,27 @@ Authorization: Bearer {ACCESS_TOKEN_A}
 ## TC-AUTH-007: Rate Limit 검증
 
 **우선순위**: 중  
-**확인 항목**
+**관련 API**: `POST /api/v1/auth/login`
 
+### 요청 (10회 반복)
+
+```json
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user_a@test.com",
+  "password": "WrongPassword!"
+}
+```
+
+### 예상 응답 (11번째 요청부터)
+- HTTP 429 Too Many Requests
+
+### 확인 항목
 - [ ] 로그인 10회 초과 시 429 (Too Many Requests) 반환
 - [ ] 회원가입 5회 초과 시 429 반환
-- [ ] Rate Limit 초기화 후 정상 응답 확인
+- [ ] Rate Limit 초기화(1분) 후 정상 응답 확인
 
 ---
 
