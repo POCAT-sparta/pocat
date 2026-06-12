@@ -10,8 +10,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * <p>{@link LazyConnectionDataSourceProxy}와 함께 사용해야 한다 — 실제 커넥션 획득을
  * 트랜잭션 동기화(readOnly 플래그 확정) 이후로 지연시켜야 라우팅 키가 올바르게 결정된다.
  *
- * TODO(#206): Replica 프로비저닝 완료(db.t4g.micro, pocat-slave) — readOnly 라우팅
- *  통합 테스트는 여전히 후속 작업.
+ * TODO(#206): Replica 프로비저닝 완료(db.t4g.micro, pocat-slave). readOnly 라우팅
+ *  통합 테스트는 {@code OpenInViewRoutingIntegrationTest}(#219, ADR-017)로 추가됨 —
+ *  open-in-view=false 전환에 따라 트랜잭션 단위 재라우팅(readOnly 조회 후 REQUIRES_NEW
+ *  write 트랜잭션)이 정상 동작함을 검증한다.
  *  특히 PaymentQueryService의 FOR UPDATE 락 메서드(findPaymentByIdWithLock 등)는
  *  클래스 레벨 readOnly=true를 상속하지만, 모든 호출자가 write 트랜잭션이므로
  *  cross-bean join 시 WRITE로 라우팅됨 — Replica 환경에서 실제 검증 필요 (ADR-016 참고).

@@ -30,7 +30,11 @@ public class AuctionEsIndexService {
     /** 경매 전체 문서 인덱싱 (ACTIVE 전환 시) */
     public void index(Auction auction) {
         try {
-            Card card = cardRepository.findById(auction.getCardId()).orElse(null);
+            Card card = cardRepository.findByIdWithPokemon(auction.getCardId()).orElse(null);
+            if (card == null) {
+                log.warn("[ES_INDEXING] 경매 인덱싱 스킵 - 카드 없음 auctionId={} cardId={}", auction.getId(), auction.getCardId());
+                return;
+            }
             String sellerNickname = resolveNickname(auction.getSellerId());
             AuctionDocument doc = AuctionDocument.from(auction, card, sellerNickname);
             auctionSearchRepository.save(doc);

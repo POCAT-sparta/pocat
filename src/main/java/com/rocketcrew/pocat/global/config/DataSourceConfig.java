@@ -28,8 +28,8 @@ import java.util.Map;
  * TODO(#206): Replica는 prod 환경에 프로비저닝 완료(db.t4g.micro, pocat-slave 엔드포인트).
  *  Replica 연결 실패/미설정 환경(local/test)에서는 {@code spring.datasource.read.*}가 YAML
  *  cascading default(`${DB_READ_URL:${DB_URL}}` 등)로 write와 동일한 값을 사용해 안전하게
- *  fallback한다 (read=write fallback). open-in-view=false 전환 여부는 별도 후속 이슈로
- *  검토한다 (ADR-016).
+ *  fallback한다 (read=write fallback). open-in-view=false 전환은 #219(ADR-017)에서
+ *  완료됨.
  */
 @Configuration
 public class DataSourceConfig {
