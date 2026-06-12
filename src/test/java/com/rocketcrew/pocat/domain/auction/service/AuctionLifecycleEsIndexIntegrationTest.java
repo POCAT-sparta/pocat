@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.auction.service;
 
 import com.rocketcrew.pocat.cache.MockRedisTestConfig;
 import com.rocketcrew.pocat.support.MockElasticsearchTestConfig;
+import com.rocketcrew.pocat.domain.auction.document.AuctionDocument;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.auction.kafka.AuctionEventHandler;
@@ -17,6 +18,8 @@ import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.domain.order.service.OrderEventHandler;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.handler.PaymentEventHandler;
+import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
+import com.rocketcrew.pocat.domain.pokemon.repository.PokemonRepository;
 import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
 import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.series.repository.SeriesRepository;
@@ -30,6 +33,7 @@ import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,6 +93,7 @@ class AuctionLifecycleEsIndexIntegrationTest {
     @Autowired private AuctionLifecycleService auctionLifecycleService;
     @Autowired private AuctionRepository auctionRepository;
     @Autowired private CardRepository cardRepository;
+    @Autowired private PokemonRepository pokemonRepository;
     @Autowired private SeriesRepository seriesRepository;
     @Autowired private PokemonSetRepository pokemonSetRepository;
     @Autowired private UserRepository userRepository;
@@ -181,6 +186,94 @@ class AuctionLifecycleEsIndexIntegrationTest {
         // afterCommit 콜백에서 AuctionEsIndexService.index() → auctionSearchRepository.save()가
         // 예외 없이 호출되었어야 함 (index()는 내부에서 예외를 흡수하므로, save 호출 자체로 검증)
         verify(auctionSearchRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("pokemon이 연결된 Card: activateApprovedAuction() afterCommit의 index()가 fetch join으로 cardNameKo 등 pokemon 필드를 채운다")
+    void activateApprovedAuction_afterCommit_withPokemonLinkedCard_indexesPokemonFields() throws InterruptedException {
+        // given: Redisson 락은 항상 성공하도록 mock
+        RLock mockLock = mock(RLock.class);
+        when(redissonClient.getLock(anyString())).thenReturn(mockLock);
+        when(mockLock.tryLock(anyLong(), any(java.util.concurrent.TimeUnit.class))).thenReturn(true);
+        when(mockLock.isHeldByCurrentThread()).thenReturn(true);
+        doAnswer(inv -> null).when(mockLock).unlock();
+
+        Long[] auctionIdHolder = new Long[1];
+        transactionTemplate.execute(status -> {
+            User seller = userRepository.save(User.builder()
+                    .email(SELLER_EMAIL)
+                    .password("encoded-pw")
+                    .nickname("라이프사이클ES판매자3")
+                    .userRole(UserRole.USER)
+                    .build());
+
+            Pokemon pokemon = pokemonRepository.findByName("Pikachu")
+                    .orElseGet(() -> pokemonRepository.save(Pokemon.builder()
+                            .name("Pikachu")
+                            .nameKo("피카츄")
+                            .build()));
+
+            Series series = seriesRepository.findByName("Sword & Shield")
+                    .orElseGet(() -> seriesRepository.save(Series.builder()
+                            .name("Sword & Shield")
+                            .build()));
+
+            PokemonSet pokemonSet = pokemonSetRepository.findBySetId("swsh5")
+                    .orElseGet(() -> pokemonSetRepository.save(PokemonSet.builder()
+                            .setId("swsh5")
+                            .name("Rebel Clash")
+                            .series(series)
+                            .build()));
+
+            Card card = cardRepository.save(Card.builder()
+                    .userId(seller.getId())
+                    .tcgdexId("swsh5-lifecycle-lazy-test-pokemon")
+                    .name("피카츄")
+                    .series(series)
+                    .pokemonSet(pokemonSet)
+                    .pokemon(pokemon)
+                    .cardNumber("058")
+                    .rarity("Rare")
+                    .category(CardCategory.POKEMON)
+                    .grade(CardGrade.PSA_10)
+                    .imageUrl("https://example.com/pikachu.jpg")
+                    .source(CardSource.TCGDEX)
+                    .status(CardStatus.ACTIVE)
+                    .build());
+
+            Auction auction = auctionRepository.save(Auction.builder()
+                    .cardId(card.getId())
+                    .sellerId(seller.getId())
+                    .title("라이프사이클 ES 인덱싱 LIE 회귀 테스트 (pokemon 연결)")
+                    .description("테스트용")
+                    .startingPrice(10_000L)
+                    .status(AuctionStatus.APPROVED)
+                    .build());
+
+            auctionIdHolder[0] = auction.getId();
+            return null;
+        });
+
+        Long auctionId = auctionIdHolder[0];
+
+        // when: activateApprovedAuction()을 별도 트랜잭션으로 실행 → 커밋 시 afterCommit 콜백 실행
+        Boolean activated = transactionTemplate.execute(status ->
+                auctionLifecycleService.activateApprovedAuction(auctionId));
+
+        // then: 예외 없이 완료되고 ACTIVE로 전환
+        assertThat(activated).isTrue();
+
+        AuctionStatus status = transactionTemplate.execute(s ->
+                auctionRepository.findById(auctionId).orElseThrow().getStatus());
+        assertThat(status).isEqualTo(AuctionStatus.ACTIVE);
+
+        // afterCommit 콜백에서 index()가 findByIdWithPokemon()의 fetch join 결과로
+        // pokemon 관련 필드(cardNameKo 등)를 채워 저장했는지 검증
+        ArgumentCaptor<AuctionDocument> docCaptor = ArgumentCaptor.forClass(AuctionDocument.class);
+        verify(auctionSearchRepository).save(docCaptor.capture());
+
+        AuctionDocument savedDoc = docCaptor.getValue();
+        assertThat(savedDoc.getCardNameKo()).isEqualTo("피카츄");
     }
 
     @Test

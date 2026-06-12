@@ -52,9 +52,9 @@ import static org.mockito.Mockito.verify;
  * 트랜잭션 밖에서 {@code auctionEsIndexService.index(auction)}을 직접 호출해
  * 예외 없이 완료되고 cardNameKo가 올바르게 채워지는지 검증한다.
  *
- * <p><b>주의</b>: 현재 {@code AuctionEsIndexService.index()}는 {@code cardRepository.findById()}를 사용한다.
- * open-in-view=false(T1) 적용 후, BACKEND가 이를 {@code cardRepository.findByIdWithPokemon()}
- * (fetch join)으로 교체해야 이 테스트가 GREEN이 된다. 메서드가 존재하지 않으면 컴파일 에러가 발생한다.
+ * <p>{@code AuctionEsIndexService.index()}는 {@code cardRepository.findByIdWithPokemon()}
+ * (fetch join)을 사용하여 detached 상태에서도 {@code card.getPokemon()} 접근 시
+ * LazyInitializationException이 발생하지 않도록 한다.
  */
 @SpringBootTest
 @Import({MockRedisTestConfig.class, MockElasticsearchTestConfig.class})
