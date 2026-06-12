@@ -20,12 +20,13 @@ spring:
       base-url: https://generativelanguage.googleapis.com/v1beta/openai
       chat:
         options:
-          model: gemini-1.5-flash
+          model: gemini-2.5-flash
           temperature: 0.3
           max-tokens: 1024
       embedding:
         options:
-          model: text-embedding-004
+          model: gemini-embedding-001
+          dimensions: 768
     vectorstore:
       elasticsearch:
         index-name: pocat-ai-index
