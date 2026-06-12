@@ -160,7 +160,7 @@ class AiAssistantServiceTest {
             // when / then
             assertThatThrownBy(() -> aiAssistantService.chat(USER_ID, request))
                     .isInstanceOf(ServiceException.class);
-            verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-1.5-flash");
+            verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-2.5-flash");
         }
 
         @Test
@@ -328,7 +328,7 @@ class AiAssistantServiceTest {
             // when / then
             assertThatThrownBy(() -> aiAssistantService.chat(USER_ID, request))
                     .isInstanceOf(ServiceException.class);
-            verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-1.5-flash");
+            verify(aiUsageMetrics).recordError("CHAT_FAILED", "gemini-2.5-flash");
         }
 
         @Test
