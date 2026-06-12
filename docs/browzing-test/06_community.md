@@ -237,7 +237,7 @@ Authorization: Bearer {ACCESS_TOKEN_B}
 ### 확인 항목
 - [ ] 200 응답
 - [ ] 좋아요한 경매 목록 반환
-- [ ] 커서 기반 페이지네이션
+- [ ] 페이지 기반 페이지네이션 (Pageable: page, size)
 
 ---
 

@@ -29,7 +29,7 @@
 | TC-AUTH-007 | 인증 | 중 | Rate Limit 검증 | POST | /api/v1/auth/login | 불필요 | 10회 초과 시 429 응답 / 회원가입 5회 초과 시 429 | ⬜ |
 | TC-USER-001 | 사용자 | 상 | 내 프로필 조회 | GET | /api/v1/users/me | 필요 | 200 응답 / userId·email·nickname·phone·address 포함 / password 미노출 / 인증 없이 401 | ⬜ |
 | TC-USER-002 | 사용자 | 중 | 내 프로필 수정 | PATCH | /api/v1/users/me | 필요 | 200 응답 / 수정 필드 반영 / 중복 닉네임→409 | ⬜ |
-| TC-USER-003 | 사용자 | 상 | 빌링키 등록 | POST | /api/v1/users/me/billing-key | 필요 | 200/201 응답 / 계정에 빌링키 연결 확인 | ⬜ |
+| TC-USER-003 | 사용자 | 상 | 빌링키 등록 | POST | /api/v1/users/me/billing-key | 필요 | 200 응답 / 계정에 빌링키 연결 확인 | ⬜ |
 | TC-USER-004 | 사용자 | 중 | 빌링키 수정 | PUT | /api/v1/users/me/billing-key | 필요 | 200 응답 / 기존 빌링키 교체 확인 | ⬜ |
 | TC-USER-005 | 사용자 | 중 | 빌링키 삭제 | DELETE | /api/v1/users/me/billing-key | 필요 | 200 응답 / 삭제 후 자동결제 불가 확인 | ⬜ |
 | TC-CARD-001 | 카드 | 상 | 카드 목록 조회 (필터) | GET | /api/v1/cards | 불필요 | 200 응답 / 페이지네이션(content·totalElements·totalPages) / keyword·seriesId·grade 필터 동작 | ⬜ |
@@ -40,7 +40,7 @@
 | TC-CARD-006 | 카드 | 중 | 내 카드 신청 목록 조회 | GET | /api/v1/cards/my-requests | 필요 | 200 응답 / 본인 신청 카드만 반환 / PENDING·APPROVED·REJECTED status 표시 | ⬜ |
 | TC-CARD-007 | 카드 | 중 | 시리즈 목록 조회 | GET | /api/v1/series | 불필요 | 200 응답 / id·name·nameKo 포함 | ⬜ |
 | TC-CARD-008 | 카드 | 중 | 세트 목록 조회 (seriesId 필터) | GET | /api/v1/sets | 불필요 | 200 응답 / seriesId 필터 동작 | ⬜ |
-| TC-AUCTION-001 | 경매 | 최상 | 경매 생성 | POST | /api/v1/auctions | 필요 | 201 응답 / status: PENDING_INSPECTION / auctionId 반환 / 이미 경매 중인 카드 재등록→409 | ⬜ |
+| TC-AUCTION-001 | 경매 | 최상 | 경매 생성 | POST | /api/v1/auctions | 필요 | 201 응답 / status: PENDING / auctionId 반환 / 이미 경매 중인 카드 재등록→409 | ⬜ |
 | TC-AUCTION-002 | 경매 | 상 | 인기 경매 목록 조회 | GET | /api/v1/auctions/popular | 불필요 | 200 응답 / 인기순 정렬 확인 / 캐싱 확인(연속 호출 시 동일 결과) | ⬜ |
 | TC-AUCTION-003 | 경매 | 상 | 경매 목록 검색 및 필터 | GET | /api/v1/auctions | 불필요 | 200 응답 / keyword·status·minPrice·maxPrice·grade 필터 / HIGHEST_PRICE·LATEST·ENDING_SOON 정렬 | ⬜ |
 | TC-AUCTION-004 | 경매 | 상 | 경매 상세 조회 | GET | /api/v1/auctions/{auctionId} | 불필요 | 200 응답 / title·startingPrice·buyoutPrice·currentPrice·status·endedAt / 카드·판매자 정보 포함 | ⬜ |
@@ -101,7 +101,7 @@
 | TC-ADMIN-CARD-005 | 어드민 | 중 | 카드 삭제 (어드민) | DELETE | /api/v1/admin/cards/{cardId} | ADMIN | 200 응답 / 삭제 후 조회→404 / 진행 중 경매 있는 경우 처리 확인 | ⬜ |
 | TC-ADMIN-CARD-006 | 어드민 | 중 | TCGdex 카드 동기화 | POST | /api/v1/admin/cards/sync | ADMIN | 202 Accepted(비동기) / 동기화 후 새 카드 확인 / 중복→upsert 처리 | ⬜ |
 | TC-ADMIN-CARD-007 | 어드민 | 낮음 | 카드 이미지 S3 마이그레이션 | POST | /api/v1/admin/cards/migrate-images | ADMIN | 202 Accepted(비동기) / 마이그레이션 후 S3 URL 변경 확인 | ⬜ |
-| TC-ADMIN-AUCTION-001 | 어드민 | 상 | 경매 목록 조회 (어드민) | GET | /api/v1/admin/auctions | ADMIN | 200 응답 / status 필터(PENDING_INSPECTION·ACTIVE 등) | ⬜ |
+| TC-ADMIN-AUCTION-001 | 어드민 | 상 | 경매 목록 조회 (어드민) | GET | /api/v1/admin/auctions | ADMIN | 200 응답 / status 필터(PENDING·ACTIVE 등) | ⬜ |
 | TC-ADMIN-AUCTION-002 | 어드민 | 최상 | 경매 검수 통과 + 입찰 가능 확인 | PATCH | /api/v1/admin/auctions/{auctionId}/inspection | ADMIN | 200 응답 / status: ACTIVE / inspectedAt·inspectedBy 저장 / 입찰 가능 확인 / 공개 목록 노출 | ⬜ |
 | TC-ADMIN-AUCTION-003 | 어드민 | 최상 | 경매 검수 거절 + 알림 | PATCH | /api/v1/admin/auctions/{auctionId}/inspection | ADMIN | 200 응답 / status: CANCELLED / 판매자 알림 발송 / 거절된 경매 입찰 불가 | ⬜ |
 | TC-ADMIN-AUCTION-004 | 어드민 | 상 | 경매 강제 취소 (어드민) | PATCH | /api/v1/admin/auctions/{auctionId}/cancel | ADMIN | 200 응답 / status: CANCELLED / 기존 입찰자 취소 알림 / 입찰 금액 환불 처리 | ⬜ |
@@ -147,7 +147,7 @@
 | 엔티티 | 초기 상태 | 어드민 승인 | 어드민 거절/취소 |
 |--------|-----------|-------------|-----------------|
 | 카드 | PENDING | APPROVED | REJECTED |
-| 경매 | PENDING_INSPECTION | ACTIVE | CANCELLED |
+| 경매 | PENDING | ACTIVE | CANCELLED |
 | 환불 | PENDING | APPROVED (→PortOne 환불) | REJECTED |
 | 정산 | PENDING | COMPLETED | - |
 

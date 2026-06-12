@@ -94,7 +94,7 @@ REFRESH_TOKEN_A = 응답의 refreshToken
 ```
 
 ### 확인 항목
-- [ ] 401 또는 400 응답 코드
+- [ ] 400 Bad Request (USER_INFO_MISMATCH)
 - [ ] 에러 메시지 존재
 
 ---

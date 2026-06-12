@@ -153,7 +153,7 @@ Authorization: Bearer {ACCESS_TOKEN_ADMIN}
 ### 요청
 ```
 GET /api/v1/admin/auctions
-GET /api/v1/admin/auctions?status=PENDING_INSPECTION
+GET /api/v1/admin/auctions?status=PENDING
 GET /api/v1/admin/auctions?status=ACTIVE
 Authorization: Bearer {ACCESS_TOKEN_ADMIN}
 ```
@@ -170,7 +170,7 @@ Authorization: Bearer {ACCESS_TOKEN_ADMIN}
 **관련 API**: `PATCH /api/v1/admin/auctions/{auctionId}/inspection`
 
 ### 사전 상태
-- 경매 status: `PENDING_INSPECTION`
+- 경매 status: `PENDING`
 
 ### 요청
 ```json
@@ -197,7 +197,7 @@ Authorization: Bearer {ACCESS_TOKEN_ADMIN}
 **관련 API**: `PATCH /api/v1/admin/auctions/{auctionId}/inspection`
 
 ### 사전 상태
-- 경매 status: `PENDING_INSPECTION`
+- 경매 status: `PENDING`
 
 ### 요청
 ```json
@@ -224,7 +224,7 @@ Authorization: Bearer {ACCESS_TOKEN_ADMIN}
 **관련 API**: `PATCH /api/v1/admin/auctions/{auctionId}/cancel`
 
 ### 사전 상태
-- 경매 status: `ACTIVE` 또는 `PENDING_INSPECTION`
+- 경매 status: `ACTIVE` 또는 `PENDING`
 
 ### 요청
 ```json
@@ -516,6 +516,42 @@ Authorization: Bearer {ACCESS_TOKEN_ADMIN}
 
 ---
 
+### TC-ADMIN-ES-004: 카드 전용 ES 마이그레이션
+
+**우선순위**: 상  
+**관련 API**: `POST /api/v1/admin/es-migrate/cards`
+
+### 요청
+```text
+POST /api/v1/admin/es-migrate/cards
+Authorization: Bearer {ACCESS_TOKEN_ADMIN}
+```
+
+### 확인 항목
+- [ ] 200 응답
+- [ ] 카드 검색 동작 확인: `GET /api/v1/cards?keyword=피카츄`
+- [ ] 경매 인덱스에는 영향 없음 (auctionsMigrated: 0)
+
+---
+
+### TC-ADMIN-ES-005: 경매 전용 ES 마이그레이션
+
+**우선순위**: 상  
+**관련 API**: `POST /api/v1/admin/es-migrate/auctions`
+
+### 요청
+```text
+POST /api/v1/admin/es-migrate/auctions
+Authorization: Bearer {ACCESS_TOKEN_ADMIN}
+```
+
+### 확인 항목
+- [ ] 200 응답
+- [ ] 경매 검색 동작 확인: `GET /api/v1/auctions?keyword=리자몽`
+- [ ] 카드 인덱스에는 영향 없음 (cardsMigrated: 0)
+
+---
+
 ### TC-ADMIN-ES-002: ES 인덱스 별칭 초기 설정 (최초 1회)
 
 **관련 API**: `POST /api/v1/admin/es-alias-setup`
@@ -588,7 +624,7 @@ Admin → PATCH /admin/cards/{id}/approve (APPROVED) 또는 /reject (REJECTED)
 User → GET /notifications (승인/거절 알림 수신)
 
 [경매 검수 플로우]
-User → POST /auctions (PENDING_INSPECTION)
+User → POST /auctions (PENDING)
          ↓
 Admin → GET /admin/auctions?status=PENDING_INSPECTION (목록 확인)
          ↓

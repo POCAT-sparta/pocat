@@ -24,7 +24,7 @@
 ### 요청
 ```
 GET /api/v1/notifications
-GET /api/v1/notifications?cursor={lastNotificationId}&size=20
+GET /api/v1/notifications?cursor={lastNotificationId}
 ```
 
 ### 확인 항목

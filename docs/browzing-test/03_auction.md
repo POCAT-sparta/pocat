@@ -31,7 +31,7 @@ Content-Type: application/json
 
 ### 확인 항목
 - [ ] 201 응답
-- [ ] 경매 상태 `PENDING_INSPECTION` (어드민 검수 대기)
+- [ ] 경매 상태 `PENDING` (어드민 검수 대기)
 - [ ] auctionId 반환 → 저장: `AUCTION_ID`
 - [ ] 이미 경매 중인 카드로 재등록 시 409 또는 400
 

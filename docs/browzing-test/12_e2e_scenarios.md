@@ -38,7 +38,7 @@ Step 5. [Admin] 카드 승인
 
 Step 6. [User A] 경매 생성
   POST /api/v1/auctions
-  → AUCTION_ID 획득 (status: PENDING_INSPECTION)
+  → AUCTION_ID 획득 (status: PENDING)
 
 Step 7. [Admin] 경매 검수 통과
   PATCH /api/v1/admin/auctions/{AUCTION_ID}/inspection (approved: true)
