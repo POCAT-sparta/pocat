@@ -1,5 +1,8 @@
 package com.rocketcrew.pocat.domain.ai.rag.dto;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
+
 import java.util.List;
 
 /**
@@ -7,5 +10,7 @@ import java.util.List;
  *
  * @param cardIds 재색인 대상 카드 ID 목록
  */
-public record ReindexChunkRequest(List<Long> cardIds) {
+public record ReindexChunkRequest(
+        @NotEmpty @Size(max = 100) List<Long> cardIds
+) {
 }

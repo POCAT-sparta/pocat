@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.domain.ai.rag.dto.ReindexChunkRequest;
 import com.rocketcrew.pocat.domain.ai.rag.dto.ReindexChunkResponse;
 import com.rocketcrew.pocat.domain.ai.rag.service.AiReindexChunkService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,7 +41,7 @@ public class InternalAiController {
     @PostMapping("/reindex-cards")
     public ResponseEntity<ApiResponseDto<ReindexChunkResponse>> reindexCards(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
-            @RequestBody ReindexChunkRequest request
+            @Valid @RequestBody ReindexChunkRequest request
     ) {
         log.info("[AI_REINDEX_CHUNK] 카드 임베딩 청크 재색인 요청: idempotencyKey={}, cardCount={}",
                 idempotencyKey, request.cardIds().size());

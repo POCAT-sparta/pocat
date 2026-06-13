@@ -193,4 +193,48 @@ class AiReindexChunkServiceTest {
             assertThat(response.indexedCount()).isEqualTo(0);
         }
     }
+
+    @Nested
+    @DisplayName("findAlreadyIndexedCardIds")
+    class FindAlreadyIndexedCardIds {
+
+        @Test
+        @DisplayName("cardIds가 비어있으면 ES 조회 없이 빈 결과로 처리한다")
+        void emptyCardIds_returnsEmptyResponseWithoutEsQuery() {
+            // when
+            ReindexChunkResponse response = aiReindexChunkService.reindex(List.of());
+
+            // then: ES 조회가 발생하지 않아야 함
+            verify(embeddingService, never()).embedCardRateLimited(anyLong(), org.mockito.ArgumentMatchers.anyString());
+
+            assertThat(response.processedCount()).isEqualTo(0);
+            assertThat(response.skippedCount()).isEqualTo(0);
+            assertThat(response.indexedCount()).isEqualTo(0);
+            assertThat(response.failedCount()).isEqualTo(0);
+            assertThat(response.rateLimited()).isFalse();
+        }
+
+        @Test
+        @DisplayName("ES 조회 중 IOException 발생 시 전체 cardId를 미인덱싱으로 간주하고(fail-open) 임베딩을 진행한다")
+        void esQueryThrowsIOException_treatsAllCardIdsAsUnindexed() throws IOException {
+            // given
+            given(esClient.search(any(Function.class), eq(Map.class))).willThrow(new IOException("ES connection failed"));
+            Card card1 = cardWithId(1L);
+            Card card2 = cardWithId(2L);
+            given(cardRepository.findById(1L)).willReturn(java.util.Optional.of(card1));
+            given(cardRepository.findById(2L)).willReturn(java.util.Optional.of(card2));
+
+            // when
+            ReindexChunkResponse response = aiReindexChunkService.reindex(List.of(1L, 2L));
+
+            // then: ES 조회 실패 시 모든 cardId를 미인덱싱으로 처리하여 임베딩 시도
+            verify(embeddingService).embedCardRateLimited(eq(1L), org.mockito.ArgumentMatchers.anyString());
+            verify(embeddingService).embedCardRateLimited(eq(2L), org.mockito.ArgumentMatchers.anyString());
+
+            assertThat(response.processedCount()).isEqualTo(2);
+            assertThat(response.skippedCount()).isEqualTo(0);
+            assertThat(response.indexedCount()).isEqualTo(2);
+            assertThat(response.failedCount()).isEqualTo(0);
+        }
+    }
 }

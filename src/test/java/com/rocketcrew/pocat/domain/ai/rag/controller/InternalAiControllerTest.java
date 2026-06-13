@@ -105,6 +105,35 @@ class InternalAiControllerTest {
                             .content(requestBody()))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        @DisplayName("cardIds가 비어있으면 400 반환")
+        void emptyCardIds_returns400() throws Exception {
+            String body = objectMapper.writeValueAsString(new ReindexChunkRequest(List.of()));
+
+            mockMvc.perform(post(URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-Internal-Token", VALID_TOKEN)
+                            .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("cardIds가 100개를 초과하면 400 반환")
+        void oversizedCardIds_returns400() throws Exception {
+            List<Long> cardIds = java.util.stream.LongStream.rangeClosed(1, 101)
+                    .boxed()
+                    .toList();
+            String body = objectMapper.writeValueAsString(new ReindexChunkRequest(cardIds));
+
+            mockMvc.perform(post(URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-Internal-Token", VALID_TOKEN)
+                            .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Nested

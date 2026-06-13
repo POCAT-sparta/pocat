@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.ai.rag.service;
 
 import com.rocketcrew.pocat.domain.ai.rag.exception.EmbeddingRateLimitedException;
+import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
 import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -36,6 +38,9 @@ class EmbeddingServiceTest {
 
     @Mock
     RedisRateLimiter redisRateLimiter;
+
+    @Spy
+    RateLimitProperties rateLimitProperties = new RateLimitProperties();
 
     @Test
     @DisplayName("카드 임베딩 성공 시 VectorStore에 문서를 추가한다")
