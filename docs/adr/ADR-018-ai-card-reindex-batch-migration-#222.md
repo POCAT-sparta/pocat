@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| **Status** | Proposed |
+| **Status** | Accepted |
 | **Date** | 2026-06-13 |
 | **Deciders** | POCAT 팀 |
 | **Issue** | #222 |
@@ -86,6 +86,16 @@ pocat-batch에 스케줄 배치 `aiReindexJob`을 신설한다.
 | **`metadata.cardId.keyword` ES 동적 매핑 의존** | terms query가 `metadata.cardId.keyword` 필드의 동적 매핑(keyword 타입)에 의존한다. 구현 시 `_mapping` API로 1회 확인을 권장한다. |
 
 **스키마 변경**: 없음
+
+---
+
+## 구현 후 반영 사항 (Phase 4 리뷰)
+
+Phase 4(REVIEW+SECURITY) 결과 다음 항목이 수정되었다.
+
+- pocat-batch `MainAiReindexClient`가 메인 백엔드 응답(`ApiResponseDto<ReindexChunkResponse>`)을 언래핑하지 않고 그대로 역직렬화하던 버그를 수정했다. `ApiResponseEnvelope<T>`를 도입하여 `data` 필드를 추출한 뒤 `ReindexChunkResponse`로 반환한다.
+- POCAT `EmbeddingService`의 Gemini 호출 rate-limit 설정값(80/60s)을 하드코딩 상수 대신 `RateLimitProperties.aiEmbeddingLimit` / `aiEmbeddingWindowSeconds`로 주입받도록 변경했다.
+- `ReindexChunkRequest.cardIds`에 `@NotEmpty @Size(max=100)` 입력 검증을 추가하여, 빈 목록 또는 100개 초과 요청 시 400 응답을 반환하도록 했다.
 
 ---
 
