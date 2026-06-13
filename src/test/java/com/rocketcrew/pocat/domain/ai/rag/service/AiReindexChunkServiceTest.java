@@ -84,7 +84,6 @@ class AiReindexChunkServiceTest {
 
     private Card cardWithId(Long id) {
         Card card = org.mockito.Mockito.mock(Card.class);
-        given(card.getId()).willReturn(id);
         given(card.getName()).willReturn("card-" + id);
         return card;
     }
@@ -98,8 +97,10 @@ class AiReindexChunkServiceTest {
         void skipsAlreadyIndexedCards() throws IOException {
             // given: cardId 1,2,3 요청 중 1은 이미 인덱싱됨
             givenAlreadyIndexedCardIds(List.of(1L));
-            given(cardRepository.findById(2L)).willReturn(java.util.Optional.of(cardWithId(2L)));
-            given(cardRepository.findById(3L)).willReturn(java.util.Optional.of(cardWithId(3L)));
+            Card card2 = cardWithId(2L);
+            Card card3 = cardWithId(3L);
+            given(cardRepository.findById(2L)).willReturn(java.util.Optional.of(card2));
+            given(cardRepository.findById(3L)).willReturn(java.util.Optional.of(card3));
 
             // when
             ReindexChunkResponse response = aiReindexChunkService.reindex(List.of(1L, 2L, 3L));
@@ -145,8 +146,10 @@ class AiReindexChunkServiceTest {
         void embeddingFailure_incrementsFailedCountAndContinues() throws IOException {
             // given
             givenAlreadyIndexedCardIds(List.of());
-            given(cardRepository.findById(1L)).willReturn(java.util.Optional.of(cardWithId(1L)));
-            given(cardRepository.findById(2L)).willReturn(java.util.Optional.of(cardWithId(2L)));
+            Card card1 = cardWithId(1L);
+            Card card2 = cardWithId(2L);
+            given(cardRepository.findById(1L)).willReturn(java.util.Optional.of(card1));
+            given(cardRepository.findById(2L)).willReturn(java.util.Optional.of(card2));
 
             willThrow(new RuntimeException("embedding failed"))
                     .given(embeddingService).embedCardRateLimited(eq(1L), org.mockito.ArgumentMatchers.anyString());
@@ -173,7 +176,8 @@ class AiReindexChunkServiceTest {
         void rateLimitException_stopsProcessingRemainingCards() throws IOException {
             // given: cardId 1,2,3 모두 미인덱싱, cardId=1에서 rate limit 도달
             givenAlreadyIndexedCardIds(List.of());
-            given(cardRepository.findById(1L)).willReturn(java.util.Optional.of(cardWithId(1L)));
+            Card card1 = cardWithId(1L);
+            given(cardRepository.findById(1L)).willReturn(java.util.Optional.of(card1));
 
             willThrow(new EmbeddingRateLimitedException("rate limit exceeded"))
                     .given(embeddingService).embedCardRateLimited(eq(1L), org.mockito.ArgumentMatchers.anyString());

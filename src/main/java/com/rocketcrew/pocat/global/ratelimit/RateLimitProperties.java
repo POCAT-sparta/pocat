@@ -54,4 +54,7 @@ public class RateLimitProperties {
 
     private int aiLimit = 10;
     private long aiWindowSeconds = 60;
+
+    private int aiEmbeddingLimit = 80;
+    private long aiEmbeddingWindowSeconds = 60;
 }

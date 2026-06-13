@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.rag.service;
 
+import com.rocketcrew.pocat.domain.ai.rag.exception.EmbeddingRateLimitedException;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
@@ -82,9 +83,12 @@ public class AdminAiService {
                     boolean indexed = false;
                     for (int attempt = 1; attempt <= 3; attempt++) {
                         try {
-                            embeddingService.embedCard(card.getId(), cardText);
+                            embeddingService.embedCardRateLimited(card.getId(), cardText);
                             indexed = true;
                             break;
+                        } catch (EmbeddingRateLimitedException e) {
+                            log.warn("[RAG_REINDEX] rate limit 도달, 전체 재색인 중단 cardId={}: {}", card.getId(), e.getMessage());
+                            return;
                         } catch (Exception e) {
                             if (attempt < 3) {
                                 log.warn("[RAG_REINDEX] 카드 색인 재시도 cardId={} attempt={}/{}: {}", card.getId(), attempt, 3, e.getMessage());

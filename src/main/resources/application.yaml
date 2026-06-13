@@ -101,6 +101,8 @@ rate-limit:
   user-window-seconds: 60
   ai-limit: 10
   ai-window-seconds: 60
+  ai-embedding-limit: 80
+  ai-embedding-window-seconds: 60
 
 resilience4j:
   circuitbreaker:

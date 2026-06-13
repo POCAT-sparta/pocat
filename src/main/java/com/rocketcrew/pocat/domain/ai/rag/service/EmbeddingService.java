@@ -1,5 +1,7 @@
 package com.rocketcrew.pocat.domain.ai.rag.service;
 
+import com.rocketcrew.pocat.domain.ai.rag.exception.EmbeddingRateLimitedException;
+import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -20,8 +22,13 @@ import java.util.Map;
 @Transactional
 public class EmbeddingService {
 
+    private static final String AI_EMBEDDING_RATE_LIMIT_KEY = "ratelimit:ai-embedding";
+    private static final int AI_EMBEDDING_RATE_LIMIT = 80;
+    private static final long AI_EMBEDDING_RATE_LIMIT_WINDOW_SECONDS = 60;
+
     private final EmbeddingModel embeddingModel;
     private final VectorStore vectorStore;
+    private final RedisRateLimiter redisRateLimiter;
 
     /**
      * 카드 정보를 벡터화하여 VectorStore에 저장.
@@ -42,6 +49,31 @@ public class EmbeddingService {
 
         vectorStore.add(java.util.List.of(document));
         log.debug("Card embedded successfully: cardId={}", cardId);
+    }
+
+    /**
+     * rate limit을 적용하여 카드 정보를 벡터화하여 VectorStore에 저장.
+     *
+     * <p>분당 호출 한도({@value #AI_EMBEDDING_RATE_LIMIT}회)를 초과하면
+     * {@link EmbeddingRateLimitedException}을 던지고 embedCard()를 호출하지 않는다.
+     *
+     * @param cardId 카드 ID
+     * @param cardText 카드 설명 텍스트
+     * @throws EmbeddingRateLimitedException rate limit 도달 시
+     */
+    public void embedCardRateLimited(Long cardId, String cardText) {
+        boolean allowed = redisRateLimiter.isAllowed(
+                AI_EMBEDDING_RATE_LIMIT_KEY,
+                AI_EMBEDDING_RATE_LIMIT,
+                AI_EMBEDDING_RATE_LIMIT_WINDOW_SECONDS
+        );
+
+        if (!allowed) {
+            log.warn("[AI_EMBEDDING] rate limit 도달, 임베딩 건너뜀: cardId={}", cardId);
+            throw new EmbeddingRateLimitedException("AI 임베딩 rate limit에 도달했습니다.");
+        }
+
+        embedCard(cardId, cardText);
     }
 
     /**
