@@ -145,6 +145,45 @@ class InternalAiControllerTest {
                             .content("null"))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        @DisplayName("cardIds에 null 요소가 있으면 400 반환")
+        void nullElementInCardIds_returns400() throws Exception {
+            String body = objectMapper.writeValueAsString(new ReindexChunkRequest(java.util.Arrays.asList(1L, null, 3L)));
+
+            mockMvc.perform(post(URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-Internal-Token", VALID_TOKEN)
+                            .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("cardIds에 0이 있으면 400 반환")
+        void zeroValueInCardIds_returns400() throws Exception {
+            String body = objectMapper.writeValueAsString(new ReindexChunkRequest(List.of(0L, 1L, 2L)));
+
+            mockMvc.perform(post(URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-Internal-Token", VALID_TOKEN)
+                            .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("cardIds에 음수가 있으면 400 반환")
+        void negativeValueInCardIds_returns400() throws Exception {
+            String body = objectMapper.writeValueAsString(new ReindexChunkRequest(List.of(-1L, 1L, 2L)));
+
+            mockMvc.perform(post(URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-Internal-Token", VALID_TOKEN)
+                            .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Nested

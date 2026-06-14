@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * AI 카드 임베딩 청크 재색인 서비스.
@@ -57,6 +58,12 @@ public class AiReindexChunkService {
         int failedCount = 0;
         boolean rateLimited = false;
 
+        List<Long> targetCardIds = cardIds.stream()
+                .filter(cardId -> !alreadyIndexedCardIds.contains(cardId))
+                .toList();
+        Map<Long, Card> cardsById = cardRepository.findAllById(targetCardIds).stream()
+                .collect(Collectors.toMap(Card::getId, card -> card));
+
         for (Long cardId : cardIds) {
             if (alreadyIndexedCardIds.contains(cardId)) {
                 skippedCount++;
@@ -64,7 +71,7 @@ public class AiReindexChunkService {
             }
 
             try {
-                Card card = cardRepository.findById(cardId).orElse(null);
+                Card card = cardsById.get(cardId);
                 if (card == null) {
                     log.warn("[AI_REINDEX_CHUNK] 카드를 찾을 수 없음, 건너뜀: cardId={}", cardId);
                     failedCount++;
