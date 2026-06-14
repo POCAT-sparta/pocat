@@ -134,6 +134,17 @@ class InternalAiControllerTest {
                             .content(body))
                     .andExpect(status().isBadRequest());
         }
+
+        @Test
+        @DisplayName("요청 본문이 null이면 400 반환")
+        void nullRequestBody_returns400() throws Exception {
+            mockMvc.perform(post(URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header("X-Internal-Token", VALID_TOKEN)
+                            .header("Idempotency-Key", IDEMPOTENCY_KEY)
+                            .content("null"))
+                    .andExpect(status().isBadRequest());
+        }
     }
 
     @Nested

@@ -102,6 +102,7 @@ public class AiReindexChunkService {
 
             SearchResponse<Map> response = esClient.search(s -> s
                             .index(AI_INDEX)
+                            .size(cardIds.size())
                             .query(q -> q.terms(TermsQuery.of(t -> t
                                     .field("metadata.cardId.keyword")
                                     .terms(TermsQueryField.of(tf -> tf.value(values)))
@@ -118,12 +119,16 @@ public class AiReindexChunkService {
                 if (metadataObj instanceof Map<?, ?> metadata) {
                     Object cardIdObj = metadata.get("cardId");
                     if (cardIdObj != null) {
-                        indexedCardIds.add(Long.parseLong(String.valueOf(cardIdObj)));
+                        try {
+                            indexedCardIds.add(Long.parseLong(String.valueOf(cardIdObj)));
+                        } catch (NumberFormatException nfe) {
+                            log.warn("[AI_REINDEX_CHUNK] ES 문서의 cardId 형식이 올바르지 않아 건너뜀: value={}", cardIdObj);
+                        }
                     }
                 }
             }
             return indexedCardIds;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             log.error("[AI_REINDEX_CHUNK] ES 기인덱싱 카드 조회 실패, 전체 카드를 미인덱싱으로 처리합니다.", e);
             return Set.of();
         }

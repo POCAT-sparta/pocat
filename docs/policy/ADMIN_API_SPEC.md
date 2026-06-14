@@ -3,7 +3,7 @@
 > **Pokemon Card Trading Platform** | 7조 로켓단  
 > Base URL: `https://{host}/api/v1`  
 > 인증 방식: `Authorization: Bearer {accessToken}` (JWT)  
-> 권한: **모든 엔드포인트는 `ADMIN` 역할 필수**  
+> 권한: **기본적으로 모든 엔드포인트는 `ADMIN` 역할 필수** (단, internal-only API는 예외 — [8.2](#82-카드-임베딩-재색인-청크-처리-내부-api) 및 ADR-018 참고)  
 > 공통 응답 포맷: `ApiResponse<T>` 래핑
 
 ---
@@ -1115,7 +1115,7 @@
 
 **Request Headers**
 
-```
+```http
 X-Internal-Token: {INTERNAL_TOKEN}
 Idempotency-Key: reindex-cards-{firstCardId}-{lastCardId}-{jobExecutionId}
 Content-Type: application/json

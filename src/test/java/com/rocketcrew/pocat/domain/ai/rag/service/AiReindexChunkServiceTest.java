@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -200,12 +201,13 @@ class AiReindexChunkServiceTest {
 
         @Test
         @DisplayName("cardIds가 비어있으면 ES 조회 없이 빈 결과로 처리한다")
-        void emptyCardIds_returnsEmptyResponseWithoutEsQuery() {
+        void emptyCardIds_returnsEmptyResponseWithoutEsQuery() throws IOException {
             // when
             ReindexChunkResponse response = aiReindexChunkService.reindex(List.of());
 
             // then: ES 조회가 발생하지 않아야 함
             verify(embeddingService, never()).embedCardRateLimited(anyLong(), org.mockito.ArgumentMatchers.anyString());
+            verify(esClient, never()).search(any(Function.class), eq(Map.class));
 
             assertThat(response.processedCount()).isEqualTo(0);
             assertThat(response.skippedCount()).isEqualTo(0);
@@ -235,6 +237,27 @@ class AiReindexChunkServiceTest {
             assertThat(response.skippedCount()).isEqualTo(0);
             assertThat(response.indexedCount()).isEqualTo(2);
             assertThat(response.failedCount()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("ES terms query 시 cardIds 개수만큼 size를 지정하여 모든 매칭 결과를 조회한다")
+        void findAlreadyIndexedCardIds_setsSizeToCardIdsCount() throws IOException {
+            // given
+            givenAlreadyIndexedCardIds(List.of());
+            List<Long> cardIds = java.util.stream.LongStream.rangeClosed(1, 50).boxed().toList();
+
+            // when
+            aiReindexChunkService.reindex(cardIds);
+
+            // then
+            ArgumentCaptor<Function<co.elastic.clients.elasticsearch.core.SearchRequest.Builder,
+                    co.elastic.clients.util.ObjectBuilder<co.elastic.clients.elasticsearch.core.SearchRequest>>> captor =
+                    ArgumentCaptor.forClass(Function.class);
+            verify(esClient).search(captor.capture(), eq(Map.class));
+
+            co.elastic.clients.elasticsearch.core.SearchRequest request =
+                    captor.getValue().apply(new co.elastic.clients.elasticsearch.core.SearchRequest.Builder()).build();
+            assertThat(request.size()).isEqualTo(50);
         }
     }
 }
