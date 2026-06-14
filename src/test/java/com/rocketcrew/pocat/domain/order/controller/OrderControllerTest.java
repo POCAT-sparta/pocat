@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.order.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
@@ -31,6 +32,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -73,8 +75,15 @@ class OrderControllerTest {
     private RateLimitProperties rateLimitProperties;
 
     private CustomUserDetails userDetails;
+    // 운영 API 와 동일하게 날짜를 ISO-8601 문자열로 직렬화하도록 구성한다
+    // (타임스탬프 배열이 아님). paymentDeadline 직렬화 계약 검증의 기준이 된다.
     private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    // 직렬화 계약(orderType/paymentDeadline)을 안정적으로 검증하기 위한 고정 시각.
+    // LocalDateTime.now() 나 null 대신 사용해 paymentDeadline JSON 경로를 결정론적으로 assert 한다.
+    private static final LocalDateTime FIXED_PAYMENT_DEADLINE = LocalDateTime.of(2026, 1, 15, 10, 30, 45);
 
     @BeforeEach
     void setUp() {
@@ -82,6 +91,7 @@ class OrderControllerTest {
         given(redisRateLimiter.isAllowed(anyString(), anyInt(), anyLong())).willReturn(true);
         mockMvc = MockMvcBuilders.standaloneSetup(orderController)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setCustomArgumentResolvers(
                         new PageableHandlerMethodArgumentResolver(),
                         new HandlerMethodArgumentResolver() {
@@ -107,7 +117,7 @@ class OrderControllerTest {
                 "https://images.pocat.io/pikachu.jpg",
                 10000L, OrderStatus.PAYMENT_COMPLETED.name(),
                 OrderType.AUCTION.name(),
-                null,
+                FIXED_PAYMENT_DEADLINE,
                 LocalDateTime.now());
     }
 
@@ -122,7 +132,7 @@ class OrderControllerTest {
                 10000L,
                 OrderStatus.PAYMENT_COMPLETED.name(),
                 null,
-                null,
+                FIXED_PAYMENT_DEADLINE,
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
@@ -147,6 +157,9 @@ class OrderControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.content[0].orderUid").value("ORD-001"))
+                    .andExpect(jsonPath("$.data.content[0].orderType").value(OrderType.AUCTION.name()))
+                    .andExpect(jsonPath("$.data.content[0].paymentDeadline")
+                            .value(FIXED_PAYMENT_DEADLINE.toString()))
                     .andExpect(jsonPath("$.data.totalElements").value(1));
         }
     }
@@ -167,7 +180,9 @@ class OrderControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.orderUid").value("ORD-001"))
-                    .andExpect(jsonPath("$.data.buyer.nickname").value("구매자"));
+                    .andExpect(jsonPath("$.data.buyer.nickname").value("구매자"))
+                    .andExpect(jsonPath("$.data.paymentDeadline")
+                            .value(FIXED_PAYMENT_DEADLINE.toString()));
         }
 
         @Test
