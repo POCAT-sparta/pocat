@@ -13,6 +13,8 @@ public record OrderResponse(
         String cardImageUrl,
         Long finalPrice,
         String orderStatus,
+        String orderType,
+        LocalDateTime paymentDeadline,
         LocalDateTime createdAt
 ) {
     public static OrderResponse of(
@@ -30,6 +32,8 @@ public record OrderResponse(
                 cardImageUrl,
                 order.getFinalPrice(),
                 order.getStatus().name(),
+                order.getOrderType().name(),
+                order.getPaymentDeadline(),
                 order.getCreatedAt()
         );
     }

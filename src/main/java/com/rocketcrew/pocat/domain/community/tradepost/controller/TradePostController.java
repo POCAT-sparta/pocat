@@ -52,6 +52,7 @@ public class TradePostController {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
+
         Page<TradePostListResponse> page = tradePostQueryService.getPostsByUserId(customUserDetails.getUserId(), pageable);
         List<TradePostListResponse> content = page.getContent();
         PageResponseDto<TradePostListResponse> pageResponse = PageResponseDto.of(page, content);

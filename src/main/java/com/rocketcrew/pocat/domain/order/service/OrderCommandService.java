@@ -2,12 +2,9 @@ package com.rocketcrew.pocat.domain.order.service;
 
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
-import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
-import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.event.OrderCancelledEvent;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -185,42 +182,5 @@ public class OrderCommandService {
                 kv("seller_id", String.valueOf(order.getSellerId())));
         // 직접결제 창 만료 키 취소 — 미취소 시 1시간 후 ExpiryEventListener가 완료된 주문을 다음 순위로 잘못 승격
         setExpireService.cancelExpiry(order.getId());
-    }
-
-    public OrderResponse cancelOrder(Long userId, String orderUid, String reason) {
-        Order order = orderRepository.findByOrderUid(orderUid)
-                .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
-
-        if (!order.getBuyerId().equals(userId)) {
-            throw new OrderException(ErrorCode.ORDER_FORBIDDEN);
-        }
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new OrderException(ErrorCode.ORDER_ALREADY_CANCELLED);
-        }
-        if (order.getStatus() == OrderStatus.REFUNDED) {
-            throw new OrderException(ErrorCode.ORDER_CANNOT_CANCEL);
-        }
-
-        Card card = cardRepository.findById(order.getCardId())
-                .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
-        order.cancel(reason);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    metrics.incrementCancelled();
-                }
-            });
-        }
-
-        // 주문 취소 이벤트 발행
-        eventPublisher.publishEvent(new OrderCancelledEvent(
-                order.getOrderUid(),
-                order.getBuyerId(),
-                order.getSellerId(),
-                reason
-        ));
-
-        return OrderResponse.of(order, card.getName(), card.getGrade().name(), card.getImageUrl());
     }
 }
