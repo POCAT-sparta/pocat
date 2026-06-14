@@ -15,6 +15,7 @@ public record OrderDetailResponse(
         Long finalPrice,
         String orderStatus,
         String cancelReason,
+        LocalDateTime paymentDeadline,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -32,6 +33,7 @@ public record OrderDetailResponse(
                 order.getFinalPrice(),
                 order.getStatus().name(),
                 order.getCancelReason(),
+                order.getPaymentDeadline(),
                 order.getCreatedAt(),
                 order.getUpdatedAt()
         );

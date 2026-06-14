@@ -2,10 +2,10 @@ package com.rocketcrew.pocat.domain.order.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.rocketcrew.pocat.domain.order.dto.request.CancelOrderRequest;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.enums.OrderType;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -31,7 +31,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -107,6 +106,8 @@ class OrderControllerTest {
                 1L, "ORD-001", 10L, "피카츄", "PSA_10",
                 "https://images.pocat.io/pikachu.jpg",
                 10000L, OrderStatus.PAYMENT_COMPLETED.name(),
+                OrderType.AUCTION.name(),
+                null,
                 LocalDateTime.now());
     }
 
@@ -120,6 +121,7 @@ class OrderControllerTest {
                         "https://images.pocat.io/pikachu.jpg"),
                 10000L,
                 OrderStatus.PAYMENT_COMPLETED.name(),
+                null,
                 null,
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -177,50 +179,6 @@ class OrderControllerTest {
             mockMvc.perform(get("/api/v1/orders/UNKNOWN"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("ORDER_NOT_FOUND"));
-        }
-    }
-
-    // ── PATCH /api/v1/orders/{orderUid}/cancel ────────────────────────
-
-    @Nested
-    @DisplayName("PATCH /api/v1/orders/{orderUid}/cancel")
-    class CancelOrder {
-
-        @Test
-        @DisplayName("성공: 200 OK 와 함께 취소된 주문을 반환한다")
-        void success_200() throws Exception {
-            OrderResponse cancelledResponse = new OrderResponse(
-                    1L, "ORD-001", 10L, "피카츄", "PSA_10",
-                    "https://images.pocat.io/pikachu.jpg",
-                    10000L, OrderStatus.CANCELLED.name(),
-                    LocalDateTime.now());
-
-            given(orderCommandService.cancelOrder(1L, "ORD-001", "단순 변심"))
-                    .willReturn(cancelledResponse);
-
-            CancelOrderRequest request = new CancelOrderRequest("단순 변심");
-
-            mockMvc.perform(patch("/api/v1/orders/ORD-001/cancel")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.orderStatus").value("CANCELLED"));
-        }
-
-        @Test
-        @DisplayName("실패: 403 — 주문 접근 권한 없음")
-        void fail_403_forbidden() throws Exception {
-            given(orderCommandService.cancelOrder(1L, "ORD-001", "단순 변심"))
-                    .willThrow(new OrderException(ErrorCode.ORDER_FORBIDDEN));
-
-            CancelOrderRequest request = new CancelOrderRequest("단순 변심");
-
-            mockMvc.perform(patch("/api/v1/orders/ORD-001/cancel")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.code").value("ORDER_FORBIDDEN"));
         }
     }
 }

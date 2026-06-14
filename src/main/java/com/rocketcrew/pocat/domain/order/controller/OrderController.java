@@ -1,17 +1,11 @@
 package com.rocketcrew.pocat.domain.order.controller;
 
-import com.rocketcrew.pocat.domain.order.dto.request.CancelOrderRequest;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
-import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.global.dto.PageResponseDto;
-import com.rocketcrew.pocat.global.exception.common.ErrorCode;
-import com.rocketcrew.pocat.global.exception.common.ServiceException;
-import com.rocketcrew.pocat.global.ratelimit.RateLimitProperties;
-import com.rocketcrew.pocat.global.ratelimit.RedisRateLimiter;
 import com.rocketcrew.pocat.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,9 +23,6 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderQueryService orderQueryService;
-    private final OrderCommandService orderCommandService;
-    private final RedisRateLimiter redisRateLimiter;
-    private final RateLimitProperties rateLimitProperties;
 
     @GetMapping("/v1/orders/me")
     public ResponseEntity<ApiResponseDto<PageResponseDto<OrderResponse>>> getMyOrders(
@@ -50,19 +40,5 @@ public class OrderController {
             @PathVariable String orderUid
     ) {
         return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, orderQueryService.getOneOrder(userDetails.getUserId(), orderUid)));
-    }
-
-    @PatchMapping("/v1/orders/{orderUid}/cancel")
-    public ResponseEntity<ApiResponseDto<OrderResponse>> cancelOrder(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable String orderUid,
-            @Valid @RequestBody CancelOrderRequest request
-    ) {
-        if (!redisRateLimiter.isAllowed("rate:user:order:" + userDetails.getUserId(),
-                rateLimitProperties.getOrderLimit(),
-                rateLimitProperties.getOrderWindowSeconds())) {
-            throw new ServiceException(ErrorCode.RATE_LIMIT_EXCEEDED);
-        }
-        return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, orderCommandService.cancelOrder(userDetails.getUserId(), orderUid, request.reason())));
     }
 }
