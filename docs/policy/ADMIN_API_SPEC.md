@@ -3,7 +3,7 @@
 > **Pokemon Card Trading Platform** | 7조 로켓단  
 > Base URL: `https://{host}/api/v1`  
 > 인증 방식: `Authorization: Bearer {accessToken}` (JWT)  
-> 권한: **모든 엔드포인트는 `ADMIN` 역할 필수**  
+> 권한: **기본적으로 모든 엔드포인트는 `ADMIN` 역할 필수** (단, internal-only API는 예외 — [8.2](#82-카드-임베딩-재색인-청크-처리-내부-api) 및 ADR-018 참고)  
 > 공통 응답 포맷: `ApiResponse<T>` 래핑
 
 ---
@@ -1105,6 +1105,58 @@
 }
 ```
 
+### 8.2 카드 임베딩 재색인 청크 처리 (내부 API)
+
+> **ADR-018**: pocat-batch `aiReindexJob`이 ACTIVE 카드 ID를 100개 단위 청크로 호출하는 내부 전용 엔드포인트. `ADMIN` 사용자 인증이 아닌 `X-Internal-Token` 헤더 기반 서비스 간 인증을 사용한다 (ADR-014 `InternalTokenAuthFilter`).
+
+- **POST** `/internal/ai/reindex-cards`
+- **권한**: 내부 서비스 전용 (`X-Internal-Token` 헤더 필수, ADMIN 역할 불필요)
+- **설명**: 전달받은 카드 ID 목록(최대 100개) 중 ES(`pocat-ai-index`)에 `metadata.cardId.keyword`로 미인덱싱된 카드만 골라 Gemini 임베딩 생성 후 ES upsert한다. `RedisRateLimiter`(key=`ratelimit:ai-embedding`, 80/60s)로 호출량을 제한하며, 한도 도달 시 `rateLimited: true`를 반환하여 pocat-batch가 이후 청크 호출을 조기 종료하도록 한다. 실패한 카드는 ES에 반영되지 않아 다음 배치 회차에 자동 재시도된다(self-healing).
+
+**Request Headers**
+
+```http
+X-Internal-Token: {INTERNAL_TOKEN}
+Idempotency-Key: reindex-cards-{firstCardId}-{lastCardId}-{jobExecutionId}
+Content-Type: application/json
+```
+
+**Request Body**
+
+```json
+{
+  "cardIds": [1001, 1002, 1003]
+}
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `cardIds` | Long[] | 재색인 대상 후보 카드 ID 목록 (최대 100개) |
+
+**Response** `200 OK`
+
+```json
+{
+  "status": "SUCCESS",
+  "data": {
+    "processedCount": 100,
+    "skippedCount": 60,
+    "indexedCount": 38,
+    "failedCount": 2,
+    "rateLimited": false
+  },
+  "message": ""
+}
+```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `processedCount` | int | 전달받은 카드 ID 총 개수 |
+| `skippedCount` | int | 이미 ES에 인덱싱되어 스킵한 카드 수 |
+| `indexedCount` | int | 신규로 임베딩·색인 처리된 카드 수 |
+| `failedCount` | int | 임베딩/색인 실패 카드 수 (다음 회차 자동 재시도 대상) |
+| `rateLimited` | boolean | `RedisRateLimiter` 한도 도달로 처리를 조기 종료했는지 여부 |
+
 ---
 
 ## 📋 엔드포인트 요약표
@@ -1141,3 +1193,4 @@
 | **포켓몬** | PATCH | `/api/v1/admin/pokemon/{id}/name-ko` | 포켓몬 한국어명 수정 |
 | **포켓몬** | DELETE | `/api/v1/admin/pokemon/{id}` | 포켓몬 삭제 |
 | **AI** | POST | `/api/v1/admin/ai/reindex` | 카드 벡터 스토어 재색인 |
+| **AI (내부)** | POST | `/internal/ai/reindex-cards` | 카드 임베딩 재색인 청크 처리 (pocat-batch `aiReindexJob` 전용, ADR-018) |

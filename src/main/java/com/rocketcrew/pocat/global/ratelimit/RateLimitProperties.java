@@ -1,12 +1,16 @@
 package com.rocketcrew.pocat.global.ratelimit;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 @Getter
 @Setter
+@Validated
 @Component
 @ConfigurationProperties(prefix = "rate-limit")
 public class RateLimitProperties {
@@ -54,4 +58,9 @@ public class RateLimitProperties {
 
     private int aiLimit = 10;
     private long aiWindowSeconds = 60;
+
+    @Positive
+    private int aiEmbeddingLimit = 80;
+    @Min(1)
+    private long aiEmbeddingWindowSeconds = 60;
 }
