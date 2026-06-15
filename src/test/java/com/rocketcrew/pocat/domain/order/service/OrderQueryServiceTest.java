@@ -188,7 +188,7 @@ class OrderQueryServiceTest {
         void success_withResults() {
             Card card = TestFixtures.aCard(); // id=3L
             given(cardRepository.findById(3L)).willReturn(Optional.of(card));
-            given(orderRepository.findAvgAndCountByCardId(eq(3L), eq(OrderStatus.ORDER_COMPLETED), any()))
+            given(orderRepository.findAvgAndCountByCardId(eq(3L), eq(OrderStatus.PAYMENT_COMPLETED), any()))
                     .willReturn(new Object[]{12500.0, 5L});
 
             CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(3L);
@@ -204,7 +204,7 @@ class OrderQueryServiceTest {
         void success_noResults() {
             Card card = TestFixtures.aCard();
             given(cardRepository.findById(3L)).willReturn(Optional.of(card));
-            given(orderRepository.findAvgAndCountByCardId(eq(3L), eq(OrderStatus.ORDER_COMPLETED), any()))
+            given(orderRepository.findAvgAndCountByCardId(eq(3L), eq(OrderStatus.PAYMENT_COMPLETED), any()))
                     .willReturn(new Object[]{null, 0L});
 
             CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(3L);
