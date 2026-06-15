@@ -74,7 +74,7 @@ public class OrderQueryService {
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
-        Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.ORDER_COMPLETED, since);
+        Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.PAYMENT_COMPLETED, since);
         // 거래 이력이 없으면 result 자체가 null이거나 집계값이 null로 오므로 방어 처리
         if (result == null || result.length < 2) {
             return new CardAveragePriceResponse(cardId, null, 0L, since, now);
