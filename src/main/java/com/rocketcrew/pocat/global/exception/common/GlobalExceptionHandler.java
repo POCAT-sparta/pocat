@@ -4,6 +4,7 @@ import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -144,6 +145,18 @@ public class GlobalExceptionHandler {
                 .body(ApiResponseDto.error(
                         ErrorCode.INVALID_INPUT.name(),
                         ex.getMessage()
+                ));
+    }
+
+    // 400 - @Validated path variable/request parameter 제약 조건 위반 (예: @Positive)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponseDto<Void>> handleConstraintViolationException(
+            ConstraintViolationException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponseDto.error(
+                        ErrorCode.INVALID_INPUT.name(),
+                        ErrorCode.INVALID_INPUT.getMessage()
                 ));
     }
 
