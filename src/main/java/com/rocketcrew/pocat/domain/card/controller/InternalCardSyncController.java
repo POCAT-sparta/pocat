@@ -41,7 +41,7 @@ public class InternalCardSyncController {
             log.info("[CARD_SYNC] 카드 동기화 요청 접수");
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponseDto.success(HttpStatus.ACCEPTED, null));
         } catch (TaskRejectedException e) {
-            log.info("[CARD_SYNC] 동기화 중복 요청: {}", e.getMessage());
+            log.info("[CARD_SYNC] 동기화 요청 거절: queue 포화");
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponseDto.error(ErrorCode.CARD_SYNC_IN_PROGRESS.name(), ErrorCode.CARD_SYNC_IN_PROGRESS.getMessage()));
         }

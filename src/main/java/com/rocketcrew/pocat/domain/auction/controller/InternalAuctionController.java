@@ -61,7 +61,7 @@ public class InternalAuctionController {
             boolean activated = auctionLifecycleService.activateApprovedAuction(id);
             return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, activated));
         } catch (AuctionException e) {
-            if (e.getErrorCode() == ErrorCode.AUCTION_LOCK_FAILED || e.getErrorCode() == ErrorCode.AUCTION_NOT_FOUND) {
+            if (isSkippableAuctionException(e)) {
                 log.info("경매 활성화 스킵: auctionId={}, reason={}", id, e.getMessage());
                 return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, false));
             }
@@ -82,11 +82,16 @@ public class InternalAuctionController {
             boolean closed = auctionLifecycleService.closeExpiredAuction(id);
             return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, closed));
         } catch (AuctionException e) {
-            if (e.getErrorCode() == ErrorCode.AUCTION_LOCK_FAILED || e.getErrorCode() == ErrorCode.AUCTION_NOT_FOUND) {
+            if (isSkippableAuctionException(e)) {
                 log.info("경매 마감 스킵: auctionId={}, reason={}", id, e.getMessage());
                 return ResponseEntity.ok(ApiResponseDto.success(HttpStatus.OK, false));
             }
             throw e;
         }
+    }
+
+    private boolean isSkippableAuctionException(AuctionException e) {
+        return e.getErrorCode() == ErrorCode.AUCTION_LOCK_FAILED
+                || e.getErrorCode() == ErrorCode.AUCTION_NOT_FOUND;
     }
 }
