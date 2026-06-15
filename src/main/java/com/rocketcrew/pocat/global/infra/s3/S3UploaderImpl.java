@@ -31,7 +31,8 @@ public class S3UploaderImpl implements S3Uploader {
     }
 
     private static String normalize(String domain) {
-        String d = domain.replaceFirst("^https?://", "").replaceAll("/+$", "").strip();
+        if (domain == null) throw new IllegalArgumentException("cloud.aws.cloudfront.domain must not be blank");
+        String d = domain.strip().replaceFirst("^https?://", "").replaceAll("/+$", "");
         if (d.isEmpty()) throw new IllegalArgumentException("cloud.aws.cloudfront.domain must not be blank");
         return d;
     }
