@@ -67,6 +67,8 @@ cloud:
       static: ${AWS_REGION:ap-northeast-2}
     s3:
       bucket: ${AWS_S3_BUCKET}
+    cloudfront:
+      domain: ${AWS_CLOUDFRONT_DOMAIN:cdn.kuromi.click}
 
 portone:
   secret: ${PORTONE_SECRET}

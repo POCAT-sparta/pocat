@@ -15,14 +15,15 @@ public class S3UploaderImpl implements S3Uploader {
 
     private final S3Client s3Client;
     private final String bucket;
-    private final String region;
+    private final String cloudfrontDomain;
 
     public S3UploaderImpl(
             @Value("${cloud.aws.region.static}") String region,
-            @Value("${cloud.aws.s3.bucket}") String bucket
+            @Value("${cloud.aws.s3.bucket}") String bucket,
+            @Value("${cloud.aws.cloudfront.domain}") String cloudfrontDomain
     ) {
         this.bucket = bucket;
-        this.region = region;
+        this.cloudfrontDomain = cloudfrontDomain;
 
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
@@ -39,8 +40,7 @@ public class S3UploaderImpl implements S3Uploader {
 
         s3Client.putObject(request, RequestBody.fromBytes(data));
 
-        String url = "https://%s.s3.%s.amazonaws.com/%s"
-                .formatted(bucket, region, key);
+        String url = "https://%s/%s".formatted(cloudfrontDomain, key);
 
         log.debug("[S3] 업로드 완료: {}", url);
         return url;
