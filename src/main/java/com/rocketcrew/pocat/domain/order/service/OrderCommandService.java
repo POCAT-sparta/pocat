@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.event.OrderCreatedEvent;
+import com.rocketcrew.pocat.domain.order.event.OrderEscalatedEvent;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.OrderException;
@@ -123,6 +124,8 @@ public class OrderCommandService {
         if (nextRank > 2) {
             cancelAuction(order.getAuctionId());
             log.info("[PAYMENT_ESCALATION] 최대 승격 순위 초과 → 경매 취소 auctionId={}", order.getAuctionId());
+            eventPublisher.publishEvent(new OrderEscalatedEvent(
+                    EscalationResult.Status.CANCELLED, null, null, order.getSellerId(), order.getOrderUid()));
             return EscalationResult.cancelled();
         }
 
@@ -132,6 +135,8 @@ public class OrderCommandService {
         if (nextBidderIndex >= lostBidderIds.size()) {
             cancelAuction(order.getAuctionId());
             log.info("[PAYMENT_ESCALATION] 다음 입찰자 없음 → 경매 취소 auctionId={}", order.getAuctionId());
+            eventPublisher.publishEvent(new OrderEscalatedEvent(
+                    EscalationResult.Status.CANCELLED, null, null, order.getSellerId(), order.getOrderUid()));
             return EscalationResult.cancelled();
         }
 
@@ -141,6 +146,9 @@ public class OrderCommandService {
         Optional<Order> existingOrder = orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank);
         if (existingOrder.isPresent()) {
             log.info("[PAYMENT_ESCALATION] 이미 주문 존재 auctionId={}, rank={}", order.getAuctionId(), nextRank);
+            eventPublisher.publishEvent(new OrderEscalatedEvent(
+                    EscalationResult.Status.ESCALATED, nextBidderId, existingOrder.get().getOrderUid(),
+                    order.getSellerId(), order.getOrderUid()));
             return EscalationResult.escalated(nextBidderId, existingOrder.get().getOrderUid());
         }
 
@@ -150,6 +158,9 @@ public class OrderCommandService {
         schedulePaymentDeadline(nextOrder.getOrderUid());
         log.info("[PAYMENT_ESCALATION] {}순위 1시간 직접결제 기간 부여 auctionId={}, buyerId={}",
                 nextRank, order.getAuctionId(), nextBidderId);
+        eventPublisher.publishEvent(new OrderEscalatedEvent(
+                EscalationResult.Status.ESCALATED, nextBidderId, nextOrder.getOrderUid(),
+                order.getSellerId(), order.getOrderUid()));
         return EscalationResult.escalated(nextBidderId, nextOrder.getOrderUid());
     }
 

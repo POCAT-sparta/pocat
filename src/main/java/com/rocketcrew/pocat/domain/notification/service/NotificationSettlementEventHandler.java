@@ -1,7 +1,6 @@
-package com.rocketcrew.pocat.domain.settlement.service;
+package com.rocketcrew.pocat.domain.notification.service;
 
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
-import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.domain.settlement.event.SettlementCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +15,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class SettlementEventHandler {
+public class NotificationSettlementEventHandler {
 
     private final NotificationCommandService notificationCommandService;
 
