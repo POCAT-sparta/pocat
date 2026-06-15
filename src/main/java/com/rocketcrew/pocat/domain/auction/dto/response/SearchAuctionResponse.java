@@ -1,7 +1,9 @@
 package com.rocketcrew.pocat.domain.auction.dto.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
+import com.rocketcrew.pocat.global.time.KoreaTimeSerializer;
 
 import java.time.LocalDateTime;
 
@@ -18,8 +20,8 @@ public record SearchAuctionResponse(
         Long highestPrice,
         Long buyoutPrice,
         AuctionStatus status,
-        LocalDateTime startedAt,
-        LocalDateTime endedAt,
-        LocalDateTime createdAt
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime startedAt,
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime endedAt,
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime createdAt
 ) {
 }

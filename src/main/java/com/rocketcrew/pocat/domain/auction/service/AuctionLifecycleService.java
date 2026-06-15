@@ -27,7 +27,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -40,8 +40,6 @@ public class AuctionLifecycleService {
     private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
     private static final long AUCTION_LOCK_WAIT_SECONDS = 0L;
     private static final int AUCTION_DURATION_DAYS = 3;
-    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
-
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
     private final RedissonClient redissonClient;
@@ -63,7 +61,7 @@ public class AuctionLifecycleService {
             return false;
         }
 
-        LocalDateTime startedAt = LocalDateTime.now(AUCTION_ZONE);
+        LocalDateTime startedAt = LocalDateTime.now(ZoneOffset.UTC);
         LocalDateTime endedAt = startedAt.plusDays(AUCTION_DURATION_DAYS);
         latestAuction.activate(startedAt, endedAt);
 
@@ -136,7 +134,7 @@ public class AuctionLifecycleService {
     private boolean isClosable(Auction auction) {
         return auction.getStatus() == AuctionStatus.ACTIVE
                 && auction.getEndedAt() != null
-                && !auction.getEndedAt().isAfter(LocalDateTime.now(AUCTION_ZONE));
+                && !auction.getEndedAt().isAfter(LocalDateTime.now(ZoneOffset.UTC));
     }
 
     // 최종 최고 입찰자는 WON, 이미 최고가 갱신으로 밀린 OUTBID 입찰자만 LOST 상태로 정리한다.

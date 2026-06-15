@@ -24,14 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuctionBuyoutTransactionService {
-
-    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
@@ -153,7 +151,7 @@ public class AuctionBuyoutTransactionService {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
         // 현재 시간이 경매 시작/종료 시간 사이인지 검증
-        LocalDateTime now = LocalDateTime.now(AUCTION_ZONE);
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (auction.getStartedAt() == null
                 || auction.getEndedAt() == null
                 || now.isBefore(auction.getStartedAt())

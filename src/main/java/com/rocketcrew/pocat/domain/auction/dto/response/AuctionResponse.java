@@ -1,10 +1,12 @@
 package com.rocketcrew.pocat.domain.auction.dto.response;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.rocketcrew.pocat.domain.auction.entity.Auction;
 import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.user.entity.User;
+import com.rocketcrew.pocat.global.time.KoreaTimeSerializer;
 
 import java.time.LocalDateTime;
 
@@ -25,11 +27,11 @@ public record AuctionResponse(
         String highestBidderNickname,
         AuctionStatus status,
         String reason,
-        LocalDateTime inspectedAt,
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime inspectedAt,
         Long inspectedBy,
-        LocalDateTime startedAt,
-        LocalDateTime endedAt,
-        LocalDateTime createdAt,
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime startedAt,
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime endedAt,
+        @JsonSerialize(using = KoreaTimeSerializer.class) LocalDateTime createdAt,
         long likeCount,
         boolean isLiked
 ) {

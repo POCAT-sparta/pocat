@@ -37,7 +37,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -109,8 +109,8 @@ class AuctionBidCommandServiceTest {
                 .startingPrice(1000L)
                 .buyoutPrice(10000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
-                .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
+                .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
+                .endedAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1))
                 .build();
         ReflectionTestUtils.setField(activeAuction, "id", 1L);
 
@@ -186,8 +186,8 @@ class AuctionBidCommandServiceTest {
                     .startingPrice(1000L)
                     .buyoutPrice(10000L)
                     .status(AuctionStatus.ACTIVE)
-                    .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
-                    .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
+                    .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
+                    .endedAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1))
                     .build();
             ReflectionTestUtils.setField(auctionWithHighestBidder, "id", 1L);
             ReflectionTestUtils.setField(auctionWithHighestBidder, "highestBidderId", 4L);
@@ -259,8 +259,8 @@ class AuctionBidCommandServiceTest {
                     .cardId(1L).sellerId(2L).title("경매")
                     .startingPrice(1000L).buyoutPrice(10000L)
                     .status(AuctionStatus.PENDING)
-                    .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
-                    .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
+                    .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
+                    .endedAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1))
                     .build();
             ReflectionTestUtils.setField(pendingAuction, "id", 1L);
             given(userQueryService.getUserEntity(3L)).willReturn(normalBidder);
@@ -281,8 +281,8 @@ class AuctionBidCommandServiceTest {
                     .cardId(1L).sellerId(2L).title("경매")
                     .startingPrice(1000L).buyoutPrice(10000L)
                     .status(AuctionStatus.ACTIVE)
-                    .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(2))
-                    .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusMinutes(1))   // already ended
+                    .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(2))
+                    .endedAt(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1))   // already ended
                     .build();
             ReflectionTestUtils.setField(expiredAuction, "id", 1L);
             given(userQueryService.getUserEntity(3L)).willReturn(normalBidder);
@@ -362,8 +362,8 @@ class AuctionBidCommandServiceTest {
                     .cardId(1L).sellerId(2L).title("경매")
                     .startingPrice(1000L).buyoutPrice(10000L)
                     .status(AuctionStatus.ACTIVE)
-                    .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
-                    .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
+                    .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
+                    .endedAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1))
                     .build();
             ReflectionTestUtils.setField(auctionWithHighestBidder, "id", 1L);
             // Set highestBidderId to 3L via reflection
@@ -427,8 +427,8 @@ class AuctionBidCommandServiceTest {
                     .cardId(1L).sellerId(2L).title("경매")
                     .startingPrice(1000L).buyoutPrice(10000L)
                     .status(AuctionStatus.ACTIVE)
-                    .startedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusHours(1))
-                    .endedAt(LocalDateTime.now(ZoneId.of("Asia/Seoul")).plusHours(1))
+                    .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusHours(1))
+                    .endedAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1))
                     .build();
             ReflectionTestUtils.setField(auctionWithHighest, "id", 1L);
             ReflectionTestUtils.setField(auctionWithHighest, "highestBidderId", 99L);  // someone else
