@@ -7,8 +7,6 @@ import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.domain.auction.snapshot.service.AuctionSnapshotCommandService;
-import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
-import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
 import com.rocketcrew.pocat.global.exception.domain.InvalidAuctionEventPayloadException;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,11 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
@@ -35,9 +30,6 @@ class AuctionPostProcessConsumerTest {
 
     @Mock
     AuctionSnapshotCommandService auctionSnapshotCommandService;
-
-    @Mock
-    NotificationCommandService notificationCommandService;
 
     @Mock
     AuctionLifecycleService auctionLifecycleService;
@@ -55,7 +47,6 @@ class AuctionPostProcessConsumerTest {
                 objectMapper,
                 auctionExpirationRedisService,
                 auctionSnapshotCommandService,
-                notificationCommandService,
                 auctionLifecycleService,
                 auctionEsIndexService
         );
@@ -77,12 +68,6 @@ class AuctionPostProcessConsumerTest {
         consumer.consume(message);
 
         verify(auctionExpirationRedisService).setExpirationKeys(1L, endedAt);
-        verify(notificationCommandService).send(
-                eq(10L),
-                eq(NotificationType.AUCTION_ACTIVATED),
-                anyString(),
-                eq(Map.of("auctionId", 1L))
-        );
         verifyNoInteractions(auctionSnapshotCommandService);
     }
 
@@ -99,7 +84,12 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -110,7 +100,12 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -127,7 +122,6 @@ class AuctionPostProcessConsumerTest {
 
         verify(auctionExpirationRedisService).deleteExpirationKeys(1L);
         verify(auctionSnapshotCommandService).createSnapshot(1L, null);
-        verifyNoInteractions(notificationCommandService);
     }
 
     @Test
@@ -147,7 +141,6 @@ class AuctionPostProcessConsumerTest {
         verify(auctionSnapshotCommandService).createSnapshot(1L, 10000L);
         verify(auctionEsIndexService).updateHighestPrice(1L, 10000L);
         verify(auctionEsIndexService).updateStatus(1L, AuctionStatus.ENDED);
-        verifyNoInteractions(notificationCommandService);
     }
 
     @Test
@@ -163,7 +156,12 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -182,30 +180,12 @@ class AuctionPostProcessConsumerTest {
         consumer.consume(message);
 
         verify(auctionExpirationRedisService).deleteExpirationKeys(1L);
-        verify(notificationCommandService).send(
-                eq(10L),
-                eq(NotificationType.AUCTION_CANCELLED),
-                anyString(),
-                eq(Map.of("auctionId", 1L))
-        );
-        verify(notificationCommandService).send(
-                eq(20L),
-                eq(NotificationType.AUCTION_CANCELLED),
-                anyString(),
-                eq(Map.of("auctionId", 1L))
-        );
-        verify(notificationCommandService).send(
-                eq(30L),
-                eq(NotificationType.AUCTION_CANCELLED),
-                anyString(),
-                eq(Map.of("auctionId", 1L))
-        );
         verifyNoInteractions(auctionSnapshotCommandService);
     }
 
     @Test
-    @DisplayName("auction.inspection.passed 이벤트는 경매를 ACTIVE 상태로 전환하고 알림을 발송한다")
-    void consumeInspectionPassedEvent_activatesAuctionAndSendsNotification() {
+    @DisplayName("auction.inspection.passed 이벤트는 경매를 ACTIVE 상태로 전환한다")
+    void consumeInspectionPassedEvent_activatesAuction() {
         String message = """
                 {
                   "eventType": "auction.inspection.passed",
@@ -218,12 +198,6 @@ class AuctionPostProcessConsumerTest {
 
         verify(auctionLifecycleService).activateApprovedAuction(1L);
         verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
-        verify(notificationCommandService).send(
-                eq(10L),
-                eq(NotificationType.INSPECTION_PASSED),
-                anyString(),
-                eq(Map.of("auctionId", 1L))
-        );
     }
 
     @Test
@@ -240,13 +214,7 @@ class AuctionPostProcessConsumerTest {
 
         consumer.consume(message);
 
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
-        verify(notificationCommandService).send(
-                eq(10L),
-                eq(NotificationType.INSPECTION_FAILED),
-                anyString(),
-                eq(Map.of("auctionId", 1L))
-        );
+        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, auctionLifecycleService, auctionEsIndexService);
     }
 
     @Test
@@ -261,7 +229,12 @@ class AuctionPostProcessConsumerTest {
 
         consumer.consume(message);
 
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -276,6 +249,11 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService, notificationCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 }

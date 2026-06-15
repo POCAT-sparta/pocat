@@ -14,7 +14,6 @@ import com.rocketcrew.pocat.domain.bid.service.BidEventHandler;
 import com.rocketcrew.pocat.domain.order.service.OrderEventHandler;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.handler.PaymentEventHandler;
 import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
-import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
 import com.rocketcrew.pocat.domain.notification.service.NotificationEventHandler;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneStatus;
@@ -86,7 +85,6 @@ class AuctionBuyoutConcurrencyIntegrationTest {
     @MockBean private OrderEventHandler orderEventHandler;
     @MockBean private PaymentEventHandler paymentEventHandler;
     @MockBean private RefundEventHandler refundEventHandler;
-    @MockBean private SettlementEventHandler settlementEventHandler;
     @MockBean private NotificationEventHandler notificationEventHandler;
 
     // ── 실제 빈 ──────────────────────────────────────────────────

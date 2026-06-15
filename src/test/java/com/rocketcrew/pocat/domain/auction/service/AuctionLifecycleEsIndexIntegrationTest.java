@@ -25,7 +25,6 @@ import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.series.repository.SeriesRepository;
 import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 import com.rocketcrew.pocat.domain.set.repository.PokemonSetRepository;
-import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.enums.UserRole;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
@@ -86,7 +85,6 @@ class AuctionLifecycleEsIndexIntegrationTest {
     @MockBean private OrderEventHandler orderEventHandler;
     @MockBean private PaymentEventHandler paymentEventHandler;
     @MockBean private RefundEventHandler refundEventHandler;
-    @MockBean private SettlementEventHandler settlementEventHandler;
     @MockBean private NotificationEventHandler notificationEventHandler;
 
     // ── 실제 빈 (AuctionEsIndexService도 실제 빈을 사용해 LIE 발생 여부를 검증) ──

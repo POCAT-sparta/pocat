@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.refund.consumer;
+package com.rocketcrew.pocat.domain.notification.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
@@ -14,14 +14,14 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RefundEventConsumer {
+public class NotificationRefundEventConsumer {
 
     private final NotificationCommandService notificationCommandService;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(
             topics = "refund",
-            groupId = "refund-notification-group",
+            groupId = "notification-refund-group",
             containerFactory = "refundKafkaListenerContainerFactory")
     public void consume(String message, Acknowledgment acknowledgment) {
         try {

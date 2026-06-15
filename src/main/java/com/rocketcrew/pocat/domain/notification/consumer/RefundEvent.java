@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.refund.consumer;
+package com.rocketcrew.pocat.domain.notification.consumer;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;

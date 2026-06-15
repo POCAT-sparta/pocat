@@ -1,8 +1,6 @@
 package com.rocketcrew.pocat.domain.order.consumer.paymentEvent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
-import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
 import com.rocketcrew.pocat.domain.order.service.OrderCommandService;
 import com.rocketcrew.pocat.domain.order.snapshot.service.OrderSnapshotCommandService;
 import com.rocketcrew.pocat.domain.payment.event.PaymentEventType;
@@ -12,15 +10,11 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderPaymentEventConsumer {
 
-    private final NotificationCommandService notificationCommandService;
     private final OrderCommandService orderCommandService;
     private final OrderSnapshotCommandService orderSnapshotCommandService;
     private final ObjectMapper objectMapper;
@@ -45,69 +39,19 @@ public class OrderPaymentEventConsumer {
         }
     }
 
-    // 결제 완료 → 주문 상태 변경 → 스냅샷 생성 → 구매자/판매자 알림
+    // 결제 완료 → 주문 상태 변경 → 스냅샷 생성
     private void handlePaymentCompleted(PaymentEvent event) {
         orderCommandService.completePayment(event.getOrderUid());
         orderSnapshotCommandService.createSnapshot(event.getOrderUid());
-
-        Map<String, Object> completedPayload = new HashMap<>();
-        completedPayload.put("orderUid", event.getOrderUid());
-        if (event.getFinalPrice() != null) {
-            completedPayload.put("finalPrice", event.getFinalPrice());
-        }
-
-        try {
-            notificationCommandService.send(
-                    event.getBuyerId(),
-                    NotificationType.PAYMENT_COMPLETED,
-                    "결제가 완료되었습니다.",
-                    completedPayload
-            );
-        } catch (Exception e) {
-            log.error("결제완료 구매자 알림 실패: orderUid={}", event.getOrderUid(), e);
-        }
-
-        try {
-            notificationCommandService.send(
-                    event.getSellerId(),
-                    NotificationType.PAYMENT_COMPLETED,
-                    "구매자의 결제가 완료되었습니다.",
-                    completedPayload
-            );
-        } catch (Exception e) {
-            log.error("결제완료 판매자 알림 실패: orderUid={}", event.getOrderUid(), e);
-        }
     }
 
-    // 자동결제 실패 → 주문 상태 변경 + 1시간 직접결제 데드라인 설정 → 구매자 알림
+    // 자동결제 실패 → 주문 상태 변경 + 1시간 직접결제 데드라인 설정
     private void handlePaymentAutoFailed(PaymentEvent event) {
         orderCommandService.schedulePaymentDeadline(event.getOrderUid());
-
-        try {
-            notificationCommandService.send(
-                    event.getBuyerId(),
-                    NotificationType.AUTO_PAYMENT_FAILED,
-                    "자동결제에 실패했습니다. 직접 결제를 진행해 주세요.",
-                    Map.of("orderUid", event.getOrderUid())
-            );
-        } catch (Exception e) {
-            log.error("자동결제 실패 알림 실패: orderUid={}", event.getOrderUid(), e);
-        }
     }
 
-    // 직접결제 실패 → 주문 상태 변경 → 구매자 알림 (재시도 가능, 1시간 TTL 만료 시 ExpiryEventListener가 승격 처리)
+    // 직접결제 실패 → 주문 상태 변경 (재시도 가능, 1시간 TTL 만료 시 ExpiryEventListener가 승격 처리)
     private void handlePaymentDirectFailed(PaymentEvent event) {
         orderCommandService.failDirectPayment(event.getOrderUid());
-
-        try {
-            notificationCommandService.send(
-                    event.getBuyerId(),
-                    NotificationType.DIRECT_PAYMENT_FAILED,
-                    "결제에 실패했습니다. 1시간 내에 다시 시도해 주세요.",
-                    Map.of("orderUid", event.getOrderUid())
-            );
-        } catch (Exception e) {
-            log.error("직접결제 실패 구매자 알림 실패: orderUid={}", event.getOrderUid(), e);
-        }
     }
 }
