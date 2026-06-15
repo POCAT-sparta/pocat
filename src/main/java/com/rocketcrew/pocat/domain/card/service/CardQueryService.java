@@ -84,6 +84,10 @@ public class CardQueryService {
                     .query(condition.keyword())
                     .type(TextQueryType.CrossFields)
                     .operator(Operator.And))._toQuery());
+            // 포켓몬 이름 매칭 카드에 가중치 부여 (setName 매칭보다 name 매칭 우선)
+            bool.should(MultiMatchQuery.of(m -> m
+                    .fields("name^2", "nameKo^3")
+                    .query(condition.keyword()))._toQuery());
         }
         if (StringUtils.hasText(condition.series())) {
             String seriesEn = seriesQueryService.translate(condition.series());
