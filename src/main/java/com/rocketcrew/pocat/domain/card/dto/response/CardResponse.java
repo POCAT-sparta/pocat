@@ -72,4 +72,5 @@ public record CardResponse(
                 cardNumber, rarity, category, grade, imageUrl, source, status,
                 createdAt, updatedAt, null, count);
     }
+
 }
