@@ -136,6 +136,17 @@ ADR-018과 동일하게, 별도 `docs/api/` 문서를 생성하지 않고 본 AD
 
 ---
 
+## 구현 후 반영 사항 (Phase 4 리뷰)
+
+Phase 4(REVIEW+SECURITY) 결과 다음 항목이 수정 또는 의도적으로 결정되었다.
+
+- **`GlobalExceptionHandler` `ConstraintViolationException` 400 처리 추가**: `InternalAuctionController`의 `@Validated`+`@Positive` path variable 검증 실패가 기존에 미처리 500으로 떨어지던 버그를 수정했다. 전역 핸들러 추가로 `/internal/**` 외의 `@Validated` 컨트롤러에도 동일하게 적용되나, 기존 테스트에서 500을 기대하는 케이스가 없어 회귀 없음. 의도적 개선으로 기록.
+- **`CardSyncTasklet`의 `RuntimeException` 전파 정책**: `triggerSync()` 호출 실패(예: 401 토큰 오류) 시 step 전체 실패로 처리한다. 이는 "카드 동기화 트리거 자체가 fire-and-forget이므로 트리거 실패는 배치 운영자 인지가 필요"라는 의도 — `AuctionActivationTasklet`/`AuctionExpirationTasklet`의 건별 스킵 전략과 의도적으로 다름. 이유: 경매는 건별 부분실패가 허용되나(다음 회차 DB 재조회로 자동 재시도), 카드 동기화는 단일 트리거이므로 실패 시 아예 스킵되어 운영자 인지 없이 누락될 위험이 있음.
+- **`MainAuctionLifecycleClient`/`MainCardSyncClient` 4xx 스킵 정책**: HTTP 401 → `RuntimeException`(step 실패, 인증설정 이상), 기타 4xx(`400`, `404`, `409 CARD_SYNC_IN_PROGRESS`) → 로그 후 스킵(정상). 단, 404는 경로 오류 등 배포 설정 이상을 나타낼 수 있으므로 운영 초기 배포 후 로그 모니터링 권장.
+- **`Idempotency-Key` 헤더**: 서버 측에서 중복요청 차단에 사용되지 않는 추적/로깅 전용 헤더. 실질 멱등성은 `AuctionLifecycleService`의 `tryLock(0, SECONDS)` + 상태 가드(`status==APPROVED`/`isClosable()`)로 보장된다.
+
+---
+
 ## Related
 
 - [ADR-014: 메인 앱 @Scheduled 스케줄러 8개 pocat-batch 완전 이전](ADR-014-scheduler-batch-migration-%23171.md) — internal API 위임 패턴(전략 C) 선례
