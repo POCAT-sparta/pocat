@@ -31,6 +31,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +88,7 @@ class AuctionLifecycleServiceTest {
         lenient().when(anomalyProperties.getAuctionAnomalyThreshold()).thenReturn(3.0);
         lenient().when(cardQueryService.getAveragePrice(anyLong()))
                 .thenReturn(new CardAveragePriceResponse(1L, 1000L, 5L,
-                        LocalDateTime.now().minusDays(90), LocalDateTime.now()));
+                        LocalDateTime.now(ZoneOffset.UTC).minusDays(90), LocalDateTime.now(ZoneOffset.UTC)));
         TransactionSynchronizationManager.initSynchronization();
     }
 
@@ -169,8 +170,8 @@ class AuctionLifecycleServiceTest {
                 .startingPrice(1000L)
                 .highestPrice(5000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusDays(3))
-                .endedAt(LocalDateTime.now().minusSeconds(1))
+                .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(3))
+                .endedAt(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", id);
         return auction;
@@ -184,8 +185,8 @@ class AuctionLifecycleServiceTest {
                 .description("설명")
                 .startingPrice(1000L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusDays(3))
-                .endedAt(LocalDateTime.now().minusSeconds(1))
+                .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(3))
+                .endedAt(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", id);
         return auction;
@@ -250,8 +251,8 @@ class AuctionLifecycleServiceTest {
                 .startingPrice(1000L)
                 .highestPrice(1500L)
                 .status(AuctionStatus.ACTIVE)
-                .startedAt(LocalDateTime.now().minusDays(3))
-                .endedAt(LocalDateTime.now().minusSeconds(1))
+                .startedAt(LocalDateTime.now(ZoneOffset.UTC).minusDays(3))
+                .endedAt(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1))
                 .build();
         ReflectionTestUtils.setField(auction, "id", 1L);
         AuctionBid winningBid = buildBid(1L, 10L, BidStatus.LEADING);

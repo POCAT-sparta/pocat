@@ -32,7 +32,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -43,8 +43,6 @@ public class AuctionBidCommandService {
 
     private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
     private static final long BID_LOCK_WAIT_SECONDS = 0L;
-    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
-
     private final AuctionBidRepository auctionBidRepository;
     private final AuctionQueryService auctionQueryService;
     private final UserQueryService userQueryService;
@@ -120,7 +118,7 @@ public class AuctionBidCommandService {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }
 
-        LocalDateTime now = LocalDateTime.now(AUCTION_ZONE);
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         if (auction.getStartedAt() == null || auction.getEndedAt() == null) {
             throw new AuctionException(ErrorCode.AUCTION_NOT_ACTIVE);
         }

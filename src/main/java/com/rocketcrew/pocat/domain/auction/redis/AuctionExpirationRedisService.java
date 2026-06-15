@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -18,8 +18,6 @@ public class AuctionExpirationRedisService {
     private static final String END_KEY_PREFIX = "auction:end:";
     private static final String SHADOW_KEY_PREFIX = "auction:end:shadow:";
     private static final Pattern END_KEY_PATTERN = Pattern.compile("^" + Pattern.quote(END_KEY_PREFIX) + "\\d+$");
-    private static final ZoneId AUCTION_ZONE = ZoneId.of("Asia/Seoul");
-
     private final StringRedisTemplate redisTemplate;
 
     public void setExpirationKeys(Long auctionId, LocalDateTime endedAt) {
@@ -28,7 +26,7 @@ public class AuctionExpirationRedisService {
             return;
         }
 
-        long ttlSeconds = Duration.between(LocalDateTime.now(AUCTION_ZONE), endedAt).getSeconds();
+        long ttlSeconds = Duration.between(LocalDateTime.now(ZoneOffset.UTC), endedAt).getSeconds();
         if (ttlSeconds <= 0) {
             log.warn("Auction expiration key skipped. endedAt already passed. auctionId={}, endedAt={}",
                     auctionId, endedAt);
