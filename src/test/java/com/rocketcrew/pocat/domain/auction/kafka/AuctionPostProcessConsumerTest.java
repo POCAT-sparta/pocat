@@ -84,7 +84,12 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -95,7 +100,12 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -146,7 +156,12 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -214,7 +229,12 @@ class AuctionPostProcessConsumerTest {
 
         consumer.consume(message);
 
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 
     @Test
@@ -229,6 +249,11 @@ class AuctionPostProcessConsumerTest {
         assertThatThrownBy(() -> consumer.consume(message))
                 .isInstanceOf(InvalidAuctionEventPayloadException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.AUCTION_EVENT_INVALID_PAYLOAD);
-        verifyNoInteractions(auctionExpirationRedisService, auctionSnapshotCommandService);
+        verifyNoInteractions(
+                auctionExpirationRedisService,
+                auctionSnapshotCommandService,
+                auctionLifecycleService,
+                auctionEsIndexService
+        );
     }
 }

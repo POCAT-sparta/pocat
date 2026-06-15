@@ -21,7 +21,7 @@ public class NotificationRefundEventConsumer {
 
     @KafkaListener(
             topics = "refund",
-            groupId = "refund-notification-group",
+            groupId = "notification-refund-group",
             containerFactory = "refundKafkaListenerContainerFactory")
     public void consume(String message, Acknowledgment acknowledgment) {
         try {
