@@ -13,7 +13,6 @@ import com.rocketcrew.pocat.domain.order.service.OrderEventHandler;
 import com.rocketcrew.pocat.domain.payment.client.out.kafka.handler.PaymentEventHandler;
 import com.rocketcrew.pocat.domain.payment.client.out.portone.PortOneClientService;
 import com.rocketcrew.pocat.domain.refund.service.RefundEventHandler;
-import com.rocketcrew.pocat.domain.settlement.service.SettlementEventHandler;
 import com.rocketcrew.pocat.global.config.EsIndexInitializer;
 import com.rocketcrew.pocat.global.dto.EsReindexResponse;
 import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
@@ -105,7 +104,6 @@ class CardEsAliasReindexServiceIntegrationTest {
     @MockBean private OrderEventHandler orderEventHandler;
     @MockBean private PaymentEventHandler paymentEventHandler;
     @MockBean private RefundEventHandler refundEventHandler;
-    @MockBean private SettlementEventHandler settlementEventHandler;
     @MockBean private NotificationEventHandler notificationEventHandler;
 
     // ── 공통 정리 ───────────────────────────────────────────────────
