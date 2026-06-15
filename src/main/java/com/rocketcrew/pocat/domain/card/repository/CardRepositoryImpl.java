@@ -1,6 +1,9 @@
 package com.rocketcrew.pocat.domain.card.repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -28,7 +31,7 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                 .leftJoin(card.series).fetchJoin()
                 .leftJoin(card.pokemonSet).fetchJoin()
                 .where(builder)
-                .orderBy(card.createdAt.desc(), card.id.desc())
+                .orderBy(nameRelevance(condition.keyword()), card.createdAt.desc(), card.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -42,6 +45,18 @@ public class CardRepositoryImpl implements CardRepositoryCustom {
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    private OrderSpecifier<Integer> nameRelevance(String keyword) {
+        QCard card = QCard.card;
+        if (!StringUtils.hasText(keyword) || keyword.trim().length() < 2) {
+            return Expressions.numberTemplate(Integer.class, "0").asc();
+        }
+        String kw = keyword.trim();
+        return new CaseBuilder()
+                .when(card.name.containsIgnoreCase(kw)).then(0)
+                .otherwise(1)
+                .asc();
     }
 
     private BooleanBuilder buildCondition(CardSearchCondition condition) {
