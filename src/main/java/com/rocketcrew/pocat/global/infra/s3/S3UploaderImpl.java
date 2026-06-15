@@ -23,11 +23,17 @@ public class S3UploaderImpl implements S3Uploader {
             @Value("${cloud.aws.cloudfront.domain}") String cloudfrontDomain
     ) {
         this.bucket = bucket;
-        this.cloudfrontDomain = cloudfrontDomain;
+        this.cloudfrontDomain = normalize(cloudfrontDomain);
 
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
                 .build();
+    }
+
+    private static String normalize(String domain) {
+        String d = domain.replaceFirst("^https?://", "").replaceAll("/+$", "").strip();
+        if (d.isEmpty()) throw new IllegalArgumentException("cloud.aws.cloudfront.domain must not be blank");
+        return d;
     }
 
     @Override
