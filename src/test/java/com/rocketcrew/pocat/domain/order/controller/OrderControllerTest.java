@@ -123,6 +123,7 @@ class OrderControllerTest {
 
     private OrderDetailResponse sampleOrderDetailResponse() {
         return new OrderDetailResponse(
+                1L,
                 "ORD-001",
                 10L,
                 new OrderDetailResponse.UserInfo("구매자"),

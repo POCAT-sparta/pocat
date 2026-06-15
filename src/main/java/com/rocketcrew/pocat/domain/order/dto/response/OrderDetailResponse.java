@@ -7,6 +7,7 @@ import com.rocketcrew.pocat.domain.user.entity.User;
 import java.time.LocalDateTime;
 
 public record OrderDetailResponse(
+        Long orderId,
         String orderUid,
         Long auctionId,
         UserInfo buyer,
@@ -25,6 +26,7 @@ public record OrderDetailResponse(
 
     public static OrderDetailResponse of(Order order, User buyer, User seller, Card card) {
         return new OrderDetailResponse(
+                order.getId(),
                 order.getOrderUid(),
                 order.getAuctionId(),
                 new UserInfo(buyer.getNickname()),
