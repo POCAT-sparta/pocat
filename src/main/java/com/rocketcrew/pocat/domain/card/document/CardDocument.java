@@ -142,6 +142,8 @@ public class CardDocument {
                 status != null ? CardStatus.valueOf(status) : null,
                 createdAt,
                 updatedAt,
+                name,    // cardDetailName — ES엔 포켓몬 영문명이 따로 없어 카드 자체 이름으로 대체
+                nameKo,  // cardDetailNameKo — 기존에 이미 채워지고 있던 값
                 null,  // activeAuction — 카드 목록에서는 CardQueryService가 별도로 주입
                 0      // activeAuctionCount — CardQueryService가 별도로 주입
         );
