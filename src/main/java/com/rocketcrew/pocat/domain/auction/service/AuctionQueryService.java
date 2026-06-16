@@ -130,14 +130,20 @@ public class AuctionQueryService {
         }
         sorts.add(SortOptions.of(s -> s.field(f -> f.field("statusOrder").order(SortOrder.Asc))));
         if (pageable.getSort().isSorted()) {
+            boolean hasIdSort = pageable.getSort().stream()
+                    .anyMatch(o -> "id".equals(o.getProperty()));
             for (Sort.Order order : pageable.getSort()) {
                 String esField = toEsField(order.getProperty());
                 SortOrder dir = order.isAscending() ? SortOrder.Asc : SortOrder.Desc;
                 sorts.add(SortOptions.of(s -> s.field(f -> f.field(esField).order(dir))));
             }
+            if (!hasIdSort) {
+                sorts.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Desc))));
+            }
         } else {
             sorts.add(SortOptions.of(s -> s.field(f -> f.field("startedAt").order(SortOrder.Desc))));
             sorts.add(SortOptions.of(s -> s.field(f -> f.field("createdAt").order(SortOrder.Desc))));
+            sorts.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Desc))));
         }
 
         NativeQuery query = NativeQuery.builder()
@@ -196,6 +202,7 @@ public class AuctionQueryService {
 
     private String toEsField(String property) {
         return switch (property) {
+            case "id"            -> "_id";
             case "endedAt"       -> "endedAt";
             case "startedAt"     -> "startedAt";
             case "highestPrice"  -> "highestPrice";
