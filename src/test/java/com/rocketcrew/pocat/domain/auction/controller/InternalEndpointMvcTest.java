@@ -1,6 +1,7 @@
 package com.rocketcrew.pocat.domain.auction.controller;
 
 import com.rocketcrew.pocat.domain.auction.service.AuctionBuyoutService;
+import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.domain.refund.controller.InternalRefundController;
 import com.rocketcrew.pocat.domain.refund.service.RefundCommandService;
 import com.rocketcrew.pocat.global.config.SecurityConfig;
@@ -49,6 +50,9 @@ class InternalEndpointMvcTest {
 
     @MockBean
     private AuctionBuyoutService auctionBuyoutService;
+
+    @MockBean
+    private AuctionLifecycleService auctionLifecycleService;
 
     @MockBean
     private RefundCommandService refundCommandService;
