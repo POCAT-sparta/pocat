@@ -332,6 +332,14 @@ POST /internal/auctions/{auctionId}/close-expired
   - 즉시구매 주문이면 주문 상태를 `CANCELLED`로 변경합니다.
   - 경매 주문이면 자동결제 실패 이벤트를 발행합니다.
 
+### 트랜잭션 의도
+
+이 API는 테스트 서비스 안에서 결제 실패 로직을 직접 재구현하지 않고, 운영 자동결제 실패 처리 경로인 `FailureService.handleAutoPaymentFailure`를 그대로 호출합니다.
+
+`PaymentCommandService.createBillingKeyPaymentIfAbsent`와 `FailureService.handleAutoPaymentFailure`는 운영 코드에서도 `REQUIRES_NEW` 트랜잭션으로 동작합니다. 따라서 `PaymentTestScenarioService.injectAutoPaymentFailure` 전체를 별도 단일 트랜잭션으로 감싸도 두 하위 작업까지 하나의 원자적 트랜잭션으로 묶이지 않습니다.
+
+테스트 서비스에서 `payment.fail()`, `order.failPayment()`, outbox 저장을 직접 처리하면 원자성은 단순해지지만 실제 운영 실패 처리 코드를 우회하게 됩니다. 이 API의 목적은 테스트 전용 복제 로직 검증이 아니라 실제 자동결제 실패 후속 로직 검증이므로, 운영 메서드의 트랜잭션 경계를 그대로 따릅니다.
+
 ### 기대 이벤트와 알림
 
 경매 낙찰 주문:

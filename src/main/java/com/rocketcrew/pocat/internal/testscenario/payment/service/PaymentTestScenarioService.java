@@ -43,6 +43,7 @@ public class PaymentTestScenarioService {
         Payment beforePayment = billingKeyPayment.payment();
         PaymentStatus beforePaymentStatus = beforePayment.getStatus();
 
+        // Keep the production failure path and its transaction boundaries intact.
         failureService.handleAutoPaymentFailure(beforePayment.getId(), beforeOrder.getId());
 
         Order afterOrder = orderQueryService.findByOrderUid(orderUid);
