@@ -130,21 +130,19 @@ public class AuctionQueryService {
         }
         sorts.add(SortOptions.of(s -> s.field(f -> f.field("statusOrder").order(SortOrder.Asc))));
         if (pageable.getSort().isSorted()) {
-            boolean hasIdSort = pageable.getSort().stream()
-                    .anyMatch(o -> "id".equals(o.getProperty()));
             for (Sort.Order order : pageable.getSort()) {
+                if ("id".equals(order.getProperty())) {
+                    continue; // ES 8에서 _id field sort 미지원 — 마지막 _doc tie-breaker로 대체
+                }
                 String esField = toEsField(order.getProperty());
                 SortOrder dir = order.isAscending() ? SortOrder.Asc : SortOrder.Desc;
                 sorts.add(SortOptions.of(s -> s.field(f -> f.field(esField).order(dir))));
             }
-            if (!hasIdSort) {
-                sorts.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Desc))));
-            }
         } else {
             sorts.add(SortOptions.of(s -> s.field(f -> f.field("startedAt").order(SortOrder.Desc))));
             sorts.add(SortOptions.of(s -> s.field(f -> f.field("createdAt").order(SortOrder.Desc))));
-            sorts.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Desc))));
         }
+        sorts.add(SortOptions.of(s -> s.doc(d -> d.order(SortOrder.Asc))));
 
         NativeQuery query = NativeQuery.builder()
                 .withQuery(bool.build()._toQuery())
@@ -202,7 +200,6 @@ public class AuctionQueryService {
 
     private String toEsField(String property) {
         return switch (property) {
-            case "id"            -> "_id";
             case "endedAt"       -> "endedAt";
             case "startedAt"     -> "startedAt";
             case "highestPrice"  -> "highestPrice";
