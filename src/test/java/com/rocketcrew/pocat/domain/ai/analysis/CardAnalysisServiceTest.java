@@ -3,7 +3,9 @@ package com.rocketcrew.pocat.domain.ai.analysis;
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
 import com.rocketcrew.pocat.domain.ai.analysis.entity.CardAiAnalysis;
 import com.rocketcrew.pocat.domain.ai.analysis.repository.CardAiAnalysisRepository;
+import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisLlmClient;
 import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisService;
+import com.rocketcrew.pocat.domain.ai.analysis.service.CardContextBuilder;
 import com.rocketcrew.pocat.global.metrics.AiUsageMetrics;
 import com.rocketcrew.pocat.domain.ai.prompt.service.AiPromptTemplateService;
 import com.rocketcrew.pocat.domain.card.entity.Card;
@@ -26,13 +28,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,9 +57,6 @@ class CardAnalysisServiceTest {
     private CardAnalysisService cardAnalysisService;
 
     @Mock
-    private ChatClient chatClient;
-
-    @Mock
     private CardRepository cardRepository;
 
     @Mock
@@ -76,15 +75,22 @@ class CardAnalysisServiceTest {
     private ValueOperations<String, String> valueOperations;
 
     @Mock
-    private ChatClient.ChatClientRequestSpec requestSpec;
+    private CardContextBuilder cardContextBuilder;
 
     @Mock
-    private ChatClient.CallResponseSpec callResponseSpec;
+    private CardAnalysisLlmClient cardAnalysisLlmClient;
 
     @Mock
     private ObjectMapper objectMapper;
 
     private Card psa10Card;
+
+    private static CardAnalysisResult analysisResult(String priceTrend, String demandLevel, String summary) {
+        return new CardAnalysisResult(
+                priceTrend, 150000L, demandLevel, summary,
+                List.of(), List.of(), List.of(),
+                "gemini-1.5-flash", 100, 200, LocalDateTime.of(2026, 5, 26, 0, 0));
+    }
 
     @BeforeEach
     void setUp() {
@@ -106,8 +112,7 @@ class CardAnalysisServiceTest {
         ReflectionTestUtils.setField(cardAnalysisService, "self", cardAnalysisService);
 
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
-        given(chatClient.prompt(any(Prompt.class))).willReturn(requestSpec);
-        given(requestSpec.call()).willReturn(callResponseSpec);
+        given(cardContextBuilder.build(any(Card.class))).willReturn("카드 컨텍스트");
         try {
             given(objectMapper.writeValueAsString(any())).willReturn("{}");
         } catch (Exception ignored) {}
@@ -129,11 +134,8 @@ class CardAnalysisServiceTest {
             given(valueOperations.get(anyString())).willReturn(null); // cache miss
             given(promptTemplateService.getPrompt("PSA_10")).willReturn(
                     "카드 분석: {cardContext}\n{format}");
-            String llmJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
-                    + "\"summary\":\"최상급 카드\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
-                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
-                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
-            given(callResponseSpec.content()).willReturn(llmJson);
+            given(cardAnalysisLlmClient.analyze(anyString(), anyString()))
+                    .willReturn(analysisResult("RISING", "HIGH", "최상급 카드"));
 
             // when
             CardAnalysisResult result = cardAnalysisService.analyzeCard(1L);
@@ -142,6 +144,7 @@ class CardAnalysisServiceTest {
             assertThat(result).isNotNull();
             assertThat(result.priceTrend()).isEqualTo("RISING");
             verify(promptTemplateService).getPrompt("PSA_10");
+            verify(cardContextBuilder).build(psa10Card);
         }
 
         @Test
@@ -178,11 +181,8 @@ class CardAnalysisServiceTest {
             given(valueOperations.get(anyString())).willReturn(null);
             given(promptTemplateService.getPrompt("PSA_10")).willReturn(
                     "카드 분석: {cardContext}\n{format}");
-            String llmJson = "{\"priceTrend\":\"STABLE\",\"fairValueEstimate\":100000,\"demandLevel\":\"MEDIUM\","
-                    + "\"summary\":\"안정적\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
-                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":80,\"completionTokens\":120,"
-                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
-            given(callResponseSpec.content()).willReturn(llmJson);
+            given(cardAnalysisLlmClient.analyze(anyString(), anyString()))
+                    .willReturn(analysisResult("STABLE", "MEDIUM", "안정적"));
             given(redisTemplate.delete(anyString())).willReturn(true);
 
             // when
@@ -246,7 +246,7 @@ class CardAnalysisServiceTest {
             CardAnalysisResult result = cardAnalysisService.analyzeCard(1L);
 
             // then: LLM은 호출되지 않아야 한다
-            verify(chatClient, never()).prompt(any(org.springframework.ai.chat.prompt.Prompt.class));
+            verify(cardAnalysisLlmClient, never()).analyze(anyString(), anyString());
             assertThat(result).isNotNull();
             assertThat(result.priceTrend()).isEqualTo("STABLE");
         }
@@ -298,64 +298,11 @@ class CardAnalysisServiceTest {
     }
 
     // ---------------------------------------------------------------
-    // 환각 방어 Layer1 — retry 및 latencyMs 실측
+    // latencyMs 실측
     // ---------------------------------------------------------------
     @Nested
-    @DisplayName("환각 방어 Layer1 / latencyMs")
-    class HallucinationDefenseAndLatency {
-
-        @Test
-        @DisplayName("파싱 실패 1회 후 재시도하여 2차 성공 → LLM 2회 호출")
-        void callLlm_parseFailOnce_retriesAndSucceeds() {
-            // given
-            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
-            given(valueOperations.get(anyString())).willReturn(null);
-            given(promptTemplateService.getPrompt("PSA_10")).willReturn(
-                    "카드 분석: {cardContext}\n{format}");
-
-            // 1차: 파싱 불가 문자열 → BeanOutputConverter.convert() 실패
-            // 2차: 유효한 JSON → 성공
-            String validJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
-                    + "\"summary\":\"재시도 성공\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
-                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
-                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
-            given(callResponseSpec.content())
-                    .willReturn("THIS_IS_NOT_JSON_WILL_FAIL_PARSING")
-                    .willReturn(validJson);
-
-            // when / then
-            // RED: 현재 callLlmForAnalysis에 retry 없음 → 1차 파싱 실패 시 즉시 ServiceException throw
-            // GREEN 조건: 재시도 로직 추가 후 result 반환 + LLM 2회 호출 확인
-            CardAnalysisResult result = cardAnalysisService.analyzeCard(1L);
-
-            assertThat(result).isNotNull();
-            assertThat(result.priceTrend()).isEqualTo("RISING");
-            verify(chatClient, org.mockito.Mockito.times(2))
-                    .prompt(any(org.springframework.ai.chat.prompt.Prompt.class));
-        }
-
-        @Test
-        @DisplayName("파싱 2회 연속 실패 시 ServiceException + LLM 2회 호출 검증")
-        void callLlm_parseFailTwice_throwsAfterRetry() {
-            // given
-            given(cardRepository.findById(1L)).willReturn(Optional.of(psa10Card));
-            given(valueOperations.get(anyString())).willReturn(null);
-            given(promptTemplateService.getPrompt("PSA_10")).willReturn(
-                    "카드 분석: {cardContext}\n{format}");
-
-            // 1차, 2차 모두 파싱 불가
-            given(callResponseSpec.content())
-                    .willReturn("INVALID_JSON_FIRST")
-                    .willReturn("INVALID_JSON_SECOND");
-
-            // when / then
-            // ServiceException 자체는 현재도 throw되지만,
-            // LLM 2회 호출(retry 로직) 검증이 RED: 현재는 1회만 호출됨
-            assertThatThrownBy(() -> cardAnalysisService.analyzeCard(1L))
-                    .isInstanceOf(ServiceException.class);
-            verify(chatClient, org.mockito.Mockito.times(2))
-                    .prompt(any(org.springframework.ai.chat.prompt.Prompt.class));
-        }
+    @DisplayName("latencyMs")
+    class Latency {
 
         @Test
         @DisplayName("analyzeCard 성공 시 recordUsage에 latencyMs >= 0 이 전달되어야 한다")
@@ -365,11 +312,8 @@ class CardAnalysisServiceTest {
             given(valueOperations.get(anyString())).willReturn(null);
             given(promptTemplateService.getPrompt("PSA_10")).willReturn(
                     "카드 분석: {cardContext}\n{format}");
-            String llmJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
-                    + "\"summary\":\"latency 테스트\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
-                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
-                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
-            given(callResponseSpec.content()).willReturn(llmJson);
+            given(cardAnalysisLlmClient.analyze(anyString(), anyString()))
+                    .willReturn(analysisResult("RISING", "HIGH", "latency 테스트"));
             given(cardAiAnalysisRepository.save(any(CardAiAnalysis.class)))
                     .willAnswer(inv -> inv.getArgument(0));
 
@@ -426,11 +370,8 @@ class CardAnalysisServiceTest {
             given(valueOperations.get(anyString())).willReturn(null);
             given(promptTemplateService.getPrompt("PSA_10")).willReturn(
                     "카드 분석: {cardContext}\n{format}");
-            String llmJson = "{\"priceTrend\":\"RISING\",\"fairValueEstimate\":150000,\"demandLevel\":\"HIGH\","
-                    + "\"summary\":\"최상급\",\"highlights\":[],\"riskFactors\":[],\"keywords\":[],"
-                    + "\"analysisModel\":\"gemini-1.5-flash\",\"promptTokens\":100,\"completionTokens\":200,"
-                    + "\"analyzedAt\":\"2026-05-26T00:00:00\"}";
-            given(callResponseSpec.content()).willReturn(llmJson);
+            given(cardAnalysisLlmClient.analyze(anyString(), anyString()))
+                    .willReturn(analysisResult("RISING", "HIGH", "최상급"));
             given(cardAiAnalysisRepository.save(any(CardAiAnalysis.class)))
                     .willAnswer(inv -> inv.getArgument(0));
 
