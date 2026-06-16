@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.auction.enums.AuctionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -75,4 +76,17 @@ public interface AuctionRepository extends JpaRepository<Auction, Long>, Auction
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
     long countByStatus(AuctionStatus status);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE Auction a
+               SET a.endedAt = :endedAt
+             WHERE a.id = :auctionId
+               AND a.status = :status
+            """)
+    int updateEndedAtByIdAndStatus(
+            @Param("auctionId") Long auctionId,
+            @Param("status") AuctionStatus status,
+            @Param("endedAt") LocalDateTime endedAt
+    );
 }

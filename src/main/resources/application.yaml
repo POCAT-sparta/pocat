@@ -41,6 +41,8 @@ spring:
 pocat:
   internal:
     token: ${POCAT_INTERNAL_TOKEN}
+  test-scenarios:
+    enabled: ${POCAT_TEST_SCENARIOS_ENABLED:false}
   monitoring:
     auction-anomaly-threshold: 3.0
 
