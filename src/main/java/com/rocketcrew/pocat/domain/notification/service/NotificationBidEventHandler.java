@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.notification.service;
 
+import com.rocketcrew.pocat.domain.bid.event.BidCreatedEvent;
 import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,23 @@ public class NotificationBidEventHandler {
         } catch (Exception e) {
             log.error("Outbid 알림 실패: auctionId={}, previousBidderId={}",
                     event.getAuctionId(), event.getPreviousBidderId(), e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handle(BidCreatedEvent event) {
+        try {
+            notificationCommandService.send(
+                    event.getBidderId(),
+                    NotificationType.BID_CREATED,
+                    "입찰되었습니다.",
+                    Map.of("auctionId", event.getAuctionId(),
+                           "bidPrice", event.getBidPrice())
+            );
+        } catch (Exception e) {
+            log.error("Bid 생성 알림 실패: auctionId={}, bidderId={}",
+                    event.getAuctionId(), event.getBidderId(), e);
         }
     }
 }

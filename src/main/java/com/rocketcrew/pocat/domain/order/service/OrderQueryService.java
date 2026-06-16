@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.repository.dto.AvgPriceAggregate;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -74,15 +75,9 @@ public class OrderQueryService {
                 .orElseThrow(() -> new OrderException(ErrorCode.CARD_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime since = now.minusMonths(6);
-        Object[] result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.PAYMENT_COMPLETED, since);
-        // 거래 이력이 없으면 result 자체가 null이거나 집계값이 null로 오므로 방어 처리
-        if (result == null || result.length < 2) {
-            return new CardAveragePriceResponse(cardId, null, 0L, since, now);
-        }
-        Double avg = (Double) result[0];
-        long count = result[1] != null ? (Long) result[1] : 0L;
-        Long averagePrice = avg != null ? Math.round(avg) : null;
-        return new CardAveragePriceResponse(cardId, averagePrice, count, since, now);
+        AvgPriceAggregate result = orderRepository.findAvgAndCountByCardId(cardId, OrderStatus.PAYMENT_COMPLETED, since);
+        Long averagePrice = result.averagePrice() != null ? Math.round(result.averagePrice()) : null;
+        return new CardAveragePriceResponse(cardId, averagePrice, result.transactionCount(), since, now);
     }
 
     public Order findByOrderid(Long orderId) {

@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.notification.service;
 
+import com.rocketcrew.pocat.domain.bid.event.BidCreatedEvent;
 import com.rocketcrew.pocat.domain.bid.event.BidOutbidEvent;
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,31 @@ class NotificationBidEventHandlerTest {
     @DisplayName("실패: 알림 전송 중 예외가 발생해도 전파되지 않는다")
     void handle_notificationFailureDoesNotPropagate() {
         BidOutbidEvent event = new BidOutbidEvent(1L, 5L, 20000L);
+        willThrow(new RuntimeException("kafka down"))
+                .given(notificationCommandService).send(any(), any(), any(), any());
+
+        handler.handle(event);
+    }
+
+    @Test
+    @DisplayName("성공: 입찰 생성 이벤트 수신 시 입찰자에게 BID_CREATED 알림을 보낸다")
+    void handleBidCreated_success() {
+        BidCreatedEvent event = new BidCreatedEvent(1L, 10L, 20L, 15000L);
+
+        handler.handle(event);
+
+        verify(notificationCommandService).send(
+                20L,
+                NotificationType.BID_CREATED,
+                "입찰되었습니다.",
+                Map.of("auctionId", 1L, "bidPrice", 15000L)
+        );
+    }
+
+    @Test
+    @DisplayName("실패: 입찰 생성 알림 전송 중 예외가 발생해도 전파되지 않는다")
+    void handleBidCreated_notificationFailureDoesNotPropagate() {
+        BidCreatedEvent event = new BidCreatedEvent(1L, 10L, 20L, 15000L);
         willThrow(new RuntimeException("kafka down"))
                 .given(notificationCommandService).send(any(), any(), any(), any());
 
