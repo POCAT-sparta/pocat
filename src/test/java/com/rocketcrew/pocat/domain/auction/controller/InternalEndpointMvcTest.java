@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Import;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -81,6 +82,7 @@ class InternalEndpointMvcTest {
         }
 
         @Test
+        @Tag("integration")
         @DisplayName("T-01: X-Internal-Token 헤더 없을 때 401 반환")
         void shouldReturn401WhenTokenMissing_auction() throws Exception {
             mockMvc.perform(post("/internal/auctions/{id}/recover-buyout", AUCTION_ID)
@@ -90,6 +92,7 @@ class InternalEndpointMvcTest {
         }
 
         @Test
+        @Tag("integration")
         @DisplayName("T-02: X-Internal-Token이 유효하지 않을 때 401 반환")
         void shouldReturn401WhenTokenInvalid_auction() throws Exception {
             mockMvc.perform(post("/internal/auctions/{id}/recover-buyout", AUCTION_ID)
@@ -157,6 +160,7 @@ class InternalEndpointMvcTest {
         }
 
         @Test
+        @Tag("integration")
         @DisplayName("T-07: X-Internal-Token 헤더 없을 때 401 반환")
         void shouldReturn401WhenTokenMissing_refund() throws Exception {
             mockMvc.perform(post("/internal/refunds/{id}/retry", REFUND_ID)
@@ -165,6 +169,7 @@ class InternalEndpointMvcTest {
         }
 
         @Test
+        @Tag("integration")
         @DisplayName("T-08: X-Internal-Token이 유효하지 않을 때 401 반환")
         void shouldReturn401WhenTokenInvalid_refund() throws Exception {
             mockMvc.perform(post("/internal/refunds/{id}/retry", REFUND_ID)

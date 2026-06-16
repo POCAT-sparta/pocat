@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.global.config.SecurityConfig;
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -53,6 +54,7 @@ class InternalCardSyncControllerTest {
     private StringRedisTemplate stringRedisTemplate;
 
     @Nested
+    @Tag("integration")
     @DisplayName("인증 검증")
     class Authentication {
 

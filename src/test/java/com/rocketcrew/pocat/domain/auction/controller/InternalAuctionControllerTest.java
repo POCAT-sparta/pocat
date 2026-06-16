@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.global.exception.domain.AuctionException;
 import com.rocketcrew.pocat.global.security.JwtUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -67,6 +68,7 @@ class InternalAuctionControllerTest {
         private static final String URL = "/internal/auctions/{id}/activate";
 
         @Test
+        @Tag("integration")
         @DisplayName("X-Internal-Token 헤더가 없으면 401 반환")
         void missingToken_returns401() throws Exception {
             mockMvc.perform(post(URL, AUCTION_ID))
@@ -74,6 +76,7 @@ class InternalAuctionControllerTest {
         }
 
         @Test
+        @Tag("integration")
         @DisplayName("X-Internal-Token 값이 올바르지 않으면 401 반환")
         void invalidToken_returns401() throws Exception {
             mockMvc.perform(post(URL, AUCTION_ID)
@@ -158,6 +161,7 @@ class InternalAuctionControllerTest {
         private static final String URL = "/internal/auctions/{id}/close-expired";
 
         @Test
+        @Tag("integration")
         @DisplayName("X-Internal-Token 헤더가 없으면 401 반환")
         void missingToken_returns401() throws Exception {
             mockMvc.perform(post(URL, AUCTION_ID))
@@ -165,6 +169,7 @@ class InternalAuctionControllerTest {
         }
 
         @Test
+        @Tag("integration")
         @DisplayName("X-Internal-Token 값이 올바르지 않으면 401 반환")
         void invalidToken_returns401() throws Exception {
             mockMvc.perform(post(URL, AUCTION_ID)
