@@ -8,6 +8,7 @@ import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
 import com.rocketcrew.pocat.domain.order.repository.OrderRepository;
+import com.rocketcrew.pocat.domain.order.repository.dto.AvgPriceAggregate;
 import com.rocketcrew.pocat.domain.user.entity.User;
 import com.rocketcrew.pocat.domain.user.repository.UserRepository;
 import com.rocketcrew.pocat.global.exception.common.ErrorCode;
@@ -189,7 +190,7 @@ class OrderQueryServiceTest {
             Card card = TestFixtures.aCard(); // id=3L
             given(cardRepository.findById(3L)).willReturn(Optional.of(card));
             given(orderRepository.findAvgAndCountByCardId(eq(3L), eq(OrderStatus.PAYMENT_COMPLETED), any()))
-                    .willReturn(new Object[]{12500.0, 5L});
+                    .willReturn(new AvgPriceAggregate(12500.0, 5L));
 
             CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(3L);
 
@@ -205,7 +206,7 @@ class OrderQueryServiceTest {
             Card card = TestFixtures.aCard();
             given(cardRepository.findById(3L)).willReturn(Optional.of(card));
             given(orderRepository.findAvgAndCountByCardId(eq(3L), eq(OrderStatus.PAYMENT_COMPLETED), any()))
-                    .willReturn(new Object[]{null, 0L});
+                    .willReturn(new AvgPriceAggregate(null, 0L));
 
             CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(3L);
 

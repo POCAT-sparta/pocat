@@ -2,6 +2,7 @@ package com.rocketcrew.pocat.domain.order.repository;
 
 import com.rocketcrew.pocat.domain.order.entity.Order;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
+import com.rocketcrew.pocat.domain.order.repository.dto.AvgPriceAggregate;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,9 +27,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
 
     Optional<Order> findByOrderUid(String orderUid);
 
-    @Query("SELECT AVG(o.finalPrice), COUNT(o) FROM Order o " +
-           "WHERE o.cardId = :cardId AND o.status = :status AND o.createdAt >= :since")
-    Object[] findAvgAndCountByCardId(
+    @Query("SELECT new com.rocketcrew.pocat.domain.order.repository.dto.AvgPriceAggregate(AVG(o.finalPrice), COUNT(o)) " +
+           "FROM Order o WHERE o.cardId = :cardId AND o.status = :status AND o.createdAt >= :since")
+    AvgPriceAggregate findAvgAndCountByCardId(
             @Param("cardId") Long cardId,
             @Param("status") OrderStatus status,
             @Param("since") LocalDateTime since

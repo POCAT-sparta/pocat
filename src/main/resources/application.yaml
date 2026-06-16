@@ -24,6 +24,9 @@ spring:
           model: gemini-2.5-flash
           temperature: 0.3
           max-tokens: 1024
+          # gemini-2.5-flash thinking 비활성화 (추론 토큰 0).
+          # thinking이 max-tokens 예산을 소진해 JSON 응답이 잘리는 문제 방지.
+          reasoning-effort: none
       embedding:
         options:
           model: gemini-embedding-001

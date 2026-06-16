@@ -18,10 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.chat.prompt.PromptTemplate;
-import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -29,22 +25,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 카드 AI 분석 오케스트레이션.
+ * 캐시 조회/저장, 컨텍스트 구성({@link CardContextBuilder}) 및 LLM 호출({@link CardAnalysisLlmClient})
+ * 위임, 결과 영속화·메트릭 기록, 장애 시 fallback을 담당한다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CardAnalysisService {
 
-    private final ChatClient chatClient;
     private final CardRepository cardRepository;
     private final AiPromptTemplateService promptTemplateService;
     private final AiUsageMetrics aiUsageMetrics;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final CardAiAnalysisRepository cardAiAnalysisRepository;
+    private final CardContextBuilder cardContextBuilder;
+    private final CardAnalysisLlmClient cardAnalysisLlmClient;
 
     @Lazy
     @Autowired
@@ -88,12 +89,12 @@ public class CardAnalysisService {
         // 등급별 프롬프트 획득
         String prompt = promptTemplateService.getPrompt(card.getGrade().toString());
 
-        // 분석 대상 카드 정보 구성
-        String cardContext = buildCardContext(card);
+        // 분석 대상 카드 정보 구성 (내부 정보 + TCGdex 실측 데이터 + 환율)
+        String cardContext = cardContextBuilder.build(card);
 
         // LLM 호출
         long startMs = System.currentTimeMillis();
-        CardAnalysisResult result = callLlmForAnalysis(cardContext, prompt);
+        CardAnalysisResult result = cardAnalysisLlmClient.analyze(cardContext, prompt);
         long latencyMs = System.currentTimeMillis() - startMs;
 
         // 캐시 저장 (TTL 24시간)
@@ -195,62 +196,6 @@ public class CardAnalysisService {
                 0,
                 0,
                 LocalDateTime.now()
-        );
-    }
-
-    /**
-     * LLM 호출 및 응답 파싱.
-     * 파싱 실패 시 1회 재시도 (환각 방어 Layer1).
-     */
-    private CardAnalysisResult callLlmForAnalysis(String cardContext, String promptTemplate) {
-        try {
-            BeanOutputConverter<CardAnalysisResult> outputConverter =
-                    new BeanOutputConverter<>(CardAnalysisResult.class);
-
-            PromptTemplate template = new PromptTemplate(promptTemplate);
-            Prompt prompt = template.create(Map.of(
-                    "cardContext", cardContext,
-                    "format", outputConverter.getFormat()
-            ));
-
-            String response = chatClient.prompt(prompt).call().content();
-
-            log.debug("LLM response received for card analysis");
-            try {
-                return outputConverter.convert(response);
-            } catch (Exception firstEx) {
-                log.warn("BeanOutputConverter parsing failed on first attempt, retrying: {}", firstEx.getMessage());
-                // 1회 재시도
-                String retryResponse = chatClient.prompt(prompt).call().content();
-                try {
-                    return outputConverter.convert(retryResponse);
-                } catch (Exception retryEx) {
-                    log.error("BeanOutputConverter parsing failed after retry: {}", retryEx.getMessage(), retryEx);
-                    aiUsageMetrics.recordError("PARSE_FAILED_AFTER_RETRY", FALLBACK_MODEL);
-                    throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, retryEx);
-                }
-            }
-        } catch (ServiceException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("LLM call failed: {}", e.getMessage(), e);
-            aiUsageMetrics.recordError("LLM_CALL_FAILED", FALLBACK_MODEL);
-            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, e);
-        }
-    }
-
-    /**
-     * 카드 정보를 분석 대상 컨텍스트로 구성.
-     */
-    private String buildCardContext(Card card) {
-        return String.format(
-                "카드 이름: %s\n등급: %s\n시리즈: %s\n세트: %s\nURL: %s\n레어도: %s",
-                card.getName(),
-                card.getGrade().toString(),
-                card.getSeries() != null ? card.getSeries().getName() : "N/A",
-                card.getPokemonSet() != null ? card.getPokemonSet().getName() : "N/A",
-                card.getImageUrl() != null ? card.getImageUrl() : "N/A",
-                card.getRarity()
         );
     }
 
