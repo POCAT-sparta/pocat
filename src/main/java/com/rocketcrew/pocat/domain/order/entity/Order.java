@@ -65,7 +65,8 @@ public class Order extends BaseEntity {
     private OrderType orderType;
 
     public void startDirectPayment(LocalDateTime deadline) {
-        if (this.status != OrderStatus.PAYMENT_PENDING) {
+        if (this.status != OrderStatus.PAYMENT_PENDING
+                && this.status != OrderStatus.AUTO_PAYMENT_FAILED) {
             throw new OrderException(ErrorCode.ORDER_CANNOT_FAIL_PAYMENT);
         }
         this.status = OrderStatus.AUTO_PAYMENT_FAILED;

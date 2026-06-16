@@ -135,6 +135,43 @@ class OrderCommandServiceTest {
         }
     }
 
+    // ── schedulePaymentDeadline ────────────────────────────────────────
+
+    @Nested
+    @DisplayName("schedulePaymentDeadline()")
+    class SchedulePaymentDeadline {
+
+        @Test
+        @DisplayName("성공: AUTO_PAYMENT_FAILED 상태에서 paymentDeadline=null이면 데드라인을 설정하고 만료 키를 등록한다")
+        void success_autoPaymentFailed_noDeadline_setsDeadlineAndSchedulesExpiry() {
+            // Arrange: AUTO_PAYMENT_FAILED 상태이나 paymentDeadline이 아직 없는 주문
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
+            ReflectionTestUtils.setField(order, "paymentDeadline", null);
+            given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
+
+            // Act
+            orderCommandService.schedulePaymentDeadline("ORD-001");
+
+            // Assert: 데드라인이 설정되고 Redis 만료 키가 등록돼야 한다
+            assertThat(order.getPaymentDeadline()).isNotNull();
+            verify(setExpireService).scheduleExpiry(eq(1L), any(java.time.Duration.class));
+        }
+
+        @Test
+        @DisplayName("성공(멱등): paymentDeadline이 이미 있으면 scheduleExpiry를 호출하지 않는다")
+        void success_idempotent_deadlineAlreadySet_skipsSchedule() {
+            // Arrange: AUTO_PAYMENT_FAILED 상태이고 paymentDeadline이 이미 설정된 주문
+            Order order = TestFixtures.aPaymentFailedOrder(); // paymentDeadline = now+30min
+            given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(order));
+
+            // Act
+            orderCommandService.schedulePaymentDeadline("ORD-001");
+
+            // Assert: 이미 데드라인이 있으므로 scheduleExpiry 호출 없음
+            verify(setExpireService, never()).scheduleExpiry(any(), any());
+        }
+    }
+
     // ── escalateToNextRankWithDirectPayment ────────────────────────────
 
     @Nested

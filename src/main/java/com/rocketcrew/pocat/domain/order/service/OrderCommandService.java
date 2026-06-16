@@ -86,8 +86,8 @@ public class OrderCommandService {
     public void schedulePaymentDeadline(String orderUid) {
         Order order = orderRepository.findByOrderUid(orderUid)
                 .orElseThrow(() -> new OrderException(ErrorCode.ORDER_NOT_FOUND));
-        // 중복 수신 시 이미 AUTO_PAYMENT_FAILED면 스킵 (멱등 처리)
-        if (order.getStatus() == OrderStatus.AUTO_PAYMENT_FAILED) {
+        // 중복 수신 시 이미 데드라인이 설정됐으면 스킵 (멱등 처리)
+        if (order.getPaymentDeadline() != null) {
             log.info("[PAYMENT_ESCALATION] 이미 처리된 주문 orderUid={}", orderUid);
             return;
         }
