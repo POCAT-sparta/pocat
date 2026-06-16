@@ -136,6 +136,9 @@ public enum ErrorCode {
     // Rate Limit
     RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
 
+    // Test scenario
+    TEST_SCENARIO_DISABLED(HttpStatus.FORBIDDEN, "테스트 시나리오 주입 API가 비활성화되어 있습니다."),
+
     // Webhook
     WEBHOOK_IP_FORBIDDEN(HttpStatus.FORBIDDEN, "허용되지 않은 IP에서의 Webhook 요청입니다."),
 

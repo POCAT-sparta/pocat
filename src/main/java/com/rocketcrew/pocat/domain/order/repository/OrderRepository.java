@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,4 +40,17 @@ public interface OrderRepository extends JpaRepository<Order, Long>, OrderReposi
 
     @Query("SELECT COALESCE(SUM(o.finalPrice), 0) FROM Order o WHERE o.createdAt BETWEEN :start AND :end")
     Long sumFinalPriceByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE Order o
+               SET o.paymentDeadline = :paymentDeadline
+             WHERE o.orderUid = :orderUid
+               AND o.status = :status
+            """)
+    int updatePaymentDeadlineByOrderUidAndStatus(
+            @Param("orderUid") String orderUid,
+            @Param("status") OrderStatus status,
+            @Param("paymentDeadline") LocalDateTime paymentDeadline
+    );
 }
