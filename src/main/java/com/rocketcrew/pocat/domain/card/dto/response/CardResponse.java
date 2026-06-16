@@ -58,7 +58,7 @@ public record CardResponse(
                 card.getStatus(),
                 card.getCreatedAt(),
                 card.getUpdatedAt(),
-                pokemon != null ? pokemon.getName() : card.getName(),
+                pokemon != null && pokemon.getName() != null ? pokemon.getName() : card.getName(),
                 pokemon != null ? pokemon.getNameKo() : null,
                 activeAuction,
                 0
