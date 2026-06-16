@@ -36,6 +36,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -122,14 +123,28 @@ public class AuctionQueryService {
             bool.filter(TermQuery.of(t -> t.field("category").value(category.name()))._toQuery());
         }
 
-        // 정렬: 키워드 있으면 관련도 우선, 그 다음 상태순 → 시작일 역순 → 생성일 역순
+        // 정렬: 키워드 있으면 관련도 우선, 상태순 → 사용자 선택 정렬 → 기본(최신순)
         List<SortOptions> sorts = new ArrayList<>();
         if (StringUtils.hasText(keyword)) {
             sorts.add(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
         }
         sorts.add(SortOptions.of(s -> s.field(f -> f.field("statusOrder").order(SortOrder.Asc))));
-        sorts.add(SortOptions.of(s -> s.field(f -> f.field("startedAt").order(SortOrder.Desc))));
-        sorts.add(SortOptions.of(s -> s.field(f -> f.field("createdAt").order(SortOrder.Desc))));
+        if (pageable.getSort().isSorted()) {
+            boolean hasIdSort = pageable.getSort().stream()
+                    .anyMatch(o -> "id".equals(o.getProperty()));
+            for (Sort.Order order : pageable.getSort()) {
+                String esField = toEsField(order.getProperty());
+                SortOrder dir = order.isAscending() ? SortOrder.Asc : SortOrder.Desc;
+                sorts.add(SortOptions.of(s -> s.field(f -> f.field(esField).order(dir))));
+            }
+            if (!hasIdSort) {
+                sorts.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Desc))));
+            }
+        } else {
+            sorts.add(SortOptions.of(s -> s.field(f -> f.field("startedAt").order(SortOrder.Desc))));
+            sorts.add(SortOptions.of(s -> s.field(f -> f.field("createdAt").order(SortOrder.Desc))));
+            sorts.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Desc))));
+        }
 
         NativeQuery query = NativeQuery.builder()
                 .withQuery(bool.build()._toQuery())
@@ -183,6 +198,18 @@ public class AuctionQueryService {
     private boolean canViewAuctionDetail(Auction auction, Long userId) {
         return PUBLIC_DETAIL_STATUSES.contains(auction.getStatus())
                 || auction.getSellerId().equals(userId);
+    }
+
+    private String toEsField(String property) {
+        return switch (property) {
+            case "id"            -> "_id";
+            case "endedAt"       -> "endedAt";
+            case "startedAt"     -> "startedAt";
+            case "highestPrice"  -> "highestPrice";
+            case "startingPrice" -> "startingPrice";
+            case "createdAt"     -> "createdAt";
+            default -> throw new AuctionException(ErrorCode.INVALID_INPUT);
+        };
     }
 
     private void validatePublicListStatus(AuctionStatus status) {
