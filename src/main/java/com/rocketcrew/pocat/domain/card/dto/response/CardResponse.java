@@ -5,6 +5,7 @@ import com.rocketcrew.pocat.domain.card.entity.enums.CardCategory;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardGrade;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardSource;
 import com.rocketcrew.pocat.domain.card.entity.enums.CardStatus;
+import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
 import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.set.entity.PokemonSet;
 
@@ -27,6 +28,8 @@ public record CardResponse(
         CardStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        String cardDetailName,    // 상세 화면 표시용 이름. 포켓몬 연결 시 pokemon.name, 없으면 card.name. 항상 값 있음
+        String cardDetailNameKo,  // 상세 화면 표시용 한글 이름. 포켓몬 연결 + nameKo 있을 때만 값, 그 외엔 null
         ActiveAuctionSummary activeAuction,  // 단건 조회용
         int activeAuctionCount               // 목록 조회용
 ) {
@@ -37,6 +40,7 @@ public record CardResponse(
     public static CardResponse from(Card card, ActiveAuctionSummary activeAuction) {
         Series series = card.getSeries();
         PokemonSet pokemonSet = card.getPokemonSet();
+        Pokemon pokemon = card.getPokemon();
         return new CardResponse(
                 card.getId(),
                 card.getUserId(),
@@ -54,6 +58,8 @@ public record CardResponse(
                 card.getStatus(),
                 card.getCreatedAt(),
                 card.getUpdatedAt(),
+                pokemon != null ? pokemon.getName() : card.getName(),
+                pokemon != null ? pokemon.getNameKo() : null,
                 activeAuction,
                 0
         );
@@ -63,14 +69,14 @@ public record CardResponse(
     public CardResponse withActiveAuction(ActiveAuctionSummary activeAuction) {
         return new CardResponse(id, userId, tcgdexId, name, series, setId, setName,
                 cardNumber, rarity, category, grade, imageUrl, source, status,
-                createdAt, updatedAt, activeAuction, 0);
+                createdAt, updatedAt, cardDetailName, cardDetailNameKo, activeAuction, 0);
     }
 
     /** 목록 조회: 진행 중인 경매 건수 붙이기 */
     public CardResponse withActiveAuctionCount(int count) {
         return new CardResponse(id, userId, tcgdexId, name, series, setId, setName,
                 cardNumber, rarity, category, grade, imageUrl, source, status,
-                createdAt, updatedAt, null, count);
+                createdAt, updatedAt, cardDetailName, cardDetailNameKo, null, count);
     }
 
 }
