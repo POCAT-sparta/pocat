@@ -6,6 +6,7 @@ import com.rocketcrew.pocat.global.security.JwtUtil;
 import com.rocketcrew.pocat.internal.testscenario.auction.dto.AuctionExpirationInjectionResponse;
 import com.rocketcrew.pocat.internal.testscenario.auction.service.AuctionTestScenarioService;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -45,6 +46,7 @@ class AuctionTestScenarioControllerTest {
     private StringRedisTemplate stringRedisTemplate;
 
     @Test
+    @Tag("integration")
     @DisplayName("/internal/test/** 경로도 X-Internal-Token 없으면 401")
     void internalTestPath_withoutToken_returns401() throws Exception {
         mockMvc.perform(post("/internal/test/auctions/{auctionId}/expire-now", AUCTION_ID))
@@ -52,6 +54,7 @@ class AuctionTestScenarioControllerTest {
     }
 
     @Test
+    @Tag("integration")
     @DisplayName("/internal/test/** 경로도 X-Internal-Token 값이 틀리면 401")
     void internalTestPath_withInvalidToken_returns401() throws Exception {
         mockMvc.perform(post("/internal/test/auctions/{auctionId}/expire-now", AUCTION_ID)
