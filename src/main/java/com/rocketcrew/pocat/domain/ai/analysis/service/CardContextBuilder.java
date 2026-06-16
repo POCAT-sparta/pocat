@@ -122,7 +122,7 @@ public class CardContextBuilder {
         if (types != null) appendPart(spec, "타입 " + types);
         if (stage != null) appendPart(spec, "단계 " + stage);
         if (evolveFrom != null) appendPart(spec, "진화 전 " + evolveFrom);
-        if (spec.length() > 0) sb.append("\n").append(spec);
+        if (!spec.isEmpty()) sb.append("\n").append(spec);
 
         // 기술 / 약점 / 후퇴 비용
         String attacks = formatAttacks(root.path("attacks"));
@@ -171,7 +171,7 @@ public class CardContextBuilder {
             appendPart(parts, num(cm, "avg30", "30일평균 "));
             appendPart(parts, num(cm, "trend", "trend "));
             appendPart(parts, num(cm, "low", "low "));
-            if (parts.length() > 0) sb.append(line).append(parts);
+            if (!parts.isEmpty()) sb.append(line).append(parts);
         }
 
         JsonNode tp = pricing.path("tcgplayer");
@@ -183,7 +183,7 @@ public class CardContextBuilder {
             if (reverse != null) appendLineRaw(sb, reverse);
         }
 
-        return sb.length() > 0 ? sb.toString() : null;
+        return !sb.isEmpty() ? sb.toString() : null;
     }
 
     private String formatTcgplayerVariant(JsonNode variant, String unit, String label) {
@@ -192,7 +192,7 @@ public class CardContextBuilder {
         appendPart(parts, num(variant, "marketPrice", "market "));
         appendPart(parts, num(variant, "lowPrice", "low "));
         appendPart(parts, num(variant, "highPrice", "high "));
-        if (parts.length() == 0) return null;
+        if (parts.isEmpty()) return null;
         StringBuilder line = new StringBuilder("시세(tcgplayer-").append(label);
         if (!unit.isBlank()) line.append(",").append(unit);
         line.append("): ").append(parts);
@@ -206,12 +206,12 @@ public class CardContextBuilder {
         for (JsonNode atk : attacks) {
             String name = text(atk, "name");
             if (name == null) continue;
-            if (sb.length() > 0) sb.append(", ");
+            if (!sb.isEmpty()) sb.append(", ");
             sb.append(name);
             String damage = text(atk, "damage");
             if (damage != null) sb.append("(").append(damage).append(")");
         }
-        return sb.length() > 0 ? sb.toString() : null;
+        return !sb.isEmpty() ? sb.toString() : null;
     }
 
     /** weaknesses 배열을 "타입 배수" 형태로 포맷. */
@@ -221,12 +221,12 @@ public class CardContextBuilder {
         for (JsonNode w : weaknesses) {
             String type = text(w, "type");
             if (type == null) continue;
-            if (sb.length() > 0) sb.append(", ");
+            if (!sb.isEmpty()) sb.append(", ");
             sb.append(type);
             String value = text(w, "value");
             if (value != null) sb.append(" ").append(value);
         }
-        return sb.length() > 0 ? sb.toString() : null;
+        return !sb.isEmpty() ? sb.toString() : null;
     }
 
     /** 노드에서 텍스트 값을 읽되, 없거나 null이면 null 반환. */
@@ -249,13 +249,13 @@ public class CardContextBuilder {
     }
 
     private void appendLineRaw(StringBuilder sb, String line) {
-        if (sb.length() > 0) sb.append("\n");
+        if (!sb.isEmpty()) sb.append("\n");
         sb.append(line);
     }
 
     private void appendPart(StringBuilder sb, String part) {
         if (part == null) return;
-        if (sb.length() > 0) sb.append(", ");
+        if (!sb.isEmpty()) sb.append(", ");
         sb.append(part);
     }
 
@@ -263,9 +263,9 @@ public class CardContextBuilder {
         if (!array.isArray() || array.isEmpty()) return null;
         StringBuilder sb = new StringBuilder();
         for (JsonNode n : array) {
-            if (sb.length() > 0) sb.append(", ");
+            if (!sb.isEmpty()) sb.append(", ");
             sb.append(n.asText());
         }
-        return sb.length() > 0 ? sb.toString() : null;
+        return !sb.isEmpty() ? sb.toString() : null;
     }
 }
