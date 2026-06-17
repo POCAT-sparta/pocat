@@ -145,10 +145,11 @@ public class PaymentApplicationService {
      */
     public PaymentResponse confirmPayment(Long buyerId, String paymentUid) {
         Timer.Sample sample = paymentMetrics.startTimer();
+        Payment payment = paymentQueryService.findPaymentByUid(paymentUid);
+        Order order = orderQueryService.findByOrderid(payment.getOrderId());
+        // PortOne에서 실제 결제(PAID)가 확정된 시점부터 true. 이 이후에 실패하면 고객 돈이 잡힌 상태이므로 취소(환불)가 필요하다.
+        boolean paid = false;
         try {
-            Payment payment = paymentQueryService.findPaymentByUid(paymentUid);
-            Order order = orderQueryService.findByOrderid(payment.getOrderId());
-
             if (!order.getBuyerId().equals(buyerId)) {
                 throw new PaymentException(ErrorCode.PAYMENT_BUYER_MISMATCH);
             }
@@ -170,6 +171,9 @@ public class PaymentApplicationService {
                 throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
             }
 
+            // 여기부터는 고객 결제가 실제로 이뤄진 상태
+            paid = true;
+
             if (portOneClientPayment.amount() == null || !payment.getAmount().equals(portOneClientPayment.amount())) {
                 paymentMetrics.incrementAmountMismatch();
                 paymentMetrics.incrementDirectFail();
@@ -180,6 +184,18 @@ public class PaymentApplicationService {
             }
             paymentMetrics.incrementDirectSuccess();
             return paymentTxService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
+        } catch (PaymentException paymentException) {
+            if (paid
+                    && !ErrorCode.PAYMENT_STATUS_NOT_PAID.equals(paymentException.getErrorCode())
+                    && !ErrorCode.PAYMENT_AMOUNT_MISMATCH.equals(paymentException.getErrorCode())) {
+                attemptCancelPayment(payment.getPaymentUid(), order.getId(), payment.getAmount());
+            }
+            throw paymentException;
+        } catch (RuntimeException dbError) {
+            if (paid) {
+                attemptCancelPayment(payment.getPaymentUid(), order.getId(), payment.getAmount());
+            }
+            throw dbError;
         } finally {
             paymentMetrics.recordDirectPaymentDuration(sample);
         }
