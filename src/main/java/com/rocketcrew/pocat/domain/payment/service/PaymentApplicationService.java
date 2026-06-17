@@ -34,13 +34,13 @@ import java.time.LocalDateTime;
 public class PaymentApplicationService {
 
     private final PortOneClientService portOneClientService;
-    private final FailureService failureService;
     private final UserQueryService userQueryService;
 
     private final PaymentCommandService paymentCommandService;
     private final PaymentQueryService paymentQueryService;
     private final OrderQueryService orderQueryService;
     private final PaymentMetrics paymentMetrics;
+    private final PaymentTxService paymentTxService;
 
     /**
      * 6.1 결제 요청 — PG 직접결제 레코드 생성
@@ -119,7 +119,7 @@ public class PaymentApplicationService {
             // 이후 성공이 아니면 실패처리
             if (!PortOneStatus.PAID.equals(response.status())) {
                 paymentMetrics.incrementAutoFail();
-                failureService.handleAutoPaymentFailure(payment.getId(), order.getId());
+                paymentTxService.handleAutoPaymentFailure(payment.getId(), order.getId());
                 throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
             }
 
@@ -128,12 +128,11 @@ public class PaymentApplicationService {
                 paymentMetrics.incrementAmountMismatch();
                 Long cancelAmount = response.amount() != null ? response.amount() : payment.getAmount();
                 attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
-                failureService.autoPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+                paymentTxService.autoPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             paymentMetrics.incrementAutoSuccess();
-            Payment completedPayment = paymentCommandService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
-            return PaymentResponse.from(completedPayment);
+            return paymentTxService.completePayment(payment.getId(), order.getId(), response.paymentMethod(), response.paidAt());
         } finally {
             paymentMetrics.recordAutoPaymentDuration(sample);
         }
@@ -158,10 +157,6 @@ public class PaymentApplicationService {
 
             PortOnePaymentResponse portOneClientPayment = portOneClientService.getPayment(paymentUid);
 
-            payment = paymentQueryService.findPaymentByUidWithLock(paymentUid);
-
-            if (payment.isFinalized()) return PaymentResponse.from(payment);
-
             if (PortOneStatus.NETWORK_ERROR.equals(portOneClientPayment.status())
                     || PortOneStatus.READY.equals(portOneClientPayment.status())
                     || PortOneStatus.PAY_PENDING.equals(portOneClientPayment.status())
@@ -171,7 +166,7 @@ public class PaymentApplicationService {
 
             if (!PortOneStatus.PAID.equals(portOneClientPayment.status())) {
                 paymentMetrics.incrementDirectFail();
-                failureService.markFailed(paymentUid, order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
+                paymentTxService.markFailed(paymentUid, order.getId(), PaymentErrorReason.WEBHOOK_FAILED);
                 throw new PaymentException(ErrorCode.PAYMENT_STATUS_NOT_PAID);
             }
 
@@ -180,12 +175,11 @@ public class PaymentApplicationService {
                 paymentMetrics.incrementDirectFail();
                 Long cancelAmount = portOneClientPayment.amount() != null ? portOneClientPayment.amount() : payment.getAmount();
                 attemptCancelPayment(payment.getPaymentUid(), order.getId(), cancelAmount);
-                failureService.directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+                paymentTxService.directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
                 throw new PaymentException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             paymentMetrics.incrementDirectSuccess();
-            paymentCommandService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
-            return PaymentResponse.from(payment);
+            return paymentTxService.completePayment(payment.getId(), order.getId(), portOneClientPayment.paymentMethod(), portOneClientPayment.paidAt());
         } finally {
             paymentMetrics.recordDirectPaymentDuration(sample);
         }
@@ -193,11 +187,11 @@ public class PaymentApplicationService {
 
     // resaon 관리는 일단 string 추후 많아지면 enum등으로 관리 필요
     private void attemptCancelPayment(String paymentUid, Long orderId,Long amount) {
-        paymentCommandService.handleCancel(paymentUid, orderId);
+        paymentTxService.handleCancel(paymentUid, orderId);
         PortOneCancelResponse response = portOneClientService.cancelPayment(paymentUid, amount ,"결제금액 불일치");
 
         if(PortOneCancelStatus.HTTP_ERROR.equals(response.status()) || PortOneCancelStatus.NETWORK_ERROR.equals(response.status())) {
-            paymentCommandService.cancelFailPayment(paymentUid);
+            paymentTxService.cancelFailPayment(paymentUid);
         }
     }
 
