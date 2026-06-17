@@ -1,6 +1,8 @@
 package com.rocketcrew.pocat.domain.order.service;
 
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
+import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.entity.Card;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
@@ -229,6 +231,43 @@ class OrderCommandServiceTest {
             assertThat(event.getNextOrderUid()).isNull();
             assertThat(event.getSellerId()).isEqualTo(order.getSellerId());
             assertThat(event.getOrderUid()).isEqualTo("ORD-001");
+        }
+
+        @Test
+        @DisplayName("성공(ESCALATED): 신규 2등 주문 생성 시 2등 입찰자의 입찰가로 finalPrice가 설정된다")
+        void escalated_newNextOrder_usesBidderPrice() {
+            // 1등 주문: finalPrice=10000L
+            Order firstOrder = TestFixtures.aPaymentFailedOrder();
+            ReflectionTestUtils.setField(firstOrder, "bidderRank", 1);
+            given(orderRepository.findByOrderUid("ORD-001")).willReturn(Optional.of(firstOrder));
+
+            // 2등 입찰자: userId=99L, 최고 입찰가=8000L (1등보다 낮음)
+            given(auctionBidRepository.findLostBidderIdsByAuctionIdOrderedByMaxBidPrice(10L))
+                    .willReturn(List.of(99L));
+            given(orderRepository.findByAuctionIdAndBidderRank(10L, 2)).willReturn(Optional.empty());
+
+            AuctionBid secondBid = AuctionBid.builder()
+                    .auctionId(10L)
+                    .userId(99L)
+                    .bidPrice(8000L)
+                    .status(BidStatus.LOST)
+                    .build();
+            given(auctionBidRepository.findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+                    10L, 99L, BidStatus.LOST)).willReturn(Optional.of(secondBid));
+
+            ArgumentCaptor<Order> savedOrderCaptor = ArgumentCaptor.forClass(Order.class);
+            Order savedNextOrder = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            ReflectionTestUtils.setField(savedNextOrder, "orderUid", "ORD-002");
+            given(orderRepository.save(savedOrderCaptor.capture())).willReturn(savedNextOrder);
+            given(orderRepository.findByOrderUid("ORD-002")).willReturn(Optional.of(savedNextOrder));
+
+            EscalationResult result = orderCommandService.escalateToNextRankWithDirectPayment("ORD-001");
+
+            assertThat(result.status()).isEqualTo(EscalationResult.Status.ESCALATED);
+            // 저장된 주문의 finalPrice가 2등 입찰가(8000L)여야 함 — 1등 낙찰가(10000L)가 아님
+            Order capturedOrder = savedOrderCaptor.getAllValues().get(0);
+            assertThat(capturedOrder.getFinalPrice()).isEqualTo(8000L);
+            assertThat(capturedOrder.getBuyerId()).isEqualTo(99L);
         }
 
         @Test
