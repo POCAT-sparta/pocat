@@ -28,6 +28,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisSubscriber;
+import com.rocketcrew.pocat.domain.order.service.ExpiryEventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -99,6 +101,8 @@ class CardEsAliasReindexServiceIntegrationTest {
     @MockBean private AuctionEsIndexService auctionEsIndexService;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
     @MockBean private RedisMessageListenerContainer redisMessageListenerContainer;
+    @MockBean private AuctionExpirationRedisSubscriber auctionExpirationRedisSubscriber;
+    @MockBean private ExpiryEventListener expiryEventListener;
     @MockBean private AuctionEventHandler auctionEventHandler;
     @MockBean private BidEventHandler bidEventHandler;
     @MockBean private OrderEventHandler orderEventHandler;
