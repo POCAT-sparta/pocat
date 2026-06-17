@@ -26,7 +26,7 @@ public class AuctionExpirationRedisService {
             return;
         }
 
-        long ttlSeconds = Duration.between(LocalDateTime.now(ZoneOffset.UTC), endedAt).getSeconds();
+        long ttlSeconds = Duration.between(LocalDateTime.now(ZoneOffset.UTC), endedAt).getSeconds() + 2;
         if (ttlSeconds <= 0) {
             log.warn("Auction expiration key skipped. endedAt already passed. auctionId={}, endedAt={}",
                     auctionId, endedAt);
