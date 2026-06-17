@@ -15,7 +15,6 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import java.time.Duration;
 import java.util.List;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.util.StringUtils;
@@ -73,14 +72,6 @@ public class RedisConfig {
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new StringRedisSerializer());
         return template;
-    }
-
-    @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(
-            RedisConnectionFactory connectionFactory) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
-        return container;
     }
 
 }
