@@ -23,6 +23,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -67,10 +68,12 @@ class FailureServiceTest {
     class MarkFailed {
 
         @Test
-        @DisplayName("성공: AUTO_PAYMENT_FAILED → DIRECT_PAYMENT_FAILED + 직접결제 실패 이벤트 발행")
+        @DisplayName("성공: 기한 초과 + PAYMENT_PENDING → order.failPayment() 호출")
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
-            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
+            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
+            // 결제 기한을 과거로 설정해 failPayment() 분기 진입
+            ReflectionTestUtils.setField(order, "paymentDeadline", LocalDateTime.now().minusHours(1));
 
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
@@ -78,11 +81,32 @@ class FailureServiceTest {
 
             failureService.markFailed("PAY-001", 1L, PaymentErrorReason.PAYMENT_EXPIRED);
 
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.DIRECT_PAYMENT_FAILED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.AUTO_PAYMENT_FAILED);
+            verify(outboxEventWriter).write(anyString(), anyString(), any());
+            verify(eventPublisher).publishEvent(any(Object.class));
         }
 
         @Test
-        @DisplayName("성공: PAYMENT_PENDING 상태는 order 상태 변경 없이 payment만 FAILED")
+        @DisplayName("성공: DIRECT_PAYMENT_FAILED → DIRECT_PAYMENT_FAILED (멱등) + 직접결제 실패 이벤트 발행")
+        void success_directPaymentFailed() {
+            Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
+            Order order = TestFixtures.anOrder(OrderStatus.DIRECT_PAYMENT_FAILED);
+            // 결제 기한을 과거로 설정해 failPayment() 분기 진입
+            ReflectionTestUtils.setField(order, "paymentDeadline", LocalDateTime.now().minusHours(1));
+
+            given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
+            given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
+            doNothing().when(outboxEventWriter).write(anyString(), anyString(), any());
+
+            failureService.markFailed("PAY-001", 1L, PaymentErrorReason.USER_CANCELLED);
+
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.DIRECT_PAYMENT_FAILED);
+            verify(outboxEventWriter).write(anyString(), anyString(), any());
+            verify(eventPublisher).publishEvent(any(Object.class));
+        }
+
+        @Test
+        @DisplayName("성공: 기한 미초과 → order 상태 변경 없이 payment만 FAILED")
         void success_deadlineNotExpired() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
             Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
