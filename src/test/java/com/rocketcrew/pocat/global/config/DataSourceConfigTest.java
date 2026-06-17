@@ -12,7 +12,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.test.context.ActiveProfiles;
+import com.rocketcrew.pocat.domain.auction.redis.AuctionExpirationRedisSubscriber;
 import com.rocketcrew.pocat.domain.auction.service.AuctionEsIndexService;
+import com.rocketcrew.pocat.domain.order.service.ExpiryEventListener;
 import com.rocketcrew.pocat.support.MockElasticsearchTestConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -53,6 +55,12 @@ class DataSourceConfigTest {
 
     @MockBean
     private AuctionEsIndexService auctionEsIndexService;
+
+    @MockBean
+    private AuctionExpirationRedisSubscriber auctionExpirationRedisSubscriber;
+
+    @MockBean
+    private ExpiryEventListener expiryEventListener;
 
     @Autowired
     @org.springframework.beans.factory.annotation.Qualifier("dataSource")

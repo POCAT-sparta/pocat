@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class AuctionLifecycleService {
 
     private static final String AUCTION_LOCK_KEY_PREFIX = "auction:lock:";
-    private static final long AUCTION_LOCK_WAIT_SECONDS = 0L;
+    private static final long AUCTION_LOCK_WAIT_SECONDS = 3L;
     private static final int AUCTION_DURATION_DAYS = 3;
     private final AuctionRepository auctionRepository;
     private final AuctionBidRepository auctionBidRepository;
