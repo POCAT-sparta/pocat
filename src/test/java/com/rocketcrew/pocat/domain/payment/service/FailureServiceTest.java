@@ -68,12 +68,10 @@ class FailureServiceTest {
     class MarkFailed {
 
         @Test
-        @DisplayName("성공: 기한 초과 + PAYMENT_PENDING → order.failPayment() 호출")
+        @DisplayName("성공: AUTO_PAYMENT_FAILED → DIRECT_PAYMENT_FAILED + 직접결제 실패 이벤트 발행")
         void success() {
             Payment payment = TestFixtures.aPayment(PaymentStatus.PENDING);
-            Order order = TestFixtures.anOrder(OrderStatus.PAYMENT_PENDING);
-            // 결제 기한을 과거로 설정해 failPayment() 분기 진입
-            ReflectionTestUtils.setField(order, "paymentDeadline", LocalDateTime.now().minusHours(1));
+            Order order = TestFixtures.anOrder(OrderStatus.AUTO_PAYMENT_FAILED);
 
             given(paymentQueryService.findPaymentByUidWithLock("PAY-001")).willReturn(payment);
             given(orderQueryService.findByOrderIdWithLock(1L)).willReturn(order);
@@ -81,7 +79,7 @@ class FailureServiceTest {
 
             failureService.markFailed("PAY-001", 1L, PaymentErrorReason.PAYMENT_EXPIRED);
 
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.AUTO_PAYMENT_FAILED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.DIRECT_PAYMENT_FAILED);
             verify(outboxEventWriter).write(anyString(), anyString(), any());
             verify(eventPublisher).publishEvent(any(Object.class));
         }
