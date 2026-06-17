@@ -19,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 import static com.rocketcrew.pocat.domain.payment.client.out.kafka.producer.PaymentEventProducer.PAYMENT_TOPIC;
 
 @Slf4j
@@ -78,9 +76,9 @@ public class FailureService {
         Order order = findOrderForPaymentWithLock(payment, orderId);
         payment.fail();
 
-        // 결제 기한이 지난 PENDING 주문은 직접결제 실패 이벤트를 발행해 후속 승격 처리를 진행한다.
-        if (order.getPaymentDeadline().isBefore(LocalDateTime.now())
-                && order.getStatus() == OrderStatus.PAYMENT_PENDING) {
+        // 직접결제 창에서 실패한 주문은 직접결제 실패 이벤트를 발행해 후속 승격 처리를 진행한다.
+        if (order.getStatus() == OrderStatus.AUTO_PAYMENT_FAILED
+                || order.getStatus() == OrderStatus.DIRECT_PAYMENT_FAILED) {
             order.failPayment();
             log.info("[PAYMENT_ESCALATION] 주문 결제 실패 처리 orderId={} reason={}", orderId, reason);
             directPaymentFailEvent(order.getOrderUid(), order.getBuyerId(), order.getSellerId());
