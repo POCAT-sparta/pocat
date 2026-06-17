@@ -1,6 +1,8 @@
 package com.rocketcrew.pocat.domain.order.service;
 
 import com.rocketcrew.pocat.domain.auction.repository.AuctionRepository;
+import com.rocketcrew.pocat.domain.bid.entity.AuctionBid;
+import com.rocketcrew.pocat.domain.bid.enums.BidStatus;
 import com.rocketcrew.pocat.domain.bid.repository.AuctionBidRepository;
 import com.rocketcrew.pocat.domain.card.repository.CardRepository;
 import com.rocketcrew.pocat.domain.order.entity.Order;
@@ -142,6 +144,12 @@ public class OrderCommandService {
 
         Long nextBidderId = lostBidderIds.get(nextBidderIndex);
 
+        Long nextBidderPrice = auctionBidRepository
+                .findFirstByAuctionIdAndUserIdAndStatusOrderByBidPriceDescCreatedAtDesc(
+                        order.getAuctionId(), nextBidderId, BidStatus.LOST)
+                .map(AuctionBid::getBidPrice)
+                .orElse(order.getFinalPrice());
+
         // 멱등성: 해당 순위 주문이 이미 존재하면 스킵
         Optional<Order> existingOrder = orderRepository.findByAuctionIdAndBidderRank(order.getAuctionId(), nextRank);
         if (existingOrder.isPresent()) {
@@ -154,7 +162,7 @@ public class OrderCommandService {
 
         Order nextOrder = orderRepository.save(
                 Order.fromAuction(order.getAuctionId(), order.getCardId(), order.getSellerId(),
-                        nextBidderId, order.getFinalPrice(), nextRank));
+                        nextBidderId, nextBidderPrice, nextRank));
         schedulePaymentDeadline(nextOrder.getOrderUid());
         log.info("[PAYMENT_ESCALATION] {}순위 1시간 직접결제 기간 부여 auctionId={}, buyerId={}",
                 nextRank, order.getAuctionId(), nextBidderId);
