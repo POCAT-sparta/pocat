@@ -118,6 +118,9 @@ public class OrderCommandService {
             return EscalationResult.skipped();
         }
 
+        if (order.getStatus() == OrderStatus.AUTO_PAYMENT_FAILED) {
+            order.failPayment();
+        }
         setExpireService.cancelExpiry(order.getId());
 
         int nextRank = order.getBidderRank() + 1;

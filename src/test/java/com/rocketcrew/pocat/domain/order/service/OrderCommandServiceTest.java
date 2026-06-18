@@ -198,6 +198,7 @@ class OrderCommandServiceTest {
             assertThat(result.status()).isEqualTo(EscalationResult.Status.ESCALATED);
             assertThat(result.nextBidderId()).isEqualTo(99L);
             assertThat(result.nextOrderUid()).isEqualTo("ORD-NEXT");
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.DIRECT_PAYMENT_FAILED);
 
             ArgumentCaptor<OrderEscalatedEvent> captor = ArgumentCaptor.forClass(OrderEscalatedEvent.class);
             verify(eventPublisher).publishEvent(captor.capture());
