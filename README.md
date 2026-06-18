@@ -162,7 +162,7 @@ POCAT은 포켓몬 TCG 카드 거래의 새로운 기준을 제시하는 **실�
 ### 5-2. 실시간 경매
 
 - WebSocket(STOMP) 기반 실시간 입찰
-- **경매 상태**: `PENDING → ACTIVE → ENDED / NO_BIDDER`
+- **경매 상태**: `PENDING → INSPECTING → APPROVED/REJECTED → ACTIVE → ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING`
 - Redis TTL 만료 이벤트로 경매 자동 종료
 - Kafka 이벤트로 낙찰·취소·후처리 비동기 처리
 - **즉시구매(Buyout)** 지원: Redisson 분산 락으로 동시성 제어
@@ -175,6 +175,7 @@ POCAT은 포켓몬 TCG 카드 거래의 새로운 기준을 제시하는 **실�
 - 결제 성공/실패 → Kafka 이벤트 → Outbox 패턴으로 안정적 전달
 - Webhook 멱등성 처리 (`webhook_events` 테이블)
 - 자동 결제 실패 시 원본 key 및 shadow key 생성 → 직접 결제 기회 제공(1시간)
+- 직접 결제도 최종 실패 시 **2등 낙찰자에게 결제 기회 에스컬레이션** (2등 입찰가 기준 주문 생성)
 - 동시성 보호: `PaymentConcurrencyIntegrationTest`
 
 ### 5-4. 정산 & 환불
@@ -212,7 +213,7 @@ POCAT은 포켓몬 TCG 카드 거래의 새로운 기준을 제시하는 **실�
 
 ### 5-8. 알림
 
-- 경매·결제·주문·환불·정산 등 22종 알림 타입
+- 경매·결제·주문·환불·정산 등 24종 알림 타입
 - Kafka Consumer → 알림 저장 → 읽음 처리 API
 
 ### 5-9. 보안 
@@ -221,7 +222,7 @@ POCAT은 포켓몬 TCG 카드 거래의 새로운 기준을 제시하는 **실�
 |------|------|
 | 인증 | JWT (Access + Refresh Token) |
 | 내부 API | POCAT_INTERNAL_TOKEN 헤더 기반 인가 |
-| Rate Limiting | Redis 기반 슬라이딩 윈도우, 기능별 세분화 |
+| Rate Limiting | Redis 기반 슬라이딩 윈도우 — 입찰 30회, 채팅 20회, AI 채팅·결제·주문 10회, 환불·게시글 5회, AI 임베딩 80회 (분당) |
 | 금지어 필터 | 제목·내용 금지어 검사 |
 | IP 처리 | X-Forwarded-For 파싱, 거래게시판 IP 암호화 |
 | 관리자 권한 | `ADMIN` Role 기반 API 분리 |
@@ -230,9 +231,10 @@ POCAT은 포켓몬 TCG 카드 거래의 새로운 기준을 제시하는 **실�
 
 ## 6. ERD
 
-> 아래 영역에 ERD 이미지를 삽입하세요.
 
-![ERD](./erd.png)
+![POCAT 260617.png](images/POCAT%20260617.png)
+
+---
 
 ### 주요 테이블 관계
 
@@ -284,100 +286,99 @@ http://localhost:8080/swagger-ui/index.html
 
 ### 주요 API 그룹
 
-#### 인증 (`/api/auth`)
+#### 인증 (`auth`)
+
+| Method | Path                  | 설명 |
+|--------|-----------------------|------|
+| POST | `/api/v1/auth/signup` | 회원가입 |
+| POST | `/api/v1/auth/login`     | 로그인 (JWT 발급) |
+| POST | `/api/v1/auth/reissue`   | Access Token 재발급 |
+| DELETE | `/api/v1/auth/logout`    | 로그아웃 |
+
+#### 카드 (`cards`)
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/api/auth/signup` | 회원가입 |
-| POST | `/api/auth/login` | 로그인 (JWT 발급) |
-| POST | `/api/auth/reissue` | Access Token 재발급 |
-| DELETE | `/api/auth/logout` | 로그아웃 |
+| GET | `/api/v1/cards` | 카드 목록 검색 (ElasticSearch) |
+| POST | `/api/v1/cards` | 카드 등록 |
+| GET | `/api/v1/cards/{cardId}` | 카드 상세 조회 |
+| PATCH | `/api/v1/admin/cards/{cardId}/approve` | 카드 검수 승인 (관리자) |
+| PATCH | `/api/v1/admin/cards/{cardId}/reject` | 카드 검수 거절 (관리자) |
 
-#### 카드 (`/api/cards`)
-
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/api/cards` | 카드 목록 검색 (ElasticSearch) |
-| POST | `/api/cards` | 카드 등록 |
-| GET | `/api/cards/{cardId}` | 카드 상세 조회 |
-| PATCH | `/api/admin/cards/{cardId}/approve` | 카드 검수 승인 (관리자) |
-| PATCH | `/api/admin/cards/{cardId}/reject` | 카드 검수 거절 (관리자) |
-
-#### 경매 (`/api/auctions`)
+#### 경매 (`auctions`)
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/api/auctions` | 경매 등록 |
-| GET | `/api/auctions` | 경매 목록 조회 |
-| GET | `/api/auctions/{auctionId}` | 경매 상세 조회 |
-| POST | `/api/auctions/{auctionId}/bids` | 입찰 |
-| POST | `/api/auctions/{auctionId}/buyout` | 즉시구매 |
-| DELETE | `/api/auctions/{auctionId}` | 경매 취소 |
+| POST   | `/api/v1/auctions` | 경매 등록 |
+| GET    | `/api/v1/auctions` | 경매 목록 조회 |
+| GET    | `/api/v1/auctions/{auctionId}` | 경매 상세 조회 |
+| POST   | `/api/v1/auctions/{auctionId}/bids` | 입찰 |
+| POST   | `/api/v1/auctions/{auctionId}/buyout` | 즉시구매 |
+| PATCH  | `/api/v1/auctions/{auctionId}` | 경매 취소 |
 
-#### 결제 (`/api/payments`)
+#### 결제 (`payments`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| POST | `/api/payments/confirm` | 결제 확인 (직접결제) |
-| POST | `/api/payments/webhook` | 포트원 Webhook 수신 |
-| GET | `/api/payments/{paymentId}` | 결제 내역 조회 |
+| Method | Path                    | 설명             |
+|--------|-------------------------|----------------|
+| POST | `/api/v1/payments`      | 결제 요청          |
+| POST | `/api/v1/payments/webhook` | 포트원 Webhook 수신 |
+| GET | `/api/v1/payments/{paymentUid}` | 결제 내역 조회       |
 
-#### 주문 (`/api/orders`)
+#### 주문 (`orders`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/api/orders` | 주문 목록 조회 |
-| GET | `/api/orders/{orderId}` | 주문 상세 |
-| PATCH | `/api/orders/{orderId}/cancel` | 주문 취소 |
+| Method | Path                        | 설명         |
+|--------|-----------------------------|------------|
+| GET | `/api/v1/orders/me`         | 내 주문 목록 조회 |
+| GET | `/api/v1/orders/{orderUid}` | 주문 상세      |
 
-#### 정산 (`/api/settlements`)
+#### 정산 (`settlements`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/api/settlements` | 정산 목록 |
-| GET | `/api/settlements/{settlementId}` | 정산 상세 |
+| Method | Path                                  | 설명      |
+|--------|---------------------------------------|---------|
+| GET | `/api/v1/settlements/me`              | 내 정산 목록 |
+| GET | `/api/v1/settlements/{settlementUid}` | 정산 상세   |
 
-#### 환불 (`/api/refunds`)
+#### 환불 (`refunds`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| POST | `/api/refunds` | 환불 요청 |
-| GET | `/api/refunds/{refundId}` | 환불 상태 조회 |
-| PATCH | `/api/admin/refunds/{refundId}/approve` | 환불 승인 (관리자) |
-| PATCH | `/api/admin/refunds/{refundId}/reject` | 환불 거절 (관리자) |
+| Method | Path | 설명          |
+|--------|------|-------------|
+| POST | `/api/v1/refunds` | 환불 요청       |
+| GET | `/api/v1/refunds/{refundId}` | 환불 상세 조회    |
+| PATCH | `/api/v1/admin/refunds/{refundId}/approve` | 환불 승인 (관리자) |
+| PATCH | `/api/v1/admin/refunds/{refundId}/reject` | 환불 거절 (관리자) |
 
-#### AI (`/api/ai`)
+#### AI (`ai`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| POST | `/api/ai/chat` | AI 어시스턴트 채팅 |
-| GET | `/api/ai/stream` | SSE 스트리밍 응답 |
+| Method | Path                              | 설명 |
+|--------|-----------------------------------|------|
+| POST | `/api/ai/assistant/chat`          | AI 어시스턴트 채팅 |
+| GET | `/api/ai/assistant/stream`        | SSE 스트리밍 응답 |
 | POST | `/api/ai/cards/{cardId}/analysis` | 카드 AI 가치 분석 |
-| POST | `/api/admin/ai/reindex` | 카드 벡터 재색인 (관리자) |
+| POST | `/api/v1/admin/ai/reindex`        | 카드 벡터 재색인 (관리자) |
 
 #### 커뮤니티
 
-| Method | Path | 설명 |
-|--------|------|------|
-| GET/POST | `/api/free-posts` | 자유게시판 목록/작성 |
-| GET/POST | `/api/trade-posts` | 거래게시판 목록/작성 |
-| POST | `/api/free-posts/{postId}/comments` | 댓글 작성 |
-| POST | `/api/auctions/{auctionId}/likes` | 좋아요 토글 |
+| Method | Path                                | 설명 |
+|--------|-------------------------------------|------|
+| GET/POST | `/api/v1/posts/free`                | 자유게시판 목록/작성 |
+| GET/POST | `/api/v1/posts/trade`               | 거래게시판 목록/작성 |
+| POST | `/api/v1/comments` | 댓글 작성 |
+| POST | `/api/v1/likes`   | 좋아요 토글 |
 
-#### 알림 (`/api/notifications`)
+#### 알림 (`notifications`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/api/notifications` | 알림 목록 |
-| PATCH | `/api/notifications/{id}/read` | 읽음 처리 |
+| Method | Path                                          | 설명 |
+|--------|-----------------------------------------------|------|
+| GET | `/api/v1/notifications`                       | 알림 목록 |
+| PATCH | `/api/v1/notifications/{notificationId}/read` | 읽음 처리 |
 
-#### 포켓몬 도감 (`/api/pokemons`, `/api/series`, `/api/pokemon-sets`)
+#### 포켓몬 도감 (`pokemons`, `series`, `pokemon-sets`)
 
-| Method | Path | 설명 |
-|--------|------|------|
-| GET | `/api/pokemons` | 포켓몬 목록 |
-| GET | `/api/series` | 시리즈 목록 |
-| GET | `/api/pokemon-sets` | 세트 목록 |
+| Method | Path                 | 설명 |
+|--------|----------------------|------|
+| GET | `/api/v1/admin/pokemons` | 포켓몬 목록 |
+| GET | `/api/v1/admin/series` | 시리즈 목록 |
+| GET | `/api/v1/admin/sets` | 세트 목록 |
 
 ---
 
@@ -385,19 +386,19 @@ http://localhost:8080/swagger-ui/index.html
 
 `pocat-batch` 서버에서 Spring Batch + ShedLock으로 운영합니다.
 
-| Job | 설명 | 주기 |
-|-----|------|------|
-| `AuctionActivationJob` | 예약 경매를 시작 시각에 ACTIVE 전환 | 1분마다 |
-| `AuctionExpirationJob` | 종료 시각 도래한 경매 ENDED 처리 | 1분마다 |
-| `AuctionRankingJob` | 경매 랭킹 집계 (좋아요·입찰 가중치 합산) | 5분마다 |
-| `OutboxRelayJob` | Outbox 미처리 이벤트 Kafka 재발행 | 10초마다 |
-| `OrderCompletionJob` | 배송 완료 후 일정 기간 지난 주문 완료 처리 | 1시간마다 |
-| `RefundRetryJob` | 환불 실패(Retryable) 건 재시도 | 5분마다 |
-| `BuyoutRecoveryJob` | 즉시구매 결제 미완료 주문 복구 | 10분마다 |
-| `CardSyncJob` | TCGDex API 카드 메타데이터 동기화 | 매일 새벽 |
-| `FreePostRankingJob` | 자유게시판 7일 인기글 랭킹 집계 | 1시간마다 |
-| `ViewCountFlushJob` | Redis 조회수 버퍼 → DB 반영 | 5분마다 |
-| `AiSessionCleanupJob` | 만료된 AI 채팅 세션 정리 | 매일 새벽 |
+| Job | 설명                      | 주기               |
+|-----|-------------------------|------------------|
+| `AuctionActivationJob` | 예약 경매를 시작 시각에 ACTIVE 전환 | 매 19:00          |
+| `AuctionExpirationJob` | 종료 시각 도래한 경매 ENDED 처리   | 19:05 ~ 19:30 매분 |
+| `AuctionRankingJob` | 경매 랭킹 집계 (좋아요·입찰 가중치 합산) | 1분마다             |
+| `OutboxRelayJob` | Outbox 미처리 이벤트 Kafka 재발행 | 5초마다             |
+| `OrderCompletionJob` | 배송 완료 후 일정 기간 지난 주문 완료 처리 | 매 02:00          |
+| `RefundRetryJob` | 환불 실패(Retryable) 건 재시도  | 1분마다             |
+| `BuyoutRecoveryJob` | 즉시구매 결제 미완료 주문 복구       | 1분마다             |
+| `CardSyncJob` | TCGDex API 카드 메타데이터 동기화 | 매주 일요일 00:00     |
+| `FreePostRankingJob` | 자유게시판 7일 인기글 랭킹 집계      | 1분마다             |
+| `ViewCountFlushJob` | Redis 조회수 버퍼 → DB 반영    | 1분마다             |
+| `AiSessionCleanupJob` | 만료된 AI 채팅 세션 정리         | 5분마다             |
 
 ---
 
@@ -424,7 +425,7 @@ http://localhost:8080/swagger-ui/index.html
 
 ### 이상 거래 감지
 
-- 경매 평균 낙찰가의 `3.0σ` 초과 시 구조화 로그 발행
+- 최종 낙찰가 및 즉시구매가가 해당 카드 시장 평균가(6개월 기준)의 3배를 초과하면 AUCTION_ANOMALY 경고 로그를 발행합니다
 - n8n이 해당 로그 감지 → Slack/Email 알림
 
 ---
@@ -486,6 +487,7 @@ push to dev 브랜치
 
 - **대상 브랜치**: `dev`
 - **이미지 플랫폼**: `linux/arm64` (AWS Graviton)
+- **이미지 경량화**: `amazoncorretto:17-alpine` 베이스 + `.dockerignore`로 JAR만 포함 + GHA 레이어 캐시 (`cache-from/to: type=gha,mode=max`)
 - **레지스트리**: AWS ECR (`pocat-backend`)
 - **클러스터**: `pocat-app-cluster`
 
@@ -497,7 +499,7 @@ push to dev 브랜치
 
 - Docker & Docker Compose
 - Java 17
-- `.env` 파일 설정 (DB 패스워드, API 키 등)
+- `.env` 파일 설정 (`.env.example` 참고)
 
 ### 인프라 실행
 
