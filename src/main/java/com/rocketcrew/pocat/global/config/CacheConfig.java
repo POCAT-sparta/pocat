@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.global.cache.CacheNames;
 import com.rocketcrew.pocat.global.cache.RedisCacheErrorHandler;
 import org.springframework.cache.annotation.CachingConfigurer;
@@ -21,11 +22,14 @@ import java.util.Map;
 public class CacheConfig implements CachingConfigurer {
 
     @Bean
-    public RedisCacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
+    public RedisCacheManager redisCacheManager(
+            RedisConnectionFactory connectionFactory,
+            ObjectMapper objectMapper
+    ) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .serializeValuesWith(
                         RedisSerializationContext.SerializationPair.fromSerializer(
-                                new GenericJackson2JsonRedisSerializer()
+                                redisCacheSerializer(objectMapper)
                         )
                 )
                 .disableCachingNullValues();
@@ -48,5 +52,12 @@ public class CacheConfig implements CachingConfigurer {
     @Override
     public CacheErrorHandler errorHandler() {
         return new RedisCacheErrorHandler();
+    }
+
+    private GenericJackson2JsonRedisSerializer redisCacheSerializer(ObjectMapper objectMapper) {
+        return GenericJackson2JsonRedisSerializer.builder()
+                .objectMapper(objectMapper.copy())
+                .defaultTyping(true)
+                .build();
     }
 }
