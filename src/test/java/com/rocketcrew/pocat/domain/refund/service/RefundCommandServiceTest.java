@@ -22,6 +22,7 @@ import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.RefundException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
@@ -70,6 +71,9 @@ class RefundCommandServiceTest {
 
     @Mock
     private PortOneClientService portOneClientService;
+
+    @Mock
+    private OutboxEventWriter outboxEventWriter;
 
     private final Long buyerId = 3L;
     private final Long orderId = 100L;
