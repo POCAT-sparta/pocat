@@ -197,6 +197,11 @@ public class RefundCommandService {
         order.refund();
         settlement.refund();
 
+        RefundApprovedEvent approvedEvent = new RefundApprovedEvent(
+                refund.getId(), order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+        outboxEventWriter.write("refund", order.getOrderUid(), approvedEvent);
+        eventPublisher.publishEvent(approvedEvent);
+
         log.info("환불 재시도 성공. refundId={}, paymentUid={}", refundId, payment.getPaymentUid());
     }
 
