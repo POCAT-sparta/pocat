@@ -22,6 +22,7 @@ import com.rocketcrew.pocat.global.exception.domain.OrderException;
 import com.rocketcrew.pocat.global.exception.domain.PaymentException;
 import com.rocketcrew.pocat.global.exception.domain.RefundException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
@@ -39,11 +40,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.rocketcrew.pocat.domain.refund.event.RefundApprovedEvent;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,6 +75,9 @@ class RefundCommandServiceTest {
 
     @Mock
     private PortOneClientService portOneClientService;
+
+    @Mock
+    private OutboxEventWriter outboxEventWriter;
 
     private final Long buyerId = 3L;
     private final Long orderId = 100L;
@@ -337,6 +345,90 @@ class RefundCommandServiceTest {
             assertThatThrownBy(() -> refundCommandService.rejectRefund(refundId, request))
                     .isInstanceOf(RefundException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.REFUND_NOT_REQUESTED);
+        }
+    }
+
+    @Nested
+    @DisplayName("retryRefund()")
+    class RetryRefund {
+
+        @Test
+        @DisplayName("성공: FAILED_RETRYABLE 상태에서 재시도 성공 — 상태 업데이트 및 이벤트 발행")
+        void success() {
+            // given
+            Refund refund = buildRefund(RefundStatus.FAILED_RETRYABLE);
+            Payment payment = buildPayment();
+            Order order = buildOrder(OrderStatus.PAYMENT_COMPLETED);
+            Settlement settlement = buildSettlement();
+
+            given(refundRepository.findByIdWithLock(refundId)).willReturn(Optional.of(refund));
+            given(paymentRepository.findByIdWithLock(paymentId)).willReturn(Optional.of(payment));
+            given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
+            given(settlementRepository.findByOrderIdWithLock(orderId)).willReturn(Optional.of(settlement));
+
+            // when
+            refundCommandService.retryRefund(refundId);
+
+            // then
+            assertThat(refund.getStatus()).isEqualTo(RefundStatus.COMPLETED);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+            assertThat(settlement.getStatus()).isEqualTo(SettlementStatus.REFUNDED);
+            verify(outboxEventWriter).write(eq("refund"), eq("ORD-001"), any(RefundApprovedEvent.class));
+            verify(eventPublisher).publishEvent(any(RefundApprovedEvent.class));
+        }
+
+        @Test
+        @DisplayName("조기 종료: 재시도 대상 상태 아님 (COMPLETED)")
+        void earlyReturn_invalidStatus() {
+            // given
+            Refund refund = buildRefund(RefundStatus.COMPLETED);
+            given(refundRepository.findByIdWithLock(refundId)).willReturn(Optional.of(refund));
+
+            // when
+            refundCommandService.retryRefund(refundId);
+
+            // then
+            verify(portOneClientService, never()).cancelPayment(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("조기 종료: 재시도 시간 미도래")
+        void earlyReturn_notRetryDue() {
+            // given
+            Refund refund = buildRefund(RefundStatus.FAILED_RETRYABLE);
+            ReflectionTestUtils.setField(refund, "nextRetryAt", LocalDateTime.now().plusHours(1));
+            given(refundRepository.findByIdWithLock(refundId)).willReturn(Optional.of(refund));
+
+            // when
+            refundCommandService.retryRefund(refundId);
+
+            // then
+            verify(portOneClientService, never()).cancelPayment(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("실패: PortOne 취소 실패 — FAILED_RETRYABLE 유지")
+        void fail_portOneCancelFailed() {
+            // given
+            Refund refund = buildRefund(RefundStatus.FAILED_RETRYABLE);
+            Payment payment = buildPayment();
+            Order order = buildOrder(OrderStatus.PAYMENT_COMPLETED);
+            Settlement settlement = buildSettlement();
+
+            given(refundRepository.findByIdWithLock(refundId)).willReturn(Optional.of(refund));
+            given(paymentRepository.findByIdWithLock(paymentId)).willReturn(Optional.of(payment));
+            given(orderRepository.findByIdWithLock(orderId)).willReturn(Optional.of(order));
+            given(settlementRepository.findByOrderIdWithLock(orderId)).willReturn(Optional.of(settlement));
+            willThrow(new RuntimeException("PortOne 오류")).given(portOneClientService)
+                    .cancelPayment(any(), any(), any());
+
+            // when
+            refundCommandService.retryRefund(refundId);
+
+            // then
+            assertThat(refund.getStatus()).isEqualTo(RefundStatus.FAILED_RETRYABLE);
+            verify(eventPublisher, never()).publishEvent(any(RefundApprovedEvent.class));
         }
     }
 }

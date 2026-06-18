@@ -23,6 +23,7 @@ import com.rocketcrew.pocat.domain.refund.event.RefundRejectedEvent;
 import com.rocketcrew.pocat.domain.refund.event.RefundRequestedEvent;
 import com.rocketcrew.pocat.global.exception.domain.RefundException;
 import com.rocketcrew.pocat.global.exception.domain.SettlementException;
+import com.rocketcrew.pocat.global.outbox.service.OutboxEventWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ public class RefundCommandService {
     private final SettlementRepository settlementRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PortOneClientService portOneClientService;
+    private final OutboxEventWriter outboxEventWriter;
 
     // 환불 요청 가능한 주문 상태
     private static final Set<OrderStatus> REFUNDABLE_STATUSES =
@@ -93,8 +95,10 @@ public class RefundCommandService {
                 .build();
 
         Refund saved = refundRepository.save(refund);
-        eventPublisher.publishEvent(new RefundRequestedEvent(
-                saved.getId(), order.getOrderUid(), order.getBuyerId()));
+        RefundRequestedEvent requestedEvent = new RefundRequestedEvent(
+                saved.getId(), order.getOrderUid(), order.getBuyerId());
+        outboxEventWriter.write("refund", order.getOrderUid(), requestedEvent);
+        eventPublisher.publishEvent(requestedEvent);
         return RefundResponse.from(saved);
     }
 
@@ -132,8 +136,10 @@ public class RefundCommandService {
         order.refund();
         settlement.refund();
 
-        eventPublisher.publishEvent(new RefundApprovedEvent(
-                refund.getId(), order.getOrderUid(), order.getBuyerId(), order.getSellerId()));
+        RefundApprovedEvent approvedEvent = new RefundApprovedEvent(
+                refund.getId(), order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+        outboxEventWriter.write("refund", order.getOrderUid(), approvedEvent);
+        eventPublisher.publishEvent(approvedEvent);
         log.info("환불 승인 완료. refundId={}, paymentUid={}, amount={}",
                 refundId, payment.getPaymentUid(), refund.getAmount());
 
@@ -191,6 +197,11 @@ public class RefundCommandService {
         order.refund();
         settlement.refund();
 
+        RefundApprovedEvent approvedEvent = new RefundApprovedEvent(
+                refund.getId(), order.getOrderUid(), order.getBuyerId(), order.getSellerId());
+        outboxEventWriter.write("refund", order.getOrderUid(), approvedEvent);
+        eventPublisher.publishEvent(approvedEvent);
+
         log.info("환불 재시도 성공. refundId={}, paymentUid={}", refundId, payment.getPaymentUid());
     }
 
@@ -203,8 +214,10 @@ public class RefundCommandService {
 
         Order order = findOrder(refund.getOrderId());
         refund.reject(request.rejectReason());
-        eventPublisher.publishEvent(new RefundRejectedEvent(
-                refund.getId(), order.getOrderUid(), order.getBuyerId(), request.rejectReason()));
+        RefundRejectedEvent rejectedEvent = new RefundRejectedEvent(
+                refund.getId(), order.getOrderUid(), order.getBuyerId(), request.rejectReason());
+        outboxEventWriter.write("refund", order.getOrderUid(), rejectedEvent);
+        eventPublisher.publishEvent(rejectedEvent);
         return RefundResponse.from(refund);
     }
 
