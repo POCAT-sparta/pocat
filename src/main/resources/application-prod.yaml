@@ -21,9 +21,11 @@ spring:
       password: ${DB_READ_PASSWORD:${DB_PASSWORD}}
       driver-class-name: ${DB_DRIVER:com.mysql.cj.jdbc.Driver}
       hikari:
-        # #206: db.t4g.micro replica(max_connections≈85) 기준 확정값. write는 기존 정책상 hikari 미설정(기본 10/10) 유지.
-        maximum-pool-size: 5
-        minimum-idle: 2
+        # #206: db.t4g.micro replica(max_connections≈85) 기준. write는 기존 정책상 hikari 미설정(기본 10/10) 유지.
+        # 부하테스트(03/05)에서 read 풀=5 고갈로 p95 폭발 확인 → 일시 상향(20×3대=60, replica 한도 내 여유 ~25).
+        #   ⚠️ replica CPU 동시 관찰 필수: pending↓·p95↓면 성공, replica CPU 100%면 새 병목=replica 등급(스케일업 필요).
+        maximum-pool-size: 20
+        minimum-idle: 5
 
   jpa:
     hibernate:
