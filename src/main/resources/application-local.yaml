@@ -62,12 +62,12 @@ loki:
 cloud:
   aws:
     credentials:
-      access-key: ${AWS_ACCESS_KEY}
-      secret-key: ${AWS_SECRET_KEY}
+      access-key: ${AWS_ACCESS_KEY:local-dummy}
+      secret-key: ${AWS_SECRET_KEY:local-dummy}
     region:
       static: ${AWS_REGION:ap-northeast-2}
     s3:
-      bucket: ${AWS_S3_BUCKET}
+      bucket: ${AWS_S3_BUCKET:local-dummy}
     cloudfront:
       domain: ${AWS_CLOUDFRONT_DOMAIN:cdn.kuromi.click}
 
