@@ -43,9 +43,8 @@ public class InternalTokenAuthFilter extends OncePerRequestFilter {
                 token.getBytes(StandardCharsets.UTF_8))) {
             log.warn("[INTERNAL_AUTH] unauthorized uri={} reason={}",
                     request.getRequestURI(), unauthorizedReason(token));
-            // TEMPORARY LOCAL DEBUG ONLY: restore the 401 response before commit/deploy.
-            // response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            // return;
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            return;
         }
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
