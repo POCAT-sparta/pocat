@@ -46,6 +46,7 @@ import org.springframework.util.StringUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+    import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -233,7 +234,8 @@ public class CardQueryService {
         }
 
         // 락 획득 성공 → 이 요청만 DB 조회
-        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", LOCK_TTL_SECONDS, TimeUnit.SECONDS);
+        String lockToken = UUID.randomUUID().toString();
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, lockToken, LOCK_TTL_SECONDS, TimeUnit.SECONDS);
         if (Boolean.TRUE.equals(locked)) {
             try {
                 CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(cardId);
@@ -247,18 +249,23 @@ public class CardQueryService {
                 }
                 return response;
             } finally {
-                redisTemplate.delete(lockKey);
+                // 내가 건 락인 경우에만 삭제 (TOCTOU 방지)
+                String script = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+                redisTemplate.execute(
+                        new org.springframework.data.redis.core.script.DefaultRedisScript<>(script, Long.class),
+                        Collections.singletonList(lockKey), lockToken);
             }
         }
 
         // 락 획득 실패 → 락 보유자가 캐시를 채울 때까지 재시도
         for (int i = 0; i < LOCK_RETRY_COUNT; i++) {
             try {
-                Thread.sleep(LOCK_RETRY_INTERVAL_MS);
+                // 즉시 캐시 확인 후 미스일 때만 대기 (불필요한 100ms 선대기 제거)
                 String cached = redisTemplate.opsForValue().get(cacheKey);
                 if (cached != null) {
                     return objectMapper.readValue(cached, CardAveragePriceResponse.class);
                 }
+                Thread.sleep(LOCK_RETRY_INTERVAL_MS);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 break;

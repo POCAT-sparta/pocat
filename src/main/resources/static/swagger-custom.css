@@ -1,0 +1,22 @@
+  /* 태그 섹션 그리드 레이아웃 */
+.swagger-ui .block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.swagger-ui .opblock-tag-section {
+  flex: 1 1 calc(33.33% - 8px);
+  min-width: 280px;
+  border: 1px solid #d9dee3;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 !important;
+  background: #fff;
+}
+
+.swagger-ui .opblock-tag {
+  border-bottom: 1px solid #e0e0e0 !important;
+  margin: 0 !important;
+}
