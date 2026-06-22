@@ -17,6 +17,7 @@ services:
       SERVER_PORT: 8080
       SPRING_PROFILES_ACTIVE: local
       ES_URI: http://elasticsearch:9200
+      LOGSTASH_HOST: "logstash"
       JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
     ports:
       - "127.0.0.1:8080:8080"

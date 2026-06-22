@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.rag.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import com.rocketcrew.pocat.domain.ai.rag.dto.ReindexChunkRequest;
 import com.rocketcrew.pocat.domain.ai.rag.dto.ReindexChunkResponse;
 import com.rocketcrew.pocat.domain.ai.rag.service.AiReindexChunkService;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code InternalTokenAuthFilter}에서 X-Internal-Token 헤더를 검증한다.
  */
 @Slf4j
+@Hidden
 @RestController
 @RequestMapping("/internal/ai")
 @RequiredArgsConstructor

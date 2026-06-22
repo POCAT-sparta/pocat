@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.auth.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.auth.dto.request.LoginRequest;
 import com.rocketcrew.pocat.domain.auth.dto.request.ReissueRequest;
 import com.rocketcrew.pocat.domain.auth.dto.request.SignupRequest;
@@ -20,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "인증", description = "회원가입, 로그인, 로그아웃, 토큰 재발급")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

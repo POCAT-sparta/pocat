@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.internal.testscenario.auction.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.internal.testscenario.auction.dto.AuctionCloseWithoutAutoPaymentResponse;
 import com.rocketcrew.pocat.internal.testscenario.auction.dto.AuctionExpirationInjectionResponse;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Validated
+@Hidden
 @RestController
 @RequestMapping("/internal/test/auctions")
 @RequiredArgsConstructor

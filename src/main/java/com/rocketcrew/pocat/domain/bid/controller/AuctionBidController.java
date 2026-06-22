@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.bid.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.bid.dto.request.CreateBidRequest;
 import com.rocketcrew.pocat.domain.bid.dto.response.AuctionBidHistoryResponse;
 import com.rocketcrew.pocat.domain.bid.dto.response.CreateAuctionBidResponse;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "경매 입찰", description = "입찰 등록 및 내역 조회")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

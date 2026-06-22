@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.analysis.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.ai.analysis.dto.CardAnalysisResult;
 import com.rocketcrew.pocat.domain.ai.analysis.dto.response.CardAnalysisResponse;
 import com.rocketcrew.pocat.domain.ai.analysis.service.CardAnalysisService;
@@ -18,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "카드 이미지 분석", description = "AI 카드 이미지 분석")
 @RestController
 @RequestMapping("/api/ai/cards")
 @RequiredArgsConstructor

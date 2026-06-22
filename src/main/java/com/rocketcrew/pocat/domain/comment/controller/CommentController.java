@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.comment.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.comment.dto.request.CreateCommentRequest;
 import com.rocketcrew.pocat.domain.comment.dto.request.UpdateCommentRequest;
 import com.rocketcrew.pocat.domain.comment.dto.response.CommentResponse;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "댓글", description = "게시글 댓글 CRUD")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

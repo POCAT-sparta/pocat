@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.card.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.card.dto.request.CardSearchCondition;
 import com.rocketcrew.pocat.domain.card.dto.request.CreateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.ActiveAuctionSummary;
@@ -32,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+@Tag(name = "카드", description = "카드 조회 및 등록")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

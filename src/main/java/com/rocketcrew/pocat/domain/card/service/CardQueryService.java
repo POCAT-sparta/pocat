@@ -58,6 +58,10 @@ public class CardQueryService {
 
     private static final long AVG_PRICE_CACHE_TTL_HOURS = 1;
     private static final String AVG_PRICE_CACHE_PREFIX = "card:avgprice:";
+    private static final String LOCK_KEY_PREFIX = "lock:avgprice:";
+    private static final long LOCK_TTL_SECONDS = 3;
+    private static final int LOCK_RETRY_COUNT = 5;
+    private static final long LOCK_RETRY_INTERVAL_MS = 100;
 
     private final CardRepository cardRepository;
     private final AuctionRepository auctionRepository;
@@ -217,6 +221,8 @@ public class CardQueryService {
 
     public CardAveragePriceResponse getAveragePrice(Long cardId) {
         String cacheKey = AVG_PRICE_CACHE_PREFIX + cardId;
+        String lockKey  = LOCK_KEY_PREFIX + cardId;
+
         try {
             String cached = redisTemplate.opsForValue().get(cacheKey);
             if (cached != null) {
@@ -226,18 +232,44 @@ public class CardQueryService {
             log.warn("[CACHE] 카드 평균가 캐시 조회/역직렬화 실패, DB 조회로 폴백 cardId={}: {}", cardId, e.getMessage());
         }
 
-        CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(cardId);
-
-        try {
-            redisTemplate.opsForValue().set(
-                    cacheKey,
-                    objectMapper.writeValueAsString(response),
-                    AVG_PRICE_CACHE_TTL_HOURS, TimeUnit.HOURS);
-        } catch (Exception e) {
-            log.warn("[CACHE] 카드 평균가 캐시 저장 실패 cardId={}: {}", cardId, e.getMessage());
+        // 락 획득 성공 → 이 요청만 DB 조회
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", LOCK_TTL_SECONDS, TimeUnit.SECONDS);
+        if (Boolean.TRUE.equals(locked)) {
+            try {
+                CardAveragePriceResponse response = orderQueryService.getAveragePriceByCard(cardId);
+                try {
+                    redisTemplate.opsForValue().set(
+                            cacheKey,
+                            objectMapper.writeValueAsString(response),
+                            AVG_PRICE_CACHE_TTL_HOURS, TimeUnit.HOURS);
+                } catch (Exception e) {
+                    log.warn("[CACHE] 카드 평균가 캐시 저장 실패 cardId={}: {}", cardId, e.getMessage());
+                }
+                return response;
+            } finally {
+                redisTemplate.delete(lockKey);
+            }
         }
 
-        return response;
+        // 락 획득 실패 → 락 보유자가 캐시를 채울 때까지 재시도
+        for (int i = 0; i < LOCK_RETRY_COUNT; i++) {
+            try {
+                Thread.sleep(LOCK_RETRY_INTERVAL_MS);
+                String cached = redisTemplate.opsForValue().get(cacheKey);
+                if (cached != null) {
+                    return objectMapper.readValue(cached, CardAveragePriceResponse.class);
+                }
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                log.warn("[CACHE] 스탬피드 방지 재시도 중 캐시 조회 실패 cardId={}: {}", cardId, e.getMessage());
+            }
+        }
+
+        // 재시도 초과 시 DB 직접 조회로 폴백
+        log.warn("[CACHE] 스탬피드 방지 재시도 초과, DB 직접 조회 cardId={}", cardId);
+        return orderQueryService.getAveragePriceByCard(cardId);
     }
 
     /** SecurityContext에서 현재 유저 ID를 추출. 비로그인이면 "anonymous" 반환 */

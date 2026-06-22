@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.card.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.card.dto.request.RejectCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.request.UpdateCardRequest;
 import com.rocketcrew.pocat.domain.card.dto.response.CardResponse;
@@ -21,6 +22,7 @@ import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "관리자 - 카드", description = "카드 승인/거절/수정")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

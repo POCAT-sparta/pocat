@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.order.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.order.dto.request.AdminOrderSearchCondition;
 import com.rocketcrew.pocat.domain.order.dto.response.AdminOrderResponse;
 import com.rocketcrew.pocat.domain.order.service.AdminOrderQueryService;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "관리자 - 주문", description = "주문 관리")
 @RestController
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")

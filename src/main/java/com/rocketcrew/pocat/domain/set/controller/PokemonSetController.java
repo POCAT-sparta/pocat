@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.set.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.set.dto.response.PokemonSetResponse;
 import com.rocketcrew.pocat.domain.set.service.PokemonSetQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "카드셋", description = "포켓몬 카드 세트 조회")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/sets")

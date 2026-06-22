@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.assistant.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.ai.assistant.AiAssistantConstants;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiChatSessionService;
 import com.rocketcrew.pocat.domain.ai.rag.service.RagService;
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 @Validated
+@Tag(name = "AI 스트리밍", description = "AI 어시스턴트 스트리밍 응답")
 @RestController
 @RequestMapping("/api/ai/assistant")
 @RequiredArgsConstructor

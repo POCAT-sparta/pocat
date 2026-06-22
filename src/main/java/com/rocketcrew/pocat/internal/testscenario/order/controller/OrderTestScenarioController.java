@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.internal.testscenario.order.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import com.rocketcrew.pocat.internal.testscenario.order.dto.OrderPaymentDeadlineInjectionResponse;
 import com.rocketcrew.pocat.internal.testscenario.order.dto.OrderPaymentDeadlineScheduleResponse;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Validated
+@Hidden
 @RestController
 @RequestMapping("/internal/test/orders")
 @RequiredArgsConstructor

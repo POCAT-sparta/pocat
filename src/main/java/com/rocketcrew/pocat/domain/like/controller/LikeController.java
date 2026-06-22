@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.like.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.like.dto.request.ToggleLikeRequest;
 import com.rocketcrew.pocat.domain.like.dto.response.LikeResponse;
 import com.rocketcrew.pocat.domain.like.dto.response.ToggleLikeResponse;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "좋아요", description = "게시글 좋아요 토글")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

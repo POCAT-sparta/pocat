@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.user.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.user.dto.request.RegisterBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateBillingKeyRequest;
 import com.rocketcrew.pocat.domain.user.dto.request.UpdateUserRequest;
@@ -25,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "사용자", description = "유저 프로필 및 결제 수단 관리")
 @RestController
 @RequiredArgsConstructor
 public class UserController {

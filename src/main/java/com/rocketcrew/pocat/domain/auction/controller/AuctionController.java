@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.auction.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.auction.dto.request.AdminCancelAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.CreateAuctionRequest;
 import com.rocketcrew.pocat.domain.auction.dto.request.InspectAuctionRequest;
@@ -49,6 +50,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "경매", description = "경매 등록, 조회, 즉시 낙찰")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

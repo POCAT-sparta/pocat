@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.rag.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.ai.rag.service.AdminAiService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "관리자 - AI RAG", description = "AI RAG 데이터 관리")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/ai")
