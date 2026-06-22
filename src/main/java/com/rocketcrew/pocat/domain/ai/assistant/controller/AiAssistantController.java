@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.ai.assistant.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatRequest;
 import com.rocketcrew.pocat.domain.ai.assistant.dto.AiChatResponse;
 import com.rocketcrew.pocat.domain.ai.assistant.service.AiAssistantService;
@@ -17,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "AI 어시스턴트", description = "AI 카드 가격 분석 어시스턴트")
 @RestController
 @RequestMapping("/api/ai/assistant")
 @RequiredArgsConstructor

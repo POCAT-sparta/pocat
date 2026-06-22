@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.global.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import com.rocketcrew.pocat.domain.auction.service.AuctionEsMigrationService;
 import com.rocketcrew.pocat.domain.card.service.CardEsAliasReindexService;
 import com.rocketcrew.pocat.domain.card.service.CardEsMigrationService;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Hidden
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

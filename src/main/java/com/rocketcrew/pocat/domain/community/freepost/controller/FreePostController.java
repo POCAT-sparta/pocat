@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.community.freepost.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.CreateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.request.UpdateFreePostRequest;
 import com.rocketcrew.pocat.domain.community.freepost.dto.response.FreePostResponse;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "자유게시판", description = "자유 게시글 CRUD")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

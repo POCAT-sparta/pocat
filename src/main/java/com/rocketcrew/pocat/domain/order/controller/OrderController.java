@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.order.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderDetailResponse;
 import com.rocketcrew.pocat.domain.order.dto.response.OrderResponse;
 import com.rocketcrew.pocat.domain.order.enums.OrderStatus;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "주문", description = "카드 즉시구매 주문 조회")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

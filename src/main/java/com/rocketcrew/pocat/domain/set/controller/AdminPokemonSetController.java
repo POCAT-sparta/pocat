@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.set.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.series.entity.Series;
 import com.rocketcrew.pocat.domain.series.service.SeriesCommandService;
 import com.rocketcrew.pocat.domain.set.dto.request.UpsertPokemonSetRequest;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "관리자 - 카드셋", description = "카드셋 관리")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/sets")

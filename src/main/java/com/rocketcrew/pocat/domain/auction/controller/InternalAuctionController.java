@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.auction.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import com.rocketcrew.pocat.domain.auction.service.AuctionBuyoutService;
 import com.rocketcrew.pocat.domain.auction.service.AuctionLifecycleService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @Validated
+@Hidden
 @RestController
 @RequestMapping("/internal/auctions")
 @RequiredArgsConstructor

@@ -83,5 +83,11 @@ pocat:
 springdoc:
   swagger-ui:
     enabled: true
+    url: /v3/api-docs
+    doc-expansion: none
+    default-models-expand-depth: -1
+    custom-css-url:
+      - /swagger-custom.css
   api-docs:
     enabled: true
+    path: /v3/api-docs

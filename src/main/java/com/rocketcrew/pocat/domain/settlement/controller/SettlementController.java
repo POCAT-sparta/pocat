@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.settlement.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.settlement.dto.response.SettlementResponse;
 import com.rocketcrew.pocat.domain.settlement.service.SettlementQueryService;
 import com.rocketcrew.pocat.global.dto.ApiResponseDto;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "정산", description = "판매 정산 조회")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

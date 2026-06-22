@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -402,7 +403,7 @@ class CardQueryServiceTest {
         }
 
         @Test
-        @DisplayName("성공: Redis 캐시 미스 → DB 조회 후 캐시 저장")
+        @DisplayName("성공: Redis 캐시 미스 → 락 획득 → DB 조회 후 캐시 저장")
         void success_cacheMiss() throws Exception {
             CardAveragePriceResponse dbResponse = new CardAveragePriceResponse(3L, 7000L, 5L, null, null);
 
@@ -410,8 +411,10 @@ class CardQueryServiceTest {
             ValueOperations<String, String> valueOps = mock(ValueOperations.class);
             given(redisTemplate.opsForValue()).willReturn(valueOps);
             given(valueOps.get("card:avgprice:3")).willReturn(null);
+            given(valueOps.setIfAbsent(eq("lock:avgprice:3"), anyString(), eq(3L), eq(TimeUnit.SECONDS))).willReturn(true);
             given(orderQueryService.getAveragePriceByCard(3L)).willReturn(dbResponse);
             given(objectMapper.writeValueAsString(dbResponse)).willReturn("{\"cardId\":3,\"averagePrice\":7000,\"count\":5}");
+            given(redisTemplate.execute(any(), anyList(), any())).willReturn(1L);
 
             CardAveragePriceResponse result = service.getAveragePrice(3L);
 

@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.refund.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import com.rocketcrew.pocat.domain.refund.service.RefundCommandService;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @Validated
+@Hidden
 @RestController
 @RequestMapping("/internal/refunds")
 @RequiredArgsConstructor

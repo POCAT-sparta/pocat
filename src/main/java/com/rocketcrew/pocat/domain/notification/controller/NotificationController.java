@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.notification.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.notification.dto.response.NotificationListResponse;
 import com.rocketcrew.pocat.domain.notification.dto.response.NotificationResponse;
 import com.rocketcrew.pocat.domain.notification.service.NotificationCommandService;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "알림", description = "사용자 알림 조회 및 읽음 처리")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

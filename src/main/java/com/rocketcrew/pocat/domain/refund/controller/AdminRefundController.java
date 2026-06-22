@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.refund.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.refund.dto.request.RejectRefundRequest;
 import com.rocketcrew.pocat.domain.refund.dto.response.AdminRefundResponse;
 import com.rocketcrew.pocat.domain.refund.dto.response.RefundResponse;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "관리자 - 환불", description = "환불 승인/거절")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

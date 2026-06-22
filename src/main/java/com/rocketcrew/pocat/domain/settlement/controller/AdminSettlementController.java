@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.settlement.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.settlement.dto.request.AdminSettlementSearchCondition;
 import com.rocketcrew.pocat.domain.settlement.dto.response.AdminSettlementResponse;
 import com.rocketcrew.pocat.domain.settlement.dto.response.SettlementCompleteResponse;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "관리자 - 정산", description = "정산 처리")
 @RestController
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")

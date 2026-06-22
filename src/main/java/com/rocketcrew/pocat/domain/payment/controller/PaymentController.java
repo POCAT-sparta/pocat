@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.payment.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.payment.dto.request.CreatePaymentRequest;
 import com.rocketcrew.pocat.domain.payment.dto.response.PaymentResponse;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Arrays;
 import java.util.List;
 
+@Tag(name = "결제", description = "결제 처리 및 조회")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

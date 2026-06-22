@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.community.tradepost.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.CreateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.request.UpdateTradePostRequest;
 import com.rocketcrew.pocat.domain.community.tradepost.dto.response.CreateTradePost;
@@ -27,6 +28,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
+@Tag(name = "거래게시판", description = "거래 게시글 CRUD")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")

@@ -20,6 +20,7 @@
 
 import http from 'k6/http';
 import { check } from 'k6';
+import exec from 'k6/execution';
 import { Trend, Counter } from 'k6/metrics';
 import { BASE_URL } from '../helpers/config.js';
 
@@ -30,30 +31,33 @@ const requestCount       = new Counter('total_requests');
 
 export const options = {
   scenarios: {
+    // Phase 1: 50 VU 동시 출발로 캐시 콜드 스탬피드 재현
     stampede: {
-      executor:         'ramping-arrival-rate',
-      startRate:        1,
-      timeUnit:         '1s',
-      preAllocatedVUs:  70,
-      maxVUs:           100,
-      stages: [
-        { duration: '5s',  target: 50 }, // 급격히 올려 캐시 미스 유발
-        { duration: '30s', target: 50 }, // 캐시 warming 후 hit 안정화
-        { duration: '5s',  target:  0 },
-      ],
+      executor:    'shared-iterations',
+      vus:         50,
+      iterations:  50,
+      maxDuration: '10s',
+    },
+    // Phase 2: 캐시 워밍 후 안정 구간 측정
+    steady: {
+      executor:        'constant-arrival-rate',
+      rate:            50,
+      timeUnit:        '1s',
+      duration:        '30s',
+      preAllocatedVUs: 10,
+      maxVUs:          20,
+      startTime:       '12s',
     },
   },
   thresholds: {
-    http_req_failed:           ['rate<0.01'],
-    http_req_duration:         ['p(95)<300'],
-    // 캐시가 warming된 이후 구간 — 100ms 이내를 기대
-    'steady_duration_ms':      ['p(95)<100'],
+    http_req_failed:       ['rate<0.01'],
+    http_req_duration:     ['p(95)<300'],
+    // 스탬피드 구간: 락 대기(최대 500ms) 안에서 처리되어야 함
+    'first_batch_duration_ms': ['p(95)<500'],
+    // 캐시 워밍 후 구간: 빠르게 응답해야 함
+    'steady_duration_ms':  ['p(95)<100'],
   },
 };
-
-// 테스트 시작 시각 기준으로 구간 분리
-const START_TS = Date.now();
-const WARM_AFTER_MS = 8000; // 8초 후부터 "캐시 히트 안정 구간"으로 간주
 
 // 동일 카드에 집중해 스탬피드 유발
 const CARD_ID = 1;
@@ -64,8 +68,7 @@ export default function () {
   check(res, { '평균가 200': (r) => r.status === 200 });
   requestCount.add(1);
 
-  const elapsed = Date.now() - START_TS;
-  if (elapsed < WARM_AFTER_MS) {
+  if (exec.scenario.name === 'stampede') {
     firstBatchDuration.add(res.timings.duration);
   } else {
     steadyDuration.add(res.timings.duration);

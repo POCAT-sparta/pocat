@@ -1,5 +1,6 @@
 package com.rocketcrew.pocat.domain.pokemon.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.rocketcrew.pocat.domain.pokemon.dto.request.UpsertPokemonRequest;
 import com.rocketcrew.pocat.domain.pokemon.dto.response.PokemonResponse;
 import com.rocketcrew.pocat.domain.pokemon.entity.Pokemon;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "관리자 - 포켓몬", description = "포켓몬 데이터 관리")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/pokemon")
