@@ -161,7 +161,6 @@ POCAT은 포켓몬 TCG 카드 거래의 새로운 기준을 제시하는 **실�
 
 ### 5-2. 실시간 경매
 
-- WebSocket(STOMP) 기반 실시간 입찰
 - **경매 상태**: `PENDING → INSPECTING → APPROVED/REJECTED → ACTIVE → ENDED / NO_BIDDER / CANCELLED / PAYMENT_PENDING`
 - Redis TTL 만료 이벤트로 경매 자동 종료
 - Kafka 이벤트로 낙찰·취소·후처리 비동기 처리
