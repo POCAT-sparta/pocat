@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.order.consumer.paymentEvent;
+package com.rocketcrew.pocat.domain.order.kafka.consumer.paymentEvent;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;

@@ -1,7 +1,7 @@
 package com.rocketcrew.pocat.domain.notification.service;
 
 import com.rocketcrew.pocat.domain.notification.enums.NotificationType;
-import com.rocketcrew.pocat.domain.order.event.OrderEscalatedEvent;
+import com.rocketcrew.pocat.domain.order.kafka.event.OrderEscalatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

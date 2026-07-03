@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.order.event;
+package com.rocketcrew.pocat.domain.order.kafka.event;
 
 import com.rocketcrew.pocat.domain.order.service.EscalationResult;
 import com.rocketcrew.pocat.global.event.BaseEvent;
