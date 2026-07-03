@@ -1,7 +1,7 @@
 package com.rocketcrew.pocat.domain.payment.client.out.kafka.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rocketcrew.pocat.domain.order.consumer.orderEvent.OrderEvent;
+import com.rocketcrew.pocat.domain.order.kafka.consumer.orderEvent.OrderEvent;
 import com.rocketcrew.pocat.domain.payment.service.PaymentApplicationService;
 import com.rocketcrew.pocat.global.exception.common.ServiceException;
 import lombok.RequiredArgsConstructor;

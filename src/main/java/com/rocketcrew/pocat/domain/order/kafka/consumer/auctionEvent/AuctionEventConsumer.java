@@ -1,4 +1,4 @@
-package com.rocketcrew.pocat.domain.order.consumer.auctionEvent;
+package com.rocketcrew.pocat.domain.order.kafka.consumer.auctionEvent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rocketcrew.pocat.domain.auction.event.AuctionEventType;
